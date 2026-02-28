@@ -1,0 +1,568 @@
+/* ====================================================
+   FEED SCREEN — PIXEL-PERFECT FROM FIGMA (3:2109)
+   ==================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono&display=swap');
+
+/* Root */
+.feed-root {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    background: black;
+}
+
+/* Noise texture overlay — 4% opacity */
+.feed-noise {
+    position: absolute;
+    inset: 0;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 512px 512px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* ===== HEADER ===== */
+.feed-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px 13px;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.feed-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.feed-logo-shapes {
+    font-family: 'Liberation Sans', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    color: #f56e3d;
+    line-height: 28px;
+}
+
+.feed-logo-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    font-weight: 400;
+    color: #f1f5f9;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    line-height: 21px;
+}
+
+.feed-search-bar {
+    flex: 1;
+    max-width: 352px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 17px;
+    margin: 0 16px;
+    background: #1a1d2e;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 9999px;
+}
+
+.feed-search-icon {
+    flex-shrink: 0;
+}
+
+.feed-search-text {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 400;
+    font-size: 14px;
+    color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.feed-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.feed-notif-box {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    position: relative;
+}
+
+.feed-notif-dot {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 8px;
+    height: 8px;
+    background: #f56e3d;
+    border-radius: 9999px;
+}
+
+.feed-avatar-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.feed-avatar-img {
+    width: 36px;
+    height: 36px;
+    border-radius: 9999px;
+    border: 1px solid rgba(245, 110, 61, 0.5);
+    object-fit: cover;
+    background: #1e293b;
+}
+
+.feed-avatar-rank {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: #94a3b8;
+    line-height: 15px;
+    margin-top: 4px;
+}
+
+/* ===== STORIES ===== */
+.feed-stories {
+    display: flex;
+    gap: 20px;
+    padding: 24px 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    position: relative;
+    z-index: 1;
+}
+
+.feed-stories::-webkit-scrollbar {
+    display: none;
+}
+
+.feed-story {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.feed-story.faded {
+    opacity: 0.5;
+}
+
+.feed-story-ring {
+    width: 64px;
+    height: 64px;
+    border-radius: 9999px;
+    border-width: 2px;
+    border-style: solid;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+}
+
+.feed-story-ring.dashed {
+    border-style: dashed;
+    padding: 2px;
+}
+
+.feed-story-avatar-inner {
+    width: 100%;
+    height: 100%;
+    border-radius: 9999px;
+    overflow: hidden;
+    background: #1e293b;
+    border: 1px solid black;
+}
+
+.feed-story-avatar-inner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 9999px;
+}
+
+.feed-story-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 500;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: -0.5px;
+    line-height: 15px;
+    text-align: center;
+}
+
+/* ===== TOGGLE BAR ===== */
+.feed-toggle-wrap {
+    padding: 0 16px 24px;
+    position: relative;
+    z-index: 1;
+}
+
+.feed-toggle-bar {
+    display: flex;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 9999px;
+    padding: 4px;
+}
+
+.feed-toggle-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 0;
+    border-radius: 9999px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: -0.3px;
+    text-align: center;
+    color: #94a3b8;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.25s;
+}
+
+.feed-toggle-btn.active {
+    background: #f56e3d;
+    color: white;
+}
+
+.toggle-shape {
+    font-size: 10px;
+}
+
+/* ===== EVENT CARDS ===== */
+.feed-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 0 16px;
+    position: relative;
+    z-index: 1;
+    padding-bottom: 24px;
+}
+
+.feed-card-wrap.card-faded {
+    opacity: 0.9;
+}
+
+.feed-card {
+    background: #1a1d2e;
+    border-left: 2px solid;
+    padding-left: 2px;
+    border-top-right-radius: 48px;
+    border-bottom-right-radius: 48px;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Card Image */
+.feed-card-image {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+}
+
+.feed-card-image img {
+    width: 100%;
+    height: 178%;
+    object-fit: cover;
+    position: absolute;
+    top: -39%;
+    left: 0;
+}
+
+.feed-card-gradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, #1a1d2e, rgba(26, 29, 46, 0) 50%, rgba(26, 29, 46, 0));
+}
+
+/* Type badge */
+.feed-card-type {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 13px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid;
+    border-radius: 9999px;
+}
+
+.feed-card-type span:first-child {
+    font-family: 'Liberation Sans', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    line-height: 15px;
+}
+
+.feed-card-type span:last-child {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: #f1f5f9;
+    line-height: 15px;
+}
+
+/* Countdown badge */
+.feed-card-countdown {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: -0.55px;
+    text-transform: uppercase;
+    line-height: 16.5px;
+}
+
+.feed-card-countdown.hot {
+    background: #f56e3d;
+    color: black;
+    box-shadow: 0 10px 15px -3px rgba(245, 110, 61, 0.2),
+        0 4px 6px -4px rgba(245, 110, 61, 0.2);
+}
+
+.feed-card-countdown.cool {
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    color: #cbd5e1;
+}
+
+/* Card Body */
+.feed-card-body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.feed-card-title {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 30px;
+    font-weight: 400;
+    color: white;
+    letter-spacing: 0.75px;
+    line-height: 30px;
+}
+
+/* Org row */
+.feed-card-org {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.feed-card-org-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 9999px;
+    overflow: hidden;
+    background: #334155;
+    border: 1px solid #2dd4bf;
+    flex-shrink: 0;
+}
+
+.feed-card-org-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.feed-card-org-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 500;
+    font-size: 11px;
+    color: #cbd5e1;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    line-height: 16.5px;
+}
+
+.feed-card-verified {
+    flex-shrink: 0;
+}
+
+/* Tags */
+.feed-card-tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.feed-card-tag {
+    padding: 3px 9px;
+    border: 1px solid;
+    border-radius: 16px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    text-transform: uppercase;
+    line-height: 15px;
+}
+
+/* Capacity */
+.feed-card-capacity {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 8px;
+    padding-bottom: 12px;
+}
+
+.feed-card-capacity-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.capacity-label {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    line-height: 15px;
+}
+
+.capacity-count {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    line-height: 15px;
+}
+
+.capacity-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 9999px;
+    overflow: hidden;
+}
+
+.capacity-bar-fill {
+    height: 100%;
+    border-radius: 9999px;
+    transition: width 0.6s ease;
+}
+
+/* Card Footer */
+.feed-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 17px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.feed-card-register {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 32px;
+    border-radius: 9999px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: -0.7px;
+    text-transform: uppercase;
+    line-height: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.feed-card-register.filled {
+    background: #f56e3d;
+    color: black;
+    border: none;
+}
+
+.feed-card-register.filled:hover {
+    box-shadow: 0 0 20px rgba(245, 110, 61, 0.4);
+}
+
+.feed-card-register.outline {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.feed-card-register.outline:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.feed-card-actions {
+    display: flex;
+    gap: 16px;
+}
+
+.feed-card-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.feed-card-action-btn:hover {
+    opacity: 1;
+}
+
+/* ===== FAB ===== */
+.feed-fab {
+    position: fixed;
+    bottom: 112px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    background: #f56e3d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 20px rgba(245, 110, 61, 0.4);
+    z-index: 100;
+    border-radius: 12px;
+    transition: transform 0.2s;
+}
+
+.feed-fab:hover {
+    transform: scale(1.1);
+}
+
+/* ===== BOTTOM NAV OVERRIDES ===== */

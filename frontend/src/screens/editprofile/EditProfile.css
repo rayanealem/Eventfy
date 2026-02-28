@@ -1,0 +1,345 @@
+/* EDIT PROFILE — PIXEL-PERFECT FROM FIGMA (3:1968 ref) */
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;700&family=Outfit:wght@400;600&display=swap');
+
+.edp-root {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    background: #000;
+    max-width: 430px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* HEADER */
+.edp-header {
+    backdrop-filter: blur(6px);
+    background: rgba(0, 0, 0, .8);
+    border-bottom: 1px solid rgba(255, 255, 255, .1);
+    padding: 16px 24px 17px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.edp-back {
+    font-size: 20px;
+    color: #fff;
+    cursor: pointer;
+}
+
+.edp-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    color: #13ecec;
+    letter-spacing: 2.4px;
+    font-weight: 400;
+}
+
+.edp-save {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    color: #13ecec;
+    letter-spacing: .6px;
+    cursor: pointer;
+}
+
+/* MAIN */
+.edp-main {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    padding: 32px 24px 96px;
+}
+
+/* AVATAR */
+.edp-avatar-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+}
+
+.edp-hex-avatar {
+    width: 128px;
+    height: 128px;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    overflow: hidden;
+    position: relative;
+    background: #f4257b;
+    padding: 4px;
+}
+
+.edp-hex-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+}
+
+.edp-avatar-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, .3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity .2s;
+    cursor: pointer;
+}
+
+.edp-hex-avatar:hover .edp-avatar-overlay {
+    opacity: 1;
+}
+
+.edp-cam-icon {
+    font-size: 24px;
+}
+
+.edp-badge {
+    background: #ff6b6b;
+    border: 1px solid rgba(255, 255, 255, .2);
+    padding: 5px 9px;
+    border-radius: 16px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    font-size: 12px;
+    color: #000;
+    line-height: 16px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, .1);
+}
+
+/* FIELDS */
+.edp-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.edp-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: rgba(255, 255, 255, .4);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    line-height: 15px;
+}
+
+.edp-input {
+    background: rgba(255, 255, 255, .05);
+    border: none;
+    border-bottom: 2px solid rgba(19, 236, 236, .3);
+    padding: 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 16px;
+    color: #fff;
+    width: 100%;
+    box-sizing: border-box;
+    line-height: 24px;
+}
+
+.edp-input.sm {
+    font-size: 14px;
+    padding: 12px 0 12px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, .1);
+}
+
+.edp-input::placeholder {
+    color: #6b7280;
+}
+
+.edp-input-wrap {
+    position: relative;
+}
+
+.edp-avail {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: #13ecec;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.edp-textarea {
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid rgba(255, 255, 255, .1);
+    padding: 16px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    color: #fff;
+    width: 100%;
+    box-sizing: border-box;
+    resize: none;
+    line-height: 20px;
+}
+
+.edp-select {
+    background: #1a1d2e;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'Outfit', sans-serif;
+    font-size: 16px;
+    color: #fff;
+    cursor: pointer;
+    line-height: 24px;
+}
+
+.edp-arrow {
+    font-size: 12px;
+    color: rgba(255, 255, 255, .4);
+}
+
+/* SKILLS */
+.edp-skills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.edp-skill {
+    padding: 9px 21px;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, .1);
+    background: rgba(255, 255, 255, .05);
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    color: rgba(255, 255, 255, .6);
+    cursor: pointer;
+    line-height: 20px;
+}
+
+.edp-skill.active {
+    background: rgba(19, 236, 236, .1);
+    border-color: rgba(19, 236, 236, .4);
+    color: #13ecec;
+    font-weight: 600;
+    box-shadow: 0 0 15px rgba(19, 236, 236, .4);
+}
+
+/* SYMBOLS */
+.edp-symbols {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+}
+
+.edp-sym-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, .2);
+    background: none;
+    font-size: 20px;
+    color: #f1f5f9;
+    cursor: pointer;
+}
+
+.edp-sym-btn.active {
+    border-width: 2px;
+    border-color: #13ecec;
+    background: rgba(19, 236, 236, .1);
+    color: #13ecec;
+    box-shadow: 0 0 15px rgba(19, 236, 236, .4);
+}
+
+/* COLORS */
+.edp-colors {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    padding-top: 8px;
+}
+
+.edp-color {
+    width: 24px;
+    height: 24px;
+    border-radius: 9999px;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.edp-color.active {
+    box-shadow: 0 0 0 2px #000, 0 0 0 4px rgba(255, 255, 255, .2);
+}
+
+/* RADAR */
+.edp-radar {
+    display: flex;
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 9999px;
+    padding: 5px;
+}
+
+.edp-radar-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    background: none;
+    border-radius: 9999px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    color: rgba(255, 255, 255, .5);
+    cursor: pointer;
+    text-align: center;
+    line-height: 20px;
+}
+
+.edp-radar-btn.active {
+    background: rgba(255, 255, 255, .2);
+    color: #fff;
+    font-weight: 600;
+}
+
+/* SOCIAL */
+.edp-social-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.edp-social-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, .05);
+    padding: 0 16px;
+    border: 1px solid rgba(255, 255, 255, .1);
+}
+
+.edp-social-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+/* SAVE BTN */
+.edp-save-btn {
+    width: 100%;
+    padding: 20px;
+    background: #13ecec;
+    border: 4px solid rgba(255, 255, 255, .2);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    color: #000;
+    letter-spacing: 2.4px;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: 0 0 15px rgba(19, 236, 236, .4);
+    line-height: 32px;
+    font-weight: 400;
+}

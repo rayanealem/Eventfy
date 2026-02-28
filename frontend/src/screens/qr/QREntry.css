@@ -1,0 +1,310 @@
+/* QR ENTRY — PIXEL-PERFECT FROM FIGMA (9:1051) */
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;700&display=swap');
+
+.qr-root {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    background: #000;
+    max-width: 430px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.qr-noise {
+    position: absolute;
+    inset: 0;
+    opacity: .04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* DECORATIVE */
+.qr-deco {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.qr-deco-shape {
+    position: absolute;
+    font-size: 60px;
+    opacity: .1;
+}
+
+.qr-d1 {
+    left: 40px;
+    top: 80px;
+    color: #0ddff2;
+}
+
+.qr-d2 {
+    right: 50px;
+    top: 220px;
+    font-size: 48px;
+    color: rgba(13, 223, 242, .4);
+}
+
+.qr-d3 {
+    left: 97px;
+    bottom: 80px;
+    font-size: 72px;
+    color: #fff;
+}
+
+/* CONTENT */
+.qr-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 884px;
+    padding: 24px;
+    position: relative;
+    z-index: 2;
+}
+
+/* HEADER */
+.qr-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 32px;
+}
+
+.qr-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    color: #fff;
+    letter-spacing: 4.8px;
+    line-height: 48px;
+    text-align: center;
+    font-weight: 400;
+}
+
+.qr-title-line {
+    width: 64px;
+    height: 2px;
+    background: #0ddff2;
+    margin-top: 8px;
+}
+
+/* SCANNER */
+.qr-scanner-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+    flex: 1;
+    justify-content: center;
+    width: 100%;
+}
+
+.qr-scanner {
+    width: 100%;
+    max-width: 384px;
+    aspect-ratio: 1;
+    background: rgba(255, 255, 255, .05);
+    backdrop-filter: blur(2px);
+    border: 2px solid rgba(255, 255, 255, .2);
+    border-radius: 4px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+/* CORNERS */
+.qr-corner {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+}
+
+.qr-tl {
+    top: 16px;
+    left: 16px;
+    border-left: 4px solid #ff4d4d;
+    border-top: 4px solid #ff4d4d;
+}
+
+.qr-tr {
+    top: 16px;
+    right: 16px;
+    border-right: 4px solid #ff4d4d;
+    border-top: 4px solid #ff4d4d;
+}
+
+.qr-bl {
+    bottom: 16px;
+    left: 16px;
+    border-left: 4px solid #ff4d4d;
+    border-bottom: 4px solid #ff4d4d;
+}
+
+.qr-br {
+    bottom: 16px;
+    right: 16px;
+    border-right: 4px solid #ff4d4d;
+    border-bottom: 4px solid #ff4d4d;
+}
+
+/* QR PLACEHOLDER */
+.qr-placeholder {
+    width: 128px;
+    height: 128px;
+    border: 1px solid rgba(255, 255, 255, .3);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* SCAN LINE */
+.qr-scan-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(to right, rgba(13, 223, 242, 0), #0ddff2 50%, rgba(13, 223, 242, 0));
+    box-shadow: 0 0 15px #0ddff2;
+    top: 50%;
+    animation: scanMove 3s ease-in-out infinite;
+}
+
+@keyframes scanMove {
+
+    0%,
+    100% {
+        top: 30%;
+    }
+
+    50% {
+        top: 70%;
+    }
+}
+
+/* SCAN CTA */
+.qr-scan-cta {
+    padding-bottom: 12px;
+}
+
+.qr-scan-text {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    color: #0ddff2;
+    letter-spacing: 2.4px;
+    line-height: 32px;
+    text-shadow: 0 0 8px rgba(13, 223, 242, .8);
+    font-weight: 400;
+}
+
+/* BOTTOM */
+.qr-bottom {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+    padding-bottom: 32px;
+}
+
+/* PLAYER CARD */
+.qr-player-card {
+    backdrop-filter: blur(6px);
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 4px;
+    padding: 17px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.qr-player-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.qr-player-avatar {
+    width: 56px;
+    height: 56px;
+    background: rgba(13, 223, 242, .2);
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.qr-player-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.qr-player-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.qr-player-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    color: #fff;
+    line-height: 22.5px;
+}
+
+.qr-player-id {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: rgba(255, 255, 255, .4);
+    line-height: 16px;
+}
+
+.qr-player-badge {
+    background: rgba(13, 223, 242, .1);
+    border: 1px solid rgba(13, 223, 242, .3);
+    border-radius: 12px;
+    padding: 7px 13px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: #0ddff2;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    line-height: 15px;
+}
+
+/* OPEN SCANNER */
+.qr-open-btn {
+    width: 100%;
+    background: #ff4d4d;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 20px 24px;
+    cursor: pointer;
+}
+
+.qr-cam-icon {
+    font-size: 20px;
+}
+
+.qr-open-btn span:last-child {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    color: #000;
+    letter-spacing: 2.4px;
+    text-transform: uppercase;
+    line-height: 32px;
+}

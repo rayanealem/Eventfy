@@ -1,0 +1,334 @@
+/* ====================================================
+   SPLASH SCREEN — PIXEL-PERFECT FROM FIGMA (3:2)
+   ==================================================== */
+
+/* Root */
+.splash-root {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    background: black;
+}
+
+/* Noise texture — 4% opacity */
+.splash-noise {
+    position: absolute;
+    inset: 0;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 512px 512px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Main container — max 430px like Figma */
+.splash-container {
+    position: relative;
+    max-width: 430px;
+    min-height: 100vh;
+    margin: 0 auto;
+    border-left: 1px solid rgba(255, 255, 255, 0.05);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+    z-index: 1;
+}
+
+/* Decorative corner text */
+.splash-corner-text {
+    position: absolute;
+    top: -83px;
+    right: 0;
+    opacity: 0.3;
+    padding-right: 17px;
+    z-index: 2;
+}
+
+.splash-corner-text span {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 400;
+    font-size: 10px;
+    color: white;
+    writing-mode: vertical-rl;
+    line-height: 15px;
+}
+
+/* Decorative left divider */
+.splash-left-divider {
+    position: absolute;
+    left: 8px;
+    top: 61.76%;
+    bottom: 25%;
+    width: 1px;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0));
+    opacity: 0.2;
+    z-index: 2;
+}
+
+/* ===== HERO SECTION ===== */
+.splash-hero {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-top: 96px;
+    padding-bottom: 64px;
+}
+
+/* Geometric Shapes — 40% opacity */
+.splash-shapes {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.splash-shape-circle {
+    position: absolute;
+    width: 256px;
+    height: 256px;
+    border-radius: 9999px;
+    border: 2px solid #ff2d78;
+    background: rgba(255, 45, 120, 0.15);
+    left: calc(50% - 228px);
+    top: 50%;
+    transform: translateX(-50%) translateY(-50%);
+}
+
+.splash-shape-triangle {
+    position: relative;
+    width: 256px;
+    height: 222px;
+    margin-left: 60px;
+    margin-top: 20px;
+    transform: rotate(12deg);
+}
+
+.splash-shape-triangle svg {
+    width: 100%;
+    height: 100%;
+}
+
+.splash-shape-square {
+    position: absolute;
+    width: 224px;
+    height: 224px;
+    border: 2px solid white;
+    background: rgba(255, 255, 255, 0.1);
+    left: calc(50% - 52px);
+    top: calc(50% + 160px);
+    transform: translate(-50%, -50%) rotate(-6deg);
+}
+
+/* Logo & Subtitle */
+.splash-logo {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 341px;
+}
+
+.splash-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 72px;
+    font-weight: 400;
+    color: white;
+    letter-spacing: 21.6px;
+    line-height: 72px;
+    text-align: center;
+}
+
+.splash-subtitle {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 500;
+    font-size: 12px;
+    color: #fb5151;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    text-align: center;
+    line-height: 18px;
+}
+
+/* ===== ONBOARDING SLIDER ===== */
+.splash-slides {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px 24px;
+    overflow: hidden;
+}
+
+.splash-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 11.25px;
+}
+
+.splash-card-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.splash-card-icon {
+    width: 32px;
+    height: 32px;
+    border: 2px solid;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 2px;
+}
+
+.icon-circle {
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+}
+
+.icon-square {
+    width: 12px;
+    height: 12px;
+}
+
+.splash-card-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    font-weight: 400;
+    color: white;
+    letter-spacing: 1px;
+    line-height: 28px;
+}
+
+.splash-card-body {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 400;
+    font-size: 14px;
+    color: #94a3b8;
+    line-height: 22.75px;
+}
+
+/* ===== FOOTER ACTIONS ===== */
+.splash-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 0 24px 40px;
+}
+
+/* Progress Indicators */
+.splash-progress {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    height: 50px;
+    padding: 16px 0;
+}
+
+.progress-shape {
+    font-family: 'Liberation Sans', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    line-height: 18px;
+}
+
+/* Buttons */
+.splash-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.splash-btn-primary {
+    width: 100%;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fb5151;
+    border: none;
+    border-radius: 2px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    font-weight: 400;
+    color: white;
+    letter-spacing: 2px;
+    line-height: 30px;
+    cursor: pointer;
+    transition: box-shadow 0.2s, transform 0.1s;
+}
+
+.splash-btn-primary:hover {
+    box-shadow: 0 0 20px rgba(251, 81, 81, 0.3);
+}
+
+.splash-btn-outline {
+    width: 100%;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 2px solid white;
+    border-radius: 2px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    font-weight: 400;
+    color: white;
+    letter-spacing: 2px;
+    line-height: 30px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.splash-btn-outline:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Bottom Link */
+.splash-org-link {
+    display: flex;
+    justify-content: center;
+    padding-top: 16px;
+    height: 33px;
+}
+
+.splash-org-link a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.org-link-text {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 400;
+    font-size: 11px;
+    color: #00ffc2;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    line-height: 16.5px;
+}
+
+.org-link-shape {
+    font-size: 10px;
+    color: #00ffc2;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    line-height: 15px;
+}

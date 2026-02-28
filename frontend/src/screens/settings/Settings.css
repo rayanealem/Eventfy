@@ -1,0 +1,340 @@
+/* ====================================================
+   SETTINGS — PIXEL-PERFECT FROM FIGMA (3:309)
+   ==================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500&display=swap');
+
+.settings-root {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    background: #000000;
+    max-width: 448px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 80px;
+}
+
+.settings-noise {
+    position: absolute;
+    inset: 0;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 390px 390px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* ===== HEADER ===== */
+.settings-header {
+    display: flex;
+    align-items: center;
+    padding: 40px 24px 25px 24px;
+    border-bottom: 1px solid #1a1d2e;
+    position: relative;
+    z-index: 2;
+}
+
+.settings-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    color: white;
+    letter-spacing: 0.9px;
+    line-height: 36px;
+    font-weight: 400;
+}
+
+/* ===== CONTENT ===== */
+.settings-content {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    position: relative;
+    z-index: 1;
+}
+
+/* ===== SECTION ===== */
+.settings-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-top: 16px;
+}
+
+.settings-section:first-child {
+    gap: 24px;
+}
+
+.settings-section-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: #64748b;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    line-height: 16.5px;
+    padding: 0 24px;
+    font-weight: 400;
+}
+
+/* ===== GROUP ===== */
+.settings-group {
+    border-top: 1px solid #1a1d2e;
+    border-bottom: 1px solid #1a1d2e;
+}
+
+.settings-group.no-border {
+    border: none;
+    border-top: 1px solid #1a1d2e;
+    border-bottom: 1px solid #1a1d2e;
+    padding: 25px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* ===== ROW ===== */
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border: none;
+    background: transparent;
+    width: 100%;
+    cursor: default;
+    text-align: left;
+}
+
+.settings-row.clickable {
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.settings-row+.settings-row,
+.settings-row.clickable+.settings-row.clickable {
+    border-top: 1px solid #1a1d2e;
+}
+
+.settings-row-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.settings-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.settings-label {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 500;
+    font-size: 16px;
+    color: white;
+    line-height: 24px;
+}
+
+/* Toggle switch */
+.toggle {
+    width: 40px;
+    height: 20px;
+    border-radius: 9999px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.25s;
+    margin-right: 8px;
+}
+
+.toggle.on {
+    background: #00e5cc;
+}
+
+.toggle.off {
+    background: #1e293b;
+}
+
+.toggle-thumb {
+    position: absolute;
+    top: -4px;
+    width: 28px;
+    height: 28px;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s;
+}
+
+.toggle.on .toggle-thumb {
+    right: -4px;
+    background: #2563eb;
+    border: 4px solid #00e5cc;
+}
+
+.toggle.off .toggle-thumb {
+    left: 0;
+    background: white;
+    border: 4px solid #334155;
+    width: 20px;
+    height: 20px;
+    top: 0;
+}
+
+.toggle.small {
+    height: 16px;
+}
+
+.toggle.small .toggle-thumb {
+    width: 24px;
+    height: 24px;
+    top: -4px;
+}
+
+.toggle.small.off .toggle-thumb {
+    width: 16px;
+    height: 16px;
+    top: 0;
+}
+
+/* ===== PRIVACY PILLS ===== */
+.privacy-pills {
+    display: flex;
+    gap: 8px;
+    height: 40px;
+}
+
+.privacy-pill {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #1a1d2e;
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    font-size: 10px;
+    color: #64748b;
+    letter-spacing: -0.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    line-height: 15px;
+}
+
+.privacy-pill.active {
+    border-color: #00e5cc;
+    color: #00e5cc;
+    box-shadow: 0 0 10px rgba(0, 229, 204, 0.2);
+}
+
+.privacy-pill:hover:not(.active) {
+    border-color: #334155;
+}
+
+/* Toggle rows in privacy */
+.settings-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 8px;
+}
+
+.settings-toggle-label {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 400;
+    font-size: 14px;
+    color: white;
+    line-height: 20px;
+}
+
+/* ===== SYSTEM APPEARANCE ===== */
+.settings-row.dimmed {
+    opacity: 0.5;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.locked-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.locked-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: #00e5cc;
+    text-transform: uppercase;
+    line-height: 15px;
+}
+
+.lang-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.lang-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    color: white;
+    line-height: 20px;
+}
+
+/* ===== DANGER ZONE ===== */
+.settings-danger {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 8px 24px 48px;
+}
+
+.logout-btn {
+    width: 100%;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid #ff7f50;
+    background: transparent;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    color: #ff7f50;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    line-height: 30px;
+}
+
+.logout-btn:hover {
+    background: rgba(255, 127, 80, 0.08);
+}
+
+.logout-x {
+    font-family: 'FreeSerif', serif;
+    font-size: 14px;
+    color: #ff7f50;
+    letter-spacing: 2px;
+}
+
+.delete-account {
+    background: transparent;
+    border: none;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: #dc2626;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    text-decoration: underline;
+    text-align: center;
+    cursor: pointer;
+    line-height: 16.5px;
+    transition: all 0.2s;
+}
+
+.delete-account:hover {
+    opacity: 0.8;
+}

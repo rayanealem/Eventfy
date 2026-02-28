@@ -1,0 +1,449 @@
+/* ORG PROFILE — PIXEL-PERFECT FROM FIGMA (9:321) */
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;700&display=swap');
+
+.orgp-root {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    background: #000;
+    max-width: 448px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 96px;
+}
+
+.orgp-noise {
+    position: absolute;
+    inset: 0;
+    opacity: .04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* HERO */
+.orgp-hero {
+    position: relative;
+    height: 256px;
+    width: 100%;
+    overflow: hidden;
+}
+
+.orgp-hero-img {
+    width: 100%;
+    height: 152%;
+    object-fit: cover;
+    position: absolute;
+    top: -26%;
+}
+
+.orgp-hero-gradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, #000 0%, rgba(0, 0, 0, .4) 50%, transparent 100%);
+}
+
+.orgp-logo-overlap {
+    position: absolute;
+    bottom: -48px;
+    left: 24px;
+    z-index: 2;
+}
+
+.orgp-logo-box {
+    width: 96px;
+    height: 96px;
+    background: #18181b;
+    border: 2px solid rgba(17, 212, 196, 0.3);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, .25);
+    position: relative;
+}
+
+.orgp-logo-icon {
+    font-size: 40px;
+}
+
+.orgp-verified-dot {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    background: #11d4c4;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, .1);
+}
+
+/* INFO */
+.orgp-info {
+    padding: 64px 24px 0;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.orgp-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 42px;
+    color: #fff;
+    letter-spacing: 2.1px;
+    line-height: 42px;
+    font-weight: 400;
+}
+
+.orgp-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.orgp-type {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    color: #11d4c4;
+    letter-spacing: -.35px;
+    text-transform: uppercase;
+    line-height: 20px;
+}
+
+.orgp-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .2);
+}
+
+.orgp-location {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    color: #94a3b8;
+    letter-spacing: -.35px;
+    text-transform: uppercase;
+    line-height: 20px;
+}
+
+/* ACTIONS */
+.orgp-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    padding: 24px 24px 0;
+    position: relative;
+    z-index: 1;
+}
+
+.orgp-follow-btn {
+    width: 162px;
+    padding: 14px 16px;
+    background: #11d4c4;
+    border: none;
+    border-radius: 2px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: #000;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all .2s;
+}
+
+.orgp-follow-btn:hover {
+    opacity: .9;
+}
+
+.orgp-notify-btn {
+    width: 166px;
+    padding: 14px 18px;
+    background: transparent;
+    border: 2px solid rgba(255, 255, 255, .2);
+    border-radius: 2px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: #fff;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all .2s;
+}
+
+.orgp-notify-btn:hover {
+    border-color: rgba(255, 255, 255, .4);
+}
+
+/* STATS */
+.orgp-stats {
+    display: flex;
+    gap: 12px;
+    padding: 32px 24px 0;
+    overflow-x: auto;
+    position: relative;
+    z-index: 1;
+}
+
+.orgp-stat {
+    min-width: 128px;
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 2px;
+    padding: 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.orgp-stat-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 20px;
+    color: #fff;
+    line-height: 28px;
+}
+
+.orgp-stat-label-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.orgp-stat-label {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: #64748b;
+    letter-spacing: -.5px;
+    text-transform: uppercase;
+    line-height: 15px;
+}
+
+.orgp-stat-shape {
+    font-size: 10px;
+    color: rgba(17, 212, 196, .7);
+    letter-spacing: -.5px;
+    line-height: 15px;
+}
+
+/* TABS */
+.orgp-tabs {
+    display: flex;
+    gap: 32px;
+    padding: 32px 24px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, .1);
+    position: relative;
+    z-index: 1;
+}
+
+.orgp-tab {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding-bottom: 14px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    color: #64748b;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all .2s;
+}
+
+.orgp-tab.active {
+    color: #fff;
+    border-bottom-color: #11d4c4;
+}
+
+/* EVENTS */
+.orgp-events {
+    display: flex;
+    gap: 16px;
+    padding: 24px;
+    position: relative;
+    z-index: 1;
+}
+
+.orgp-event-card {
+    flex: 1;
+    height: 202.5px;
+    background: #18181b;
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+}
+
+.orgp-event-img {
+    width: 125.31%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    left: -12.66%;
+    top: 0;
+}
+
+.orgp-event-gradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, #000 0%, transparent 100%);
+}
+
+.orgp-event-info {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    display: flex;
+    flex-direction: column;
+    z-index: 1;
+}
+
+.orgp-event-date {
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    font-size: 10px;
+    color: #11d4c4;
+    line-height: 15px;
+}
+
+.orgp-event-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    color: #fff;
+    text-transform: uppercase;
+    line-height: 16px;
+}
+
+/* REVIEWS */
+.orgp-reviews {
+    background: rgba(9, 9, 11, .5);
+    border-top: 1px solid rgba(255, 255, 255, .05);
+    border-bottom: 1px solid rgba(255, 255, 255, .05);
+    padding: 33px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    position: relative;
+    z-index: 1;
+}
+
+.orgp-reviews-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+}
+
+.orgp-rating-col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.orgp-rating-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 24px;
+    color: #fff;
+    line-height: 24px;
+}
+
+.orgp-stars {
+    display: flex;
+    gap: 4px;
+}
+
+.orgp-star {
+    font-size: 10px;
+    color: #11d4c4;
+}
+
+.orgp-view-reviews {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(17, 212, 196, .3);
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: #11d4c4;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    padding-bottom: 5px;
+    line-height: 15px;
+}
+
+.orgp-review-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.orgp-review-card {
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid rgba(255, 255, 255, .05);
+    border-radius: 4px;
+    padding: 17px;
+    display: flex;
+    gap: 16px;
+}
+
+.orgp-review-avatar {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    background: #27272a;
+    border: 1px solid rgba(17, 212, 196, .2);
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+.orgp-review-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.orgp-review-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3.25px;
+}
+
+.orgp-review-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.orgp-review-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    color: #fff;
+    line-height: 16px;
+}
+
+.orgp-review-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: #64748b;
+    line-height: 13.5px;
+}
+
+.orgp-review-text {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 400;
+    font-size: 12px;
+    color: #94a3b8;
+    line-height: 19.5px;
+}

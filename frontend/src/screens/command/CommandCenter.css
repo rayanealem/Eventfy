@@ -1,0 +1,437 @@
+/* COMMAND CENTER — PIXEL-PERFECT FROM FIGMA (9:1447) */
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;700&display=swap');
+
+.cc-root {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    background: #0a0a0f;
+    max-width: 430px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.cc-noise {
+    position: absolute;
+    inset: 0;
+    opacity: .04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+}
+
+.cc-glow-tr {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 256px;
+    height: 256px;
+    background: rgba(244, 71, 37, .05);
+    filter: blur(60px);
+}
+
+.cc-glow-bl {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 256px;
+    height: 256px;
+    background: rgba(45, 212, 191, .05);
+    filter: blur(60px);
+}
+
+/* HEADER */
+.cc-header {
+    backdrop-filter: blur(6px);
+    background: rgba(10, 10, 15, .8);
+    border-bottom: 1px solid rgba(255, 255, 255, .05);
+    padding: 24px 24px 17px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+    z-index: 2;
+}
+
+.cc-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.cc-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    color: #fff;
+    letter-spacing: 1.8px;
+    line-height: 36px;
+    font-weight: 400;
+}
+
+.cc-live-badge {
+    background: rgba(244, 71, 37, .1);
+    border: 1px solid rgba(244, 71, 37, .2);
+    border-radius: 9999px;
+    padding: 5px 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cc-live-dot {
+    width: 8px;
+    height: 8px;
+    background: #f44725;
+    border-radius: 9999px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: .4;
+    }
+}
+
+.cc-live-text {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: #f44725;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    line-height: 15px;
+}
+
+.cc-timer-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.cc-network {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cc-net-icon {
+    font-size: 10px;
+}
+
+.cc-net-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: #94a3b8;
+    letter-spacing: -.5px;
+    text-transform: uppercase;
+    line-height: 15px;
+}
+
+.cc-timer {
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    font-size: 30px;
+    color: #fff;
+    letter-spacing: -1.5px;
+    line-height: 36px;
+}
+
+/* MAIN */
+.cc-main {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 24px 16px 160px;
+    position: relative;
+    z-index: 1;
+}
+
+/* STATS GRID */
+.cc-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.cc-stat-card {
+    background: #1a1d2e;
+    border: 1px solid rgba(255, 255, 255, .05);
+    border-radius: 16px;
+    padding: 17px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 144px;
+}
+
+.cc-stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.cc-stat-label {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: #94a3b8;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    line-height: 15px;
+}
+
+.cc-stat-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 24px;
+    line-height: 24px;
+}
+
+.cc-stat-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 20px;
+    line-height: 25px;
+}
+
+/* MINI BARS */
+.cc-mini-bars {
+    display: flex;
+    gap: 2px;
+    align-items: flex-end;
+    justify-content: center;
+    height: 32px;
+    padding-top: 8px;
+}
+
+.cc-bar {
+    flex: 1;
+    background: rgba(255, 255, 255, .1);
+    border-radius: 2px 2px 0 0;
+}
+
+/* RANK */
+.cc-rank-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.cc-rank {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    line-height: 15px;
+}
+
+.cc-rank-arrow {
+    font-size: 6px;
+    color: rgba(251, 191, 36, .6);
+}
+
+/* ACTIVE */
+.cc-active-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.cc-active-icon {
+    font-size: 8px;
+}
+
+.cc-active-label {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    line-height: 15px;
+}
+
+/* LIVE FEED */
+.cc-feed-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.cc-feed-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.cc-feed-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    color: #fff;
+    letter-spacing: 2px;
+    line-height: 28px;
+    font-weight: 400;
+}
+
+.cc-feed-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: #64748b;
+    text-transform: uppercase;
+    line-height: 15px;
+}
+
+.cc-feed-terminal {
+    background: rgba(26, 29, 46, .4);
+    border: 1px solid rgba(255, 255, 255, .05);
+    border-radius: 16px;
+    padding: 16px;
+    height: 256px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.cc-log-entry {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding-bottom: 9px;
+    border-bottom: 1px solid rgba(255, 255, 255, .05);
+    margin-bottom: 12px;
+}
+
+.cc-log-entry:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.cc-log-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    line-height: 16px;
+    flex-shrink: 0;
+}
+
+.cc-log-msg {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    line-height: 16px;
+}
+
+/* FOOTER */
+.cc-footer {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 430px;
+    background: linear-gradient(to top, #0a0a0f 50%, rgba(10, 10, 15, 0));
+    padding: 16px 24px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    z-index: 10;
+}
+
+.cc-footer-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.cc-action-pill {
+    flex: 1;
+    backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 9999px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 5px 22px;
+}
+
+.cc-pill-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    cursor: pointer;
+}
+
+.cc-pill-icon {
+    font-size: 13px;
+}
+
+.cc-pill-label {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 8px;
+    letter-spacing: -.4px;
+    text-transform: uppercase;
+    line-height: 12px;
+    text-align: center;
+}
+
+.cc-pill-divider {
+    width: 1px;
+    height: 24px;
+    background: rgba(255, 255, 255, .1);
+}
+
+.cc-emergency-fab {
+    width: 56px;
+    height: 56px;
+    background: #f44725;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    cursor: pointer;
+    box-shadow: 0 0 20px rgba(244, 71, 37, .4);
+    margin-left: 16px;
+    flex-shrink: 0;
+}
+
+.cc-scan-fab {
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 80px;
+    background: #fff;
+    border: 4px solid #0a0a0f;
+    border-radius: 9999px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, .25);
+    cursor: pointer;
+}
+
+.cc-scan-icon {
+    font-size: 22px;
+    color: #000;
+}
+
+.cc-scan-label {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 8px;
+    color: #000;
+    letter-spacing: -.4px;
+    text-transform: uppercase;
+    line-height: 12px;
+}

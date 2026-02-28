@@ -1,0 +1,595 @@
+/* ONBOARDING STEPS 2-6 — PIXEL-PERFECT FROM FIGMA (3:854) */
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;700&family=Outfit:wght@400;600&display=swap');
+
+.obs-root {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    background: #000;
+    max-width: 430px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* AMBIENT GLOWS */
+.obs-glow-cyan {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    background: rgba(19, 236, 236, .1);
+    filter: blur(30px);
+    left: -40px;
+    top: 870px;
+    pointer-events: none;
+}
+
+.obs-glow-red {
+    position: absolute;
+    width: 128px;
+    height: 128px;
+    background: rgba(255, 77, 77, .1);
+    filter: blur(40px);
+    right: -40px;
+    top: 600px;
+    pointer-events: none;
+}
+
+/* STICKY HEADER */
+.obs-sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(6px);
+    background: rgba(0, 0, 0, .8);
+    border-bottom: 1px solid rgba(255, 255, 255, .1);
+    padding: 16px 24px 17px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.obs-brand {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    color: #13ecec;
+    letter-spacing: 2.4px;
+    font-weight: 400;
+    line-height: 32px;
+}
+
+.obs-header-shapes {
+    display: flex;
+    gap: 16px;
+}
+
+.obs-h-shape {
+    font-size: 14px;
+    color: rgba(255, 255, 255, .4);
+}
+
+.obs-h-shape.active {
+    color: #13ecec;
+}
+
+/* PROGRESS BAR */
+.obs-progress-wrap {
+    padding: 0 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+    z-index: 10;
+}
+
+.obs-progress-bar {
+    height: 2px;
+    background: rgba(255, 255, 255, .1);
+    width: 100%;
+    position: relative;
+}
+
+.obs-progress-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    background: #13ecec;
+    transition: width .4s ease;
+}
+
+.obs-progress-label {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 500;
+    font-size: 11px;
+    color: #f1f5f9;
+    letter-spacing: 2.2px;
+    line-height: 16.5px;
+    text-align: right;
+}
+
+/* MAIN */
+.obs-main {
+    display: flex;
+    flex-direction: column;
+    gap: 128px;
+    padding: 96px 24px 128px;
+    position: relative;
+    z-index: 1;
+}
+
+.obs-main.single-step {
+    gap: 0;
+    padding: 32px 24px 96px;
+}
+
+/* STEP SECTIONS */
+.obs-step {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.obs-step-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    color: #fff;
+    letter-spacing: 1.8px;
+    line-height: 40px;
+    font-weight: 400;
+    margin: 0;
+}
+
+.obs-step-title.gold {
+    color: #fc0;
+}
+
+/* HEX UPLOAD */
+.obs-avatar-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 24px 0;
+}
+
+.obs-hex-upload {
+    width: 192px;
+    height: 224px;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    background: rgba(255, 255, 255, .05);
+    border: 2px solid transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.obs-upload-icon {
+    font-size: 33px;
+    color: rgba(255, 255, 255, .4);
+}
+
+.obs-upload-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: rgba(255, 255, 255, .6);
+    letter-spacing: -.5px;
+    text-transform: uppercase;
+    text-align: center;
+}
+
+/* SYMBOLS */
+.obs-symbol-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.obs-sub-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: rgba(255, 255, 255, .4);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-align: center;
+}
+
+.obs-symbols {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+}
+
+.obs-sym {
+    width: 48px;
+    height: 48px;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, .2);
+    background: none;
+    font-size: 20px;
+    color: #f1f5f9;
+    cursor: pointer;
+}
+
+.obs-sym.active {
+    border-width: 2px;
+    border-color: #13ecec;
+    background: rgba(19, 236, 236, .1);
+    color: #13ecec;
+    box-shadow: 0 0 15px rgba(19, 236, 236, .5);
+}
+
+.obs-colors {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    padding-top: 8px;
+}
+
+.obs-color {
+    width: 24px;
+    height: 24px;
+    border-radius: 9999px;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.obs-color.active {
+    box-shadow: 0 0 0 2px #000, 0 0 0 4px rgba(255, 255, 255, .2);
+}
+
+/* USERNAME */
+.obs-username-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.obs-field-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: rgba(255, 255, 255, .4);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.obs-username-input-wrap {
+    position: relative;
+}
+
+.obs-text-input {
+    width: 100%;
+    background: rgba(255, 255, 255, .05);
+    border: none;
+    border-bottom: 2px solid rgba(19, 236, 236, .3);
+    padding: 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 16px;
+    color: #fff;
+    box-sizing: border-box;
+    line-height: 24px;
+}
+
+.obs-avail {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: #13ecec;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* CTA BUTTONS */
+.obs-cta-btn {
+    width: 100%;
+    padding: 20px;
+    border: none;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    letter-spacing: 2.4px;
+    text-align: center;
+    cursor: pointer;
+    line-height: 32px;
+    font-weight: 400;
+}
+
+.obs-cta-btn.cyan {
+    background: #13ecec;
+    color: #000;
+    box-shadow: 0 10px 15px -3px rgba(19, 236, 236, .2);
+}
+
+.obs-cta-btn.round {
+    border-radius: 9999px;
+}
+
+.obs-cta-btn.outline {
+    background: rgba(255, 255, 255, .05);
+    border: 2px solid rgba(255, 255, 255, .2);
+    color: #fff;
+}
+
+.obs-cta-btn.gold {
+    background: #fc0;
+    color: #000;
+    box-shadow: 0 0 20px rgba(255, 204, 0, .3);
+}
+
+.obs-cta-btn.cyan-outline {
+    background: none;
+    border: 2px solid #13ecec;
+    color: #13ecec;
+}
+
+/* SKILLS CLOUD */
+.obs-skills-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.obs-pill {
+    padding: 9px 21px;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, .1);
+    background: rgba(255, 255, 255, .05);
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    color: rgba(255, 255, 255, .6);
+    cursor: pointer;
+    line-height: 20px;
+}
+
+.obs-pill.active {
+    background: rgba(19, 236, 236, .1);
+    border-color: rgba(19, 236, 236, .4);
+    color: #13ecec;
+    font-weight: 600;
+    box-shadow: 0 0 15px rgba(19, 236, 236, .4);
+}
+
+/* FIELDS */
+.obs-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.obs-dropdown {
+    background: #1a1d2e;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'Outfit', sans-serif;
+    font-size: 16px;
+    color: #fff;
+    cursor: pointer;
+    line-height: 24px;
+}
+
+.obs-dd-arrow {
+    font-size: 14px;
+    color: rgba(255, 255, 255, .4);
+}
+
+.obs-radar {
+    display: flex;
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 9999px;
+    padding: 5px;
+}
+
+.obs-radar-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    background: none;
+    border-radius: 9999px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    color: rgba(255, 255, 255, .5);
+    cursor: pointer;
+    text-align: center;
+    line-height: 20px;
+}
+
+.obs-radar-btn.active {
+    background: rgba(255, 255, 255, .2);
+    color: #fff;
+    font-weight: 600;
+}
+
+/* ALLIES GRID */
+.obs-allies-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.obs-ally-card {
+    background: rgba(26, 29, 46, .5);
+    border: 1px solid rgba(255, 255, 255, .1);
+    padding: 17px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.obs-ally-avatar {
+    width: 64px;
+    height: 64px;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.obs-ally-avatar img {
+    width: 56px;
+    height: 56px;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    object-fit: cover;
+}
+
+.obs-ally-name {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: #f1f5f9;
+    text-align: center;
+    line-height: 20px;
+}
+
+.obs-ally-members {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: rgba(255, 255, 255, .4);
+    text-align: center;
+}
+
+.obs-follow-btn {
+    width: 100%;
+    padding: 9px;
+    border: 1px solid rgba(19, 236, 236, .4);
+    background: rgba(19, 236, 236, .2);
+    border-radius: 9999px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: #13ecec;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-align: center;
+}
+
+/* MISSION CARD */
+.obs-mission-card {
+    background: #1a1d2e;
+    border-top: 4px solid #ff4d4d;
+    overflow: hidden;
+}
+
+.obs-mission-img {
+    height: 192px;
+    opacity: .6;
+    overflow: hidden;
+}
+
+.obs-mission-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.obs-mission-body {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.obs-mission-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.obs-mission-priority {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: #ff4d4d;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    display: block;
+    line-height: 15px;
+}
+
+.obs-mission-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    color: #fff;
+    letter-spacing: .6px;
+    line-height: 32px;
+    display: block;
+    font-weight: 400;
+}
+
+.obs-mission-date {
+    background: rgba(0, 0, 0, .4);
+    border: 1px solid rgba(255, 255, 255, .2);
+    padding: 5px 13px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: #fc0;
+    line-height: 16px;
+    white-space: nowrap;
+}
+
+.obs-mission-desc {
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    color: rgba(255, 255, 255, .6);
+    line-height: 22.75px;
+    margin: 0;
+}
+
+.obs-register-btn {
+    width: 100%;
+    padding: 16px;
+    background: #ff4d4d;
+    border: none;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    color: #fff;
+    letter-spacing: 2px;
+    text-align: center;
+    cursor: pointer;
+    line-height: 28px;
+    font-weight: 400;
+}
+
+/* FINAL CTA */
+.obs-final-cta {
+    padding-top: 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    align-items: center;
+}
+
+.obs-enter-btn {
+    width: 100%;
+    padding: 36px 4px;
+    background: #13ecec;
+    border: 4px solid rgba(255, 255, 255, .2);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    color: #000;
+    letter-spacing: 7.2px;
+    text-align: center;
+    cursor: pointer;
+    line-height: 40px;
+    box-shadow: 0 0 15px rgba(19, 236, 236, .4);
+    font-weight: 400;
+}
+
+.obs-final-status {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: rgba(255, 255, 255, .3);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-align: center;
+}

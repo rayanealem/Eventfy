@@ -1,0 +1,304 @@
+/* ====================================================
+   NOTIFICATIONS — PIXEL-PERFECT FROM FIGMA (3:163)
+   ==================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Outfit:wght@400;500;600&family=Inter:wght@400&display=swap');
+
+.notif-root {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    background: #000000;
+    max-width: 448px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.notif-noise {
+    position: absolute;
+    inset: 0;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 390px 390px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* ===== HEADER ===== */
+.notif-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 56px 24px 8px 24px;
+    position: relative;
+    z-index: 1;
+}
+
+.notif-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    color: white;
+    letter-spacing: 0.9px;
+    line-height: 36px;
+    font-weight: 400;
+}
+
+.notif-shape {
+    font-family: 'Liberation Serif', serif;
+    font-size: 24px;
+    color: white;
+}
+
+.notif-mark-read {
+    background: transparent;
+    border: none;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: #00e5cc;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    padding-bottom: 6px;
+    line-height: 15px;
+}
+
+.notif-mark-read:hover {
+    opacity: 0.8;
+}
+
+/* ===== TABS ===== */
+.notif-tabs {
+    display: flex;
+    align-items: flex-start;
+    padding: 16px 24px 0 24px;
+    border-bottom: 1px solid rgba(51, 51, 51, 0.5);
+    position: relative;
+    z-index: 1;
+}
+
+.notif-tab {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding-bottom: 14px;
+    margin-right: 24px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    color: #64748b;
+    letter-spacing: 0.9px;
+    cursor: pointer;
+    line-height: 28px;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.notif-tab:last-child {
+    margin-right: 0;
+}
+
+.notif-tab.active {
+    color: white;
+    border-bottom-color: #ff4d4d;
+}
+
+.notif-tab:hover:not(.active) {
+    color: #94a3b8;
+}
+
+/* ===== NOTIFICATION LIST ===== */
+.notif-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 24px 16px;
+    position: relative;
+    z-index: 1;
+}
+
+/* ===== NOTIFICATION ITEM ===== */
+.notif-item {
+    background: #111111;
+    border-left: 2px solid transparent;
+    padding: 16px 16px 16px 18px;
+}
+
+.notif-item.glow {
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
+}
+
+.notif-item.faded {
+    opacity: 0.6;
+}
+
+.notif-item-inner {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+/* Icon */
+.notif-icon-wrap {
+    padding-top: 4px;
+    flex-shrink: 0;
+}
+
+.notif-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+}
+
+.notif-icon span {
+    font-size: 15px;
+}
+
+.notif-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 9999px;
+    overflow: hidden;
+    background: #1e293b;
+}
+
+.notif-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.8;
+}
+
+/* Content */
+.notif-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.notif-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.notif-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    line-height: 15px;
+}
+
+.notif-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: #64748b;
+    line-height: 15px;
+}
+
+.notif-text-wrap {
+    padding-bottom: 8px;
+}
+
+.notif-text {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    color: white;
+    line-height: 19.25px;
+}
+
+.notif-text strong {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    color: white;
+}
+
+.notif-text-rest {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    color: #cbd5e1;
+}
+
+.notif-subtitle {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 400;
+    font-size: 12px;
+    color: #94a3b8;
+    line-height: 16px;
+    margin-top: 1px;
+}
+
+/* Actions */
+.notif-action-filled {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    background: rgba(0, 229, 204, 0.1);
+    border: none;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 10px;
+    color: #00e5cc;
+    letter-spacing: 1px;
+    text-align: center;
+    cursor: pointer;
+    align-self: flex-start;
+    line-height: 15px;
+    transition: all 0.2s;
+}
+
+.notif-action-filled:hover {
+    background: rgba(0, 229, 204, 0.2);
+}
+
+.notif-action-outlined {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 13px;
+    background: transparent;
+    border: 1px solid #00e5cc;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 10px;
+    color: #00e5cc;
+    letter-spacing: 1px;
+    text-align: center;
+    cursor: pointer;
+    align-self: flex-start;
+    line-height: 15px;
+    transition: all 0.2s;
+}
+
+.notif-action-outlined:hover {
+    background: rgba(0, 229, 204, 0.08);
+}
+
+.notif-download {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: none;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    cursor: pointer;
+    padding-top: 5px;
+    line-height: 15px;
+    transition: all 0.2s;
+}
+
+.notif-download:hover {
+    color: white;
+}
+
+.dl-icon {
+    font-size: 11px;
+}

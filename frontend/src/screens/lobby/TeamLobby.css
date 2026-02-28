@@ -1,0 +1,502 @@
+/* TEAM LOBBY — PIXEL-PERFECT FROM FIGMA (9:9) */
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;700&display=swap');
+
+.tl-root {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    background: #000;
+    max-width: 430px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid #1e293b;
+    border-right: 1px solid #1e293b;
+}
+
+.tl-noise {
+    position: absolute;
+    inset: 0;
+    opacity: .04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* HEADER */
+.tl-header {
+    border-bottom: 1px solid rgba(255, 255, 255, .1);
+    padding: 24px 24px 9px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: relative;
+    z-index: 1;
+}
+
+.tl-header-top {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+}
+
+.tl-title-wrap {
+    display: flex;
+    flex-direction: column;
+}
+
+.tl-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    color: #fff;
+    letter-spacing: 1.8px;
+    line-height: 36px;
+    font-weight: 400;
+}
+
+.tl-title-shape {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    color: #fff;
+    letter-spacing: 1.8px;
+    line-height: 36px;
+}
+
+.tl-countdown {
+    display: flex;
+    flex-direction: column;
+}
+
+.tl-cd-label {
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    font-size: 14px;
+    color: #f44725;
+    line-height: 20px;
+}
+
+.tl-cd-time {
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    font-size: 14px;
+    color: #f44725;
+    line-height: 20px;
+}
+
+.tl-event-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tl-event-badge {
+    background: rgba(255, 255, 255, .1);
+    border: 1px solid rgba(255, 255, 255, .2);
+    border-radius: 2px;
+    padding: 5px 13px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: #fff;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    line-height: 15px;
+}
+
+.tl-online {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
+
+.tl-online-dot {
+    width: 8px;
+    height: 8px;
+    background: #2dd4bf;
+    border-radius: 12px;
+}
+
+.tl-online span {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: #2dd4bf;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    line-height: 15px;
+}
+
+.tl-create-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 8px;
+}
+
+.tl-input {
+    width: 100%;
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 2px;
+    padding: 18px 17px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: #fff;
+    letter-spacing: 1.4px;
+    outline: none;
+}
+
+.tl-input::placeholder {
+    color: rgba(255, 255, 255, .3);
+}
+
+.tl-create-btns {
+    display: flex;
+    gap: 8px;
+}
+
+.tl-create-btn {
+    flex: 1;
+    padding: 13px 16px;
+    background: #f44725;
+    border: none;
+    border-radius: 2px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    color: #fff;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all .2s;
+}
+
+.tl-create-btn:hover {
+    opacity: .9;
+}
+
+.tl-copy-btn {
+    padding: 13px 25px;
+    background: rgba(45, 212, 191, .2);
+    border: 1px solid rgba(45, 212, 191, .4);
+    border-radius: 2px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    color: #2dd4bf;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all .2s;
+}
+
+.tl-copy-btn:hover {
+    background: rgba(45, 212, 191, .3);
+}
+
+/* MAIN */
+.tl-main {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 16px;
+    overflow: hidden;
+    padding-bottom: 128px;
+    position: relative;
+    z-index: 1;
+}
+
+.tl-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px;
+}
+
+.tl-section-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: rgba(255, 255, 255, .4);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    line-height: 15px;
+}
+
+.tl-section-layout {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: rgba(255, 255, 255, .2);
+    line-height: 15px;
+}
+
+/* TEAM GRID */
+.tl-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.tl-team-card {
+    background: #1a1d2e;
+    border-left: 2px solid;
+    border-radius: 2px;
+    padding: 12px 12px 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.tl-team-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.tl-team-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    color: #f1f5f9;
+    letter-spacing: -.6px;
+    line-height: 16px;
+}
+
+.tl-team-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    line-height: 13.5px;
+}
+
+.tl-team-avatars {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.tl-team-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    overflow: hidden;
+    position: relative;
+    background: #334155;
+    border: 1px solid rgba(255, 255, 255, .1);
+}
+
+.tl-team-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.tl-star {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    font-size: 8px;
+    color: #ffd700;
+}
+
+.tl-team-skills {
+    display: flex;
+    gap: 4px;
+}
+
+.tl-skill-pill {
+    background: rgba(255, 255, 255, .05);
+    border-radius: 2px;
+    padding: 2px 6px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 400;
+    font-size: 8px;
+    color: rgba(255, 255, 255, .6);
+    line-height: 12px;
+}
+
+/* YOUR TEAM */
+.tl-your-team {
+    background: #1a1d2e;
+    border: 2px solid #f44725;
+    border-radius: 4px;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    box-shadow: 0 0 15px rgba(244, 71, 37, .4);
+}
+
+.tl-yt-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.tl-yt-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    color: #f44725;
+    letter-spacing: 2.4px;
+    text-transform: uppercase;
+    line-height: 16px;
+}
+
+.tl-yt-badge {
+    background: rgba(244, 71, 37, .2);
+    border-radius: 2px;
+    padding: 2px 8px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: #f44725;
+    line-height: 15px;
+}
+
+.tl-yt-members {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.tl-yt-avatars {
+    display: flex;
+}
+
+.tl-yt-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin-right: -12px;
+    border: 2px solid rgba(255, 255, 255, .2);
+    background: #1e293b;
+}
+
+.tl-yt-avatar.leader {
+    border-color: #f44725;
+    background: rgba(244, 71, 37, .2);
+}
+
+.tl-yt-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.tl-yt-avatar-placeholder {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 2px dashed rgba(255, 255, 255, .2);
+    background: rgba(255, 255, 255, .05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: rgba(255, 255, 255, .4);
+}
+
+.tl-yt-capacity {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.tl-yt-cap-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: rgba(255, 255, 255, .4);
+    line-height: 15px;
+}
+
+.tl-yt-cap-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    color: #f1f5f9;
+    letter-spacing: 2px;
+    line-height: 28px;
+}
+
+.tl-yt-skills {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tl-yt-skills-label {
+    display: flex;
+    justify-content: space-between;
+}
+
+.tl-yt-skills-label span {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: #2dd4bf;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    line-height: 15px;
+}
+
+.tl-yt-bar {
+    height: 8px;
+    background: rgba(255, 255, 255, .1);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.tl-yt-bar-fill {
+    width: 75%;
+    height: 100%;
+    background: #2dd4bf;
+    box-shadow: 0 0 10px rgba(45, 212, 191, .5);
+}
+
+.tl-yt-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    padding-top: 8px;
+}
+
+.tl-leave-btn {
+    width: 151px;
+    padding: 13px 17px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, .2);
+    border-radius: 2px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: rgba(255, 255, 255, .6);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-align: center;
+}
+
+.tl-ready-btn {
+    width: 149px;
+    padding: 13px 16px;
+    background: #f44725;
+    border: none;
+    border-radius: 2px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: #fff;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-align: center;
+    box-shadow: 0 0 20px rgba(244, 71, 37, .3);
+}
+
+.tl-ready-btn:hover {
+    opacity: .9;
+}
