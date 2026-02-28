@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import './EventDetail.css';
@@ -41,6 +42,13 @@ const TIERS = [
 export default function EventDetail() {
     const navigate = useNavigate();
     const { id } = useParams();
+    // Dummy event object to demonstrate polymorphism
+    const event = { id, type: 'cultural', orgId: 'org123' };
+
+    // activeTab: 'INFO' | 'COMMUNITY' | 'VOLUNTEERS' | 'SPONSORS'
+    const [activeTab, setActiveTab] = useState('INFO');
+    const [selectedTier, setSelectedTier] = useState(null);
+    const [isRegistered, setIsRegistered] = useState(false);
 
     return (
         <div className="event-root">
@@ -53,8 +61,8 @@ export default function EventDetail() {
                         <path d="M10 12L6 8L10 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 </button>
-                <span className="event-topnav-title">MISSION: EVENTFY ◇</span>
-                <button className="event-share">
+                <span className="event-topnav-title" onClick={() => navigate('/org/' + event.orgId)} style={{ cursor: 'pointer' }}>MISSION: EVENTFY ◇</span>
+                <button className="event-share" onClick={() => { if (navigator.share) navigator.share({ title: 'ALGIERS MUSIC FESTIVAL', url: `/event/${id}` }); }}>
                     <svg width="18" height="20" viewBox="0 0 18 20" fill="none">
                         <path d="M2 10l7-8M9 2l7 8M9 2v14" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
@@ -82,145 +90,205 @@ export default function EventDetail() {
             </div>
 
             {/* Tabs */}
-            <div className="event-tabs">
-                <button className="event-tab active">INFO</button>
-                <button className="event-tab">TICKETS</button>
-                <button className="event-tab">MAP</button>
+            <div className="event-tabs" style={{ overflowX: 'auto', whiteSpace: 'nowrap', justifyContent: 'flex-start', WebkitOverflowScrolling: 'touch' }}>
+                <button className={`event-tab ${activeTab === 'INFO' ? 'active' : ''}`} onClick={() => setActiveTab('INFO')}>INFO</button>
+                <button className={`event-tab ${activeTab === 'COMMUNITY' ? 'active' : ''}`} onClick={() => setActiveTab('COMMUNITY')}>COMMUNITY</button>
+                <button className={`event-tab ${activeTab === 'VOLUNTEERS' ? 'active' : ''}`} onClick={() => setActiveTab('VOLUNTEERS')}>VOLUNTEERS</button>
+                <button className={`event-tab ${activeTab === 'SPONSORS' ? 'active' : ''}`} onClick={() => setActiveTab('SPONSORS')}>SPONSORS</button>
             </div>
 
             {/* Content */}
             <div className="event-content">
-                {/* Lineup */}
-                <section className="event-section">
-                    <div className="event-section-header">
-                        <h2 className="event-section-title">THE LINEUP</h2>
-                        <span className="event-section-count">04 PERFORMERS</span>
-                    </div>
-                    <div className="event-artists">
-                        {ARTISTS.map((a, i) => (
-                            <motion.div
-                                key={i}
-                                className="event-artist"
-                                initial={{ opacity: 0, x: -16 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: i * 0.1 }}
-                            >
-                                <div className={`event-artist-avatar ${a.highlighted ? 'highlighted' : ''}`}>
-                                    <img src={a.image} alt={a.name} />
-                                </div>
-                                <div className="event-artist-info">
-                                    <div className="event-artist-row">
-                                        <span className="event-artist-name">{a.name}</span>
-                                        <span className="event-artist-time" style={{ background: a.timeBg }}>{a.time}</span>
+                {activeTab === 'INFO' && (
+                    <>
+                        {event.type === 'cultural' && (
+                            <>
+                                {/* Lineup */}
+                                <section className="event-section">
+                                    <div className="event-section-header">
+                                        <h2 className="event-section-title">THE LINEUP</h2>
+                                        <span className="event-section-count">04 PERFORMERS</span>
                                     </div>
-                                    <span className="event-artist-stage">{a.stage}</span>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
-                </section>
+                                    <div className="event-artists">
+                                        {ARTISTS.map((a, i) => (
+                                            <motion.div
+                                                key={i}
+                                                className="event-artist"
+                                                initial={{ opacity: 0, x: -16 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ delay: i * 0.1 }}
+                                            >
+                                                <div className={`event-artist-avatar ${a.highlighted ? 'highlighted' : ''}`}>
+                                                    <img src={a.image} alt={a.name} />
+                                                </div>
+                                                <div className="event-artist-info">
+                                                    <div className="event-artist-row">
+                                                        <span className="event-artist-name">{a.name}</span>
+                                                        <span className="event-artist-time" style={{ background: a.timeBg }}>{a.time}</span>
+                                                    </div>
+                                                    <span className="event-artist-stage">{a.stage}</span>
+                                                </div>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                </section>
 
-                {/* Access Tiers */}
-                <section className="event-section">
-                    <h2 className="event-section-title">ACCESS TIERS</h2>
-                    <div className="event-tiers">
-                        {TIERS.map((tier, i) => (
-                            <motion.div
-                                key={i}
-                                className="event-tier"
-                                style={{ background: tier.bg, borderColor: tier.border }}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.1 + i * 0.12 }}
-                            >
-                                {tier.recommended && <div className="tier-recommended">RECOMMENDED</div>}
-                                <div className="tier-header">
-                                    <div className="tier-info">
-                                        <div className="tier-name-row">
-                                            <span className="tier-shape" style={{ color: tier.shapeColor }}>{tier.shape}</span>
-                                            <span className="tier-name" style={{ color: tier.nameColor }}>{tier.name}</span>
-                                        </div>
-                                        <span className="tier-subtitle" style={{ color: tier.subtitleColor }}>{tier.subtitle}</span>
+                                {/* Access Tiers */}
+                                <section className="event-section">
+                                    <h2 className="event-section-title">ACCESS TIERS</h2>
+                                    <div className="event-tiers">
+                                        {TIERS.map((tier, i) => (
+                                            <motion.div
+                                                key={i}
+                                                className="event-tier"
+                                                style={{ background: tier.bg, borderColor: tier.border }}
+                                                initial={{ opacity: 0, y: 20 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: 0.1 + i * 0.12 }}
+                                            >
+                                                {tier.recommended && <div className="tier-recommended">RECOMMENDED</div>}
+                                                <div className="tier-header">
+                                                    <div className="tier-info">
+                                                        <div className="tier-name-row">
+                                                            <span className="tier-shape" style={{ color: tier.shapeColor }}>{tier.shape}</span>
+                                                            <span className="tier-name" style={{ color: tier.nameColor }}>{tier.name}</span>
+                                                        </div>
+                                                        <span className="tier-subtitle" style={{ color: tier.subtitleColor }}>{tier.subtitle}</span>
+                                                    </div>
+                                                    <span className="tier-price">{tier.price}</span>
+                                                </div>
+                                                <div className="tier-items">
+                                                    {tier.items.map((item, j) => (
+                                                        <div key={j} className="tier-item">
+                                                            <div className="tier-dot" style={{ background: tier.dotColor }} />
+                                                            <span style={{ color: tier.itemColor }}>{item}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <button
+                                                    className="tier-button"
+                                                    onClick={() => setSelectedTier(tier.name)}
+                                                    style={{
+                                                        background: selectedTier === tier.name ? '#2dd4bf' : tier.buttonBg,
+                                                        borderColor: selectedTier === tier.name ? '#2dd4bf' : tier.buttonBorder,
+                                                        color: selectedTier === tier.name ? '#000' : tier.buttonColor,
+                                                        border: tier.buttonBorder !== 'transparent' ? `1px solid ${selectedTier === tier.name ? '#2dd4bf' : tier.buttonBorder}` : 'none',
+                                                    }}
+                                                >
+                                                    {selectedTier === tier.name ? 'SELECTED ✓' : tier.buttonText}
+                                                </button>
+                                            </motion.div>
+                                        ))}
                                     </div>
-                                    <span className="tier-price">{tier.price}</span>
-                                </div>
-                                <div className="tier-items">
-                                    {tier.items.map((item, j) => (
-                                        <div key={j} className="tier-item">
-                                            <div className="tier-dot" style={{ background: tier.dotColor }} />
-                                            <span style={{ color: tier.itemColor }}>{item}</span>
+                                </section>
+
+                                {/* Mission Site */}
+                                <section className="event-section">
+                                    <div className="event-section-header">
+                                        <h2 className="event-section-title">MISSION SITE</h2>
+                                        <span className="event-section-location">
+                                            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 0C4 0 0 2 0 6.5c0 4 6.5 6.5 6.5 6.5S13 10.5 13 6.5C13 2 9 0 6.5 0z" fill="#64748b" /><circle cx="6.5" cy="6.5" r="2" fill="black" /></svg>
+                                            ALGIERS ARENA
+                                        </span>
+                                    </div>
+                                    <div className="event-map-container">
+                                        <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?w=600&h=300&fit=crop&sat=-100" alt="Map" className="event-map-img" />
+                                        <div className="event-map-pin">
+                                            <span>◇</span>
                                         </div>
-                                    ))}
-                                </div>
-                                <button
-                                    className="tier-button"
-                                    style={{
-                                        background: tier.buttonBg,
-                                        borderColor: tier.buttonBorder,
-                                        color: tier.buttonColor,
-                                        border: tier.buttonBorder !== 'transparent' ? `1px solid ${tier.buttonBorder}` : 'none',
-                                    }}
-                                >
-                                    {tier.buttonText}
+                                        <div className="event-map-label">DROP POINT: SECTOR B-4</div>
+                                    </div>
+                                </section>
+
+                                {/* Gamification Card */}
+                                <section className="event-xp-card">
+                                    <div className="xp-bg-text">XP</div>
+                                    <div className="xp-content">
+                                        <div className="xp-header">
+                                            <div className="xp-icon">◇</div>
+                                            <div className="xp-info">
+                                                <span className="xp-label">MISSION REWARD</span>
+                                                <span className="xp-value">+200 PLAYER XP</span>
+                                            </div>
+                                        </div>
+                                        <div className="xp-badge-row">
+                                            <div className="xp-badge-icon">
+                                                <svg width="10" height="20" viewBox="0 0 10 20" fill="none">
+                                                    <path d="M5 0v20M0 5l5-5 5 5M0 15l5 5 5-5" stroke="#f45c25" strokeWidth="1.5" />
+                                                </svg>
+                                            </div>
+                                            <div className="xp-badge-info">
+                                                <span className="xp-badge-title">CULTURE ENTHUSIAST ◇</span>
+                                                <span className="xp-badge-sub">COLLECTIBLE BADGE</span>
+                                            </div>
+                                            <svg width="16" height="21" viewBox="0 0 16 21" fill="none">
+                                                <path d="M6 0l2 8h8l-6.5 5 2.5 8L6 16l-6 5L2.5 13 -4 8h8z" fill="#64748b" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </section>
+                            </>
+                        )}
+                        {event.type === 'sport' && (
+                            <section className="event-section" style={{ textAlign: 'center', padding: '40px 0' }}>
+                                <h2 className="event-section-title" style={{ marginBottom: '16px' }}>TEAM SELECTION</h2>
+                                <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', marginBottom: '24px' }}>Teams are forming for this sporting event.</p>
+                                <button className="tier-button" onClick={() => navigate(`/event/${event.id}/teams`)} style={{ borderColor: '#2dd4bf', color: '#2dd4bf', padding: '12px 24px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 'bold', background: 'transparent' }}>
+                                    JOIN A TEAM △
                                 </button>
-                            </motion.div>
-                        ))}
-                    </div>
-                </section>
+                            </section>
+                        )}
+                        {event.type === 'science' && (
+                            <section className="event-section" style={{ textAlign: 'center', padding: '40px 0' }}>
+                                <h2 className="event-section-title">SCIENCE TRACK</h2>
+                                <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', marginTop: '16px' }}>Panels, workshops, and hackathons.</p>
+                            </section>
+                        )}
+                        {event.type === 'charity' && (
+                            <section className="event-section" style={{ textAlign: 'center', padding: '40px 0' }}>
+                                <h2 className="event-section-title">DONATION GOALS</h2>
+                                <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', marginTop: '16px' }}>Help us reach our charitable milestones.</p>
+                            </section>
+                        )}
+                    </>
+                )}
 
-                {/* Mission Site */}
-                <section className="event-section">
-                    <div className="event-section-header">
-                        <h2 className="event-section-title">MISSION SITE</h2>
-                        <span className="event-section-location">
-                            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 0C4 0 0 2 0 6.5c0 4 6.5 6.5 6.5 6.5S13 10.5 13 6.5C13 2 9 0 6.5 0z" fill="#64748b" /><circle cx="6.5" cy="6.5" r="2" fill="black" /></svg>
-                            ALGIERS ARENA
-                        </span>
+                {activeTab === 'COMMUNITY' && (
+                    <div className="event-section" style={{ textAlign: 'center', padding: '40px 0' }}>
+                        <h3 style={{ color: 'white', fontFamily: 'var(--font-display)', letterSpacing: '2px', marginBottom: '16px' }}>COMMUNITY LOBBY</h3>
+                        <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', marginBottom: '32px' }}>Discuss strategies, find teammates, and connect.</p>
+                        <button className="tier-button" onClick={() => navigate(`/chat/${event.id}`)} style={{ borderColor: '#2dd4bf', color: '#2dd4bf', padding: '12px 24px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 'bold', background: 'transparent' }}>
+                            JOIN LOBBY CHAT ○
+                        </button>
                     </div>
-                    <div className="event-map-container">
-                        <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?w=600&h=300&fit=crop&sat=-100" alt="Map" className="event-map-img" />
-                        <div className="event-map-pin">
-                            <span>◇</span>
-                        </div>
-                        <div className="event-map-label">DROP POINT: SECTOR B-4</div>
+                )}
+                {activeTab === 'VOLUNTEERS' && (
+                    <div className="event-section" style={{ textAlign: 'center', padding: '40px 0' }}>
+                        <h3 style={{ color: 'white', fontFamily: 'var(--font-display)', letterSpacing: '2px', marginBottom: '16px' }}>VOLUNTEER MISSIONS</h3>
+                        <p style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>Help organize the event and earn special XP.</p>
                     </div>
-                </section>
-
-                {/* Gamification Card */}
-                <section className="event-xp-card">
-                    <div className="xp-bg-text">XP</div>
-                    <div className="xp-content">
-                        <div className="xp-header">
-                            <div className="xp-icon">◇</div>
-                            <div className="xp-info">
-                                <span className="xp-label">MISSION REWARD</span>
-                                <span className="xp-value">+200 PLAYER XP</span>
-                            </div>
-                        </div>
-                        <div className="xp-badge-row">
-                            <div className="xp-badge-icon">
-                                <svg width="10" height="20" viewBox="0 0 10 20" fill="none">
-                                    <path d="M5 0v20M0 5l5-5 5 5M0 15l5 5 5-5" stroke="#f45c25" strokeWidth="1.5" />
-                                </svg>
-                            </div>
-                            <div className="xp-badge-info">
-                                <span className="xp-badge-title">CULTURE ENTHUSIAST ◇</span>
-                                <span className="xp-badge-sub">COLLECTIBLE BADGE</span>
-                            </div>
-                            <svg width="16" height="21" viewBox="0 0 16 21" fill="none">
-                                <path d="M6 0l2 8h8l-6.5 5 2.5 8L6 16l-6 5L2.5 13 -4 8h8z" fill="#64748b" />
-                            </svg>
-                        </div>
+                )}
+                {activeTab === 'SPONSORS' && (
+                    <div className="event-section" style={{ textAlign: 'center', padding: '40px 0' }}>
+                        <h3 style={{ color: 'white', fontFamily: 'var(--font-display)', letterSpacing: '2px', marginBottom: '16px' }}>EVENT PARTNERS</h3>
+                        <p style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>Supported by leading brands in the industry.</p>
                     </div>
-                </section>
+                )}
             </div>
 
             {/* Sticky Footer */}
             <div className="event-footer">
-                <button className="event-cta">
-                    <span>ENTER THE GAME</span>
-                    <div className="cta-circle">○</div>
+                <button className="event-cta" onClick={() => setIsRegistered(r => !r)} style={isRegistered ? { background: '#2dd4bf' } : undefined}>
+                    <span>{isRegistered ? "YOU'RE IN ✓" : 'ENTER THE GAME'}</span>
+                    {!isRegistered && <div className="cta-circle">○</div>}
                 </button>
+                {isRegistered && (
+                    <button className="event-cta" onClick={() => navigate(`/qr/${id}`)} style={{ background: 'transparent', border: '1px solid white', marginTop: '12px' }}>
+                        <span>SCAN IN ○</span>
+                    </button>
+                )}
+                {/* Note: In a real app we'd check user role. Hardcoding the manage button for organizer simulation if needed, but not specified to always show. Example: */}
+                {/* <button className="event-cta" onClick={() => navigate(`/manage/${id}`)} style={{ background: 'var(--color-gold)', color: 'black', marginTop: '12px' }}><span>MANAGE THIS EVENT □</span></button> */}
             </div>
         </div>
     );

@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Story.css';
 
 const STORIES = [
@@ -8,6 +10,8 @@ const STORIES = [
 ];
 
 export default function Story() {
+    const navigate = useNavigate();
+    const [liked, setLiked] = useState(false);
     return (
         <div className="story-root">
             {/* Full Screen Story View */}
@@ -34,7 +38,7 @@ export default function Story() {
                     </div>
                     <div className="story-actions">
                         <span className="story-action">⋯</span>
-                        <span className="story-action">✕</span>
+                        <span className="story-action" onClick={() => navigate(-1)} style={{ cursor: 'pointer' }}>✕</span>
                     </div>
                 </div>
 
@@ -54,8 +58,8 @@ export default function Story() {
                         <input className="story-reply-input" placeholder="Send a message..." />
                     </div>
                     <div className="story-footer-actions">
-                        <span className="story-react">♡</span>
-                        <span className="story-share">↗</span>
+                        <span className="story-react" onClick={() => setLiked(l => !l)} style={{ cursor: 'pointer', color: liked ? '#ff4d4d' : undefined }}>{liked ? '♥' : '♡'}</span>
+                        <span className="story-share" style={{ cursor: 'pointer' }}>↗</span>
                     </div>
                 </div>
             </div>

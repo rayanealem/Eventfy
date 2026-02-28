@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import './Settings.css';
 
 const ACCOUNT_ITEMS = [
@@ -30,6 +31,7 @@ const ACCOUNT_ITEMS = [
 ];
 
 export default function Settings() {
+    const navigate = useNavigate();
     const [pushNotif, setPushNotif] = useState(true);
     const [emailDigests, setEmailDigests] = useState(false);
     const [showLocation, setShowLocation] = useState(false);
@@ -55,6 +57,7 @@ export default function Settings() {
                                 key={i}
                                 className="settings-row clickable"
                                 whileHover={{ background: 'rgba(255,255,255,0.02)' }}
+                                onClick={() => i === 0 ? navigate('/profile/edit') : null}
                             >
                                 <div className="settings-row-left">
                                     <span className="settings-icon">{item.icon}</span>
@@ -169,10 +172,10 @@ export default function Settings() {
 
                 {/* Log Out / Delete */}
                 <div className="settings-danger">
-                    <button className="logout-btn">
+                    <button className="logout-btn" onClick={() => navigate('/splash')}>
                         LOG OUT <span className="logout-x">✗</span>
                     </button>
-                    <button className="delete-account">
+                    <button className="delete-account" onClick={() => { if (window.confirm('Are you sure you want to delete your account?')) navigate('/splash'); }}>
                         DELETE ACCOUNT PERMANENTLY
                     </button>
                 </div>

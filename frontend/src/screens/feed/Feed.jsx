@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import './Feed.css';
 
 const MOCK_EVENTS = [
@@ -7,6 +8,7 @@ const MOCK_EVENTS = [
         id: '1',
         title: 'NEON CIRCUIT: THE FINAL ELIMINATION',
         org: 'ORG_PRIME',
+        orgId: 'org1',
         orgVerified: true,
         type: 'SPORT',
         typeShape: '○',
@@ -30,6 +32,7 @@ const MOCK_EVENTS = [
         id: '2',
         title: 'SYNTHWAVE REBELS LIVE',
         org: 'VOX_NETWORKS',
+        orgId: 'org2',
         orgVerified: false,
         type: 'MUSIC',
         typeShape: '□',
@@ -52,13 +55,26 @@ const MOCK_EVENTS = [
 
 const STORIES = [
     { id: 0, name: 'ADD STORY', isAdd: true, borderColor: '#f472b6' },
-    { id: 1, name: 'LIVE_P102', borderColor: '#f56e3d', image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop', nameColor: '#f1f5f9' },
-    { id: 2, name: 'ELITE_01', borderColor: '#2dd4bf', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop', nameColor: '#f1f5f9' },
-    { id: 3, name: 'SUPREME_X', borderColor: '#fbbf24', image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop', nameColor: '#f1f5f9' },
-    { id: 4, name: 'PLAYER_59', borderColor: '#334155', image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&h=80&fit=crop', nameColor: '#64748b', faded: true },
+    { id: 1, name: 'LIVE_P102', borderColor: '#f56e3d', image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop', nameColor: '#f1f5f9', orgId: 'org1' },
+    { id: 2, name: 'ELITE_01', borderColor: '#2dd4bf', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop', nameColor: '#f1f5f9', orgId: 'org2' },
+    { id: 3, name: 'SUPREME_X', borderColor: '#fbbf24', image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop', nameColor: '#f1f5f9', orgId: 'org3' },
+    { id: 4, name: 'PLAYER_59', borderColor: '#334155', image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&h=80&fit=crop', nameColor: '#64748b', faded: true, orgId: 'org4' },
 ];
 
 export default function Feed() {
+    const navigate = useNavigate();
+    const [registered, setRegistered] = useState({});
+    const [saved, setSaved] = useState({});
+    const [scope, setScope] = useState('local');
+
+    const toggleRegister = (eventId) => {
+        setRegistered(prev => ({ ...prev, [eventId]: !prev[eventId] }));
+    };
+
+    const toggleSave = (eventId) => {
+        setSaved(prev => ({ ...prev, [eventId]: !prev[eventId] }));
+    };
+
     return (
         <div className="feed-root">
             {/* Noise overlay */}
@@ -70,7 +86,7 @@ export default function Feed() {
                     <span className="feed-logo-shapes">○△□</span>
                     <span className="feed-logo-text">EVENTFY</span>
                 </div>
-                <div className="feed-search-bar">
+                <div className="feed-search-bar" onClick={() => navigate('/explore')} style={{ cursor: 'pointer' }}>
                     <svg className="feed-search-icon" width="18.5" height="10.5" viewBox="0 0 19 11" fill="none">
                         <circle cx="5" cy="5" r="4.5" stroke="#64748b" strokeWidth="1" />
                         <line x1="8.5" y1="8" x2="13" y2="10.5" stroke="#64748b" strokeWidth="1" />
@@ -78,13 +94,13 @@ export default function Feed() {
                     <span className="feed-search-text">Search the Arena</span>
                 </div>
                 <div className="feed-header-actions">
-                    <div className="feed-notif-box">
+                    <div className="feed-notif-box" onClick={() => navigate('/notifications')} style={{ cursor: 'pointer' }}>
                         <svg width="16" height="20" viewBox="0 0 16 20" fill="none">
                             <path d="M8 0C5.8 0 4 1.8 4 4v4.6L2 11v2h12v-2l-2-2.4V4c0-2.2-1.8-4-4-4zm0 20c1.1 0 2-.9 2-2H6c0 1.1.9 2 2 2z" fill="rgba(255,255,255,0.5)" />
                         </svg>
                         <div className="feed-notif-dot" />
                     </div>
-                    <div className="feed-avatar-wrap">
+                    <div className="feed-avatar-wrap" onClick={() => navigate('/profile/me')} style={{ cursor: 'pointer' }}>
                         <img
                             className="feed-avatar-img"
                             src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=40&h=40&fit=crop"
@@ -98,7 +114,12 @@ export default function Feed() {
             {/* Story Row */}
             <div className="feed-stories">
                 {STORIES.map(s => (
-                    <div key={s.id} className={`feed-story ${s.faded ? 'faded' : ''}`}>
+                    <div
+                        key={s.id}
+                        className={`feed-story ${s.faded ? 'faded' : ''}`}
+                        onClick={() => s.isAdd ? navigate('/stories/create') : navigate(`/stories/${s.orgId}`)}
+                        style={{ cursor: 'pointer' }}
+                    >
                         <div
                             className={`feed-story-ring ${s.isAdd ? 'dashed' : ''}`}
                             style={{ borderColor: s.borderColor }}
@@ -122,15 +143,15 @@ export default function Feed() {
             {/* Toggle Bar */}
             <div className="feed-toggle-wrap">
                 <div className="feed-toggle-bar">
-                    <button className="feed-toggle-btn active">
+                    <button className={`feed-toggle-btn ${scope === 'local' ? 'active' : ''}`} onClick={() => setScope('local')}>
                         <span>LOCAL</span>
                         <span className="toggle-shape">○</span>
                     </button>
-                    <button className="feed-toggle-btn">
+                    <button className={`feed-toggle-btn ${scope === 'national' ? 'active' : ''}`} onClick={() => setScope('national')}>
                         <span>NATIONAL</span>
                         <span className="toggle-shape">△</span>
                     </button>
-                    <button className="feed-toggle-btn">
+                    <button className={`feed-toggle-btn ${scope === 'international' ? 'active' : ''}`} onClick={() => setScope('international')}>
                         <span>INTERNATIONAL</span>
                         <span className="toggle-shape">□</span>
                     </button>
@@ -151,8 +172,8 @@ export default function Feed() {
                             className="feed-card"
                             style={{ borderLeftColor: event.borderAccent }}
                         >
-                            {/* Image area */}
-                            <div className="feed-card-image">
+                            {/* Image area — clickable to event detail */}
+                            <div className="feed-card-image" onClick={() => navigate(`/event/${event.id}`)} style={{ cursor: 'pointer' }}>
                                 <img src={event.image} alt={event.title} />
                                 <div className="feed-card-gradient" />
                                 <div
@@ -169,9 +190,9 @@ export default function Feed() {
 
                             {/* Body */}
                             <div className="feed-card-body">
-                                <h3 className="feed-card-title">{event.title}</h3>
+                                <h3 className="feed-card-title" onClick={() => navigate(`/event/${event.id}`)} style={{ cursor: 'pointer' }}>{event.title}</h3>
 
-                                <div className="feed-card-org">
+                                <div className="feed-card-org" onClick={() => navigate(`/org/${event.orgId}`)} style={{ cursor: 'pointer' }}>
                                     <div className="feed-card-org-icon">
                                         <img
                                             src={`https://images.unsplash.com/photo-${event.id === '1' ? '1472099645785-5658abf4ff4e' : '1560250097-0b93528c311a'}?w=24&h=24&fit=crop`}
@@ -229,16 +250,23 @@ export default function Feed() {
                                 </div>
 
                                 <div className="feed-card-footer">
-                                    <button className={`feed-card-register ${event.registerStyle}`}>
-                                        REGISTER {event.registerShape}
+                                    <button
+                                        className={`feed-card-register ${registered[event.id] ? 'registered' : event.registerStyle}`}
+                                        onClick={() => toggleRegister(event.id)}
+                                        style={registered[event.id] ? { background: '#2dd4bf', borderColor: '#2dd4bf', color: '#000' } : undefined}
+                                    >
+                                        {registered[event.id] ? "YOU'RE IN ✓" : `REGISTER ${event.registerShape}`}
                                     </button>
                                     <div className="feed-card-actions">
-                                        <button className="feed-card-action-btn">
+                                        <button className="feed-card-action-btn" onClick={() => toggleSave(event.id)}>
                                             <svg width="14" height="18" viewBox="0 0 14 18" fill="none">
-                                                <path d="M1 2.5C1 1.67 1.67 1 2.5 1h9c.83 0 1.5.67 1.5 1.5V17l-6-3-6 3V2.5z" stroke="rgba(255,255,255,0.4)" strokeWidth="1.2" />
+                                                <path d="M1 2.5C1 1.67 1.67 1 2.5 1h9c.83 0 1.5.67 1.5 1.5V17l-6-3-6 3V2.5z"
+                                                    stroke={saved[event.id] ? '#fbbf24' : 'rgba(255,255,255,0.4)'}
+                                                    fill={saved[event.id] ? '#fbbf24' : 'none'}
+                                                    strokeWidth="1.2" />
                                             </svg>
                                         </button>
-                                        <button className="feed-card-action-btn">
+                                        <button className="feed-card-action-btn" onClick={() => { if (navigator.share) navigator.share({ title: event.title, url: `/event/${event.id}` }); }}>
                                             <svg width="18" height="20" viewBox="0 0 18 20" fill="none">
                                                 <path d="M2 10l7-8M9 2l7 8M9 2v14" stroke="rgba(255,255,255,0.4)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
                                             </svg>

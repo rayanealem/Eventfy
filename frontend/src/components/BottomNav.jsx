@@ -17,11 +17,11 @@ export default function BottomNav() {
                 <span className="nav-icon">△</span>
                 <span className="nav-label">△ EXPLORE</span>
             </NavLink>
-            <NavLink to="/hub" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <NavLink to="/profile/me" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                 <span className="nav-icon">□</span>
                 <span className="nav-label">□ EVENTS</span>
             </NavLink>
-            <NavLink to="/profile/@me" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <NavLink to="/profile/me" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                 <span className="nav-icon">◇</span>
                 <span className="nav-label">◇ PROFILE</span>
             </NavLink>

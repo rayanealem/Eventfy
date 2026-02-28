@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import './OrgProfile.css';
@@ -22,6 +23,9 @@ const TABS = ['EVENTS', 'ABOUT', 'REVIEWS'];
 
 export default function OrgProfile() {
     const navigate = useNavigate();
+    const [isFollowing, setIsFollowing] = useState(false);
+    const [isNotified, setIsNotified] = useState(false);
+    const [activeTab, setActiveTab] = useState('EVENTS');
 
     return (
         <div className="orgp-root">
@@ -53,8 +57,20 @@ export default function OrgProfile() {
 
             {/* Buttons */}
             <div className="orgp-actions">
-                <button className="orgp-follow-btn">FOLLOW +</button>
-                <button className="orgp-notify-btn">NOTIFY ME □</button>
+                <button
+                    className="orgp-follow-btn"
+                    onClick={() => setIsFollowing(f => !f)}
+                    style={isFollowing ? { background: '#2dd4bf', borderColor: '#2dd4bf', color: '#000' } : undefined}
+                >
+                    {isFollowing ? 'FOLLOWING ✓' : 'FOLLOW +'}
+                </button>
+                <button
+                    className="orgp-notify-btn"
+                    onClick={() => setIsNotified(n => !n)}
+                    style={isNotified ? { background: 'rgba(45,212,191,0.15)', borderColor: '#2dd4bf', color: '#2dd4bf' } : undefined}
+                >
+                    {isNotified ? 'NOTIFIED ✓' : 'NOTIFY ME □'}
+                </button>
             </div>
 
             {/* Stats */}
@@ -73,14 +89,14 @@ export default function OrgProfile() {
             {/* Tabs */}
             <div className="orgp-tabs">
                 {TABS.map((t, i) => (
-                    <button key={t} className={`orgp-tab ${i === 0 ? 'active' : ''}`}>{t}</button>
+                    <button key={t} className={`orgp-tab ${activeTab === t ? 'active' : ''}`} onClick={() => setActiveTab(t)}>{t}</button>
                 ))}
             </div>
 
             {/* Events Grid */}
             <div className="orgp-events">
                 {EVENTS.map((e, i) => (
-                    <motion.div key={i} className="orgp-event-card" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }}>
+                    <motion.div key={i} className="orgp-event-card" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }} onClick={() => navigate(`/event/${i + 1}`)} style={{ cursor: 'pointer' }}>
                         <img src={e.img} alt="" className="orgp-event-img" />
                         <div className="orgp-event-gradient" />
                         <div className="orgp-event-info">

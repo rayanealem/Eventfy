@@ -25,6 +25,8 @@ const POLL_OPTIONS = [
 
 export default function NewPost() {
     const navigate = useNavigate();
+    const [activeType, setActiveType] = useState('ANNOUNCEMENT');
+    const [activeAudience, setActiveAudience] = useState('EVENT ATTENDEES');
 
     return (
         <div className="np-root">
@@ -37,7 +39,7 @@ export default function NewPost() {
                     <span className="np-cancel-x">✗</span>
                 </button>
                 <h1 className="np-title">NEW POST □</h1>
-                <button className="np-publish-btn">
+                <button className="np-publish-btn" onClick={() => navigate(-1)}>
                     <span className="np-publish-text">PUBLISH</span>
                     <span className="np-publish-icon">△</span>
                 </button>
@@ -59,7 +61,7 @@ export default function NewPost() {
                 {/* Post Type Selector */}
                 <div className="np-types-row">
                     {POST_TYPES.map((t, i) => (
-                        <button key={i} className={`np-type-btn ${t.active ? 'active' : ''}`}>
+                        <button key={i} className={`np-type-btn ${activeType === t.label ? 'active' : ''}`} onClick={() => setActiveType(t.label)}>
                             {t.icon} {t.label}
                         </button>
                     ))}
@@ -110,7 +112,7 @@ export default function NewPost() {
                     <span className="np-audience-title">Audience Targeting</span>
                     <div className="np-audience-tags">
                         {AUDIENCE_TAGS.map((t, i) => (
-                            <button key={i} className={`np-aud-tag ${t.active ? 'active' : ''}`}>
+                            <button key={i} className={`np-aud-tag ${activeAudience === t.label ? 'active' : ''}`} onClick={() => setActiveAudience(t.label)}>
                                 {t.label}
                             </button>
                         ))}
@@ -121,7 +123,7 @@ export default function NewPost() {
             {/* Footer */}
             <div className="np-footer">
                 <button className="np-schedule-btn">SCHEDULE POST ◇</button>
-                <button className="np-publish-now-btn">PUBLISH NOW □</button>
+                <button className="np-publish-now-btn" onClick={() => navigate(-1)}>PUBLISH NOW □</button>
             </div>
         </div>
     );

@@ -15,6 +15,11 @@ export default function ParticipantLoginAuth() {
 
     return (
         <div className="auth-screen" id="participant-login-screen">
+            <button className="auth-back" onClick={() => navigate('/splash')}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M10 12L6 8L10 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+            </button>
             <div className="auth-header">
                 <motion.h1
                     className="auth-heading-large"

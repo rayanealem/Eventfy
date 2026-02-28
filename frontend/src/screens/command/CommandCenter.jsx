@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import './CommandCenter.css';
 
@@ -19,6 +20,7 @@ const LOG_ENTRIES = [
 ];
 
 export default function CommandCenter() {
+    const navigate = useNavigate();
     return (
         <div className="cc-root">
             <div className="cc-noise" />
@@ -119,7 +121,7 @@ export default function CommandCenter() {
                     </div>
                     <div className="cc-emergency-fab">⚠</div>
                 </div>
-                <div className="cc-scan-fab">
+                <div className="cc-scan-fab" onClick={() => navigate('/qr')} style={{ cursor: 'pointer' }}>
                     <span className="cc-scan-icon">⬡</span>
                     <span className="cc-scan-label">SCAN △</span>
                 </div>

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import './Chat.css';
@@ -42,6 +43,14 @@ const MESSAGES = [
 
 export default function Chat() {
     const navigate = useNavigate();
+    const [msgInput, setMsgInput] = useState('');
+    const [extraMsgs, setExtraMsgs] = useState([]);
+
+    const handleSend = () => {
+        if (!msgInput.trim()) return;
+        setExtraMsgs(prev => [...prev, { type: 'own', text: msgInput.trim(), time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
+        setMsgInput('');
+    };
 
     return (
         <div className="chat-root">
@@ -120,7 +129,7 @@ export default function Chat() {
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: 0.2 }}
                             >
-                                <div className="other-avatar">
+                                <div className="other-avatar" onClick={() => navigate('/profile/player456')} style={{ cursor: 'pointer' }}>
                                     <img src={msg.avatar} alt={msg.sender} />
                                 </div>
                                 <div className="other-content">
@@ -175,6 +184,19 @@ export default function Chat() {
                     return null;
                 })}
 
+                {/* Extra Messages */}
+                {extraMsgs.map((msg, i) => (
+                    <motion.div
+                        key={`extra-${i}`}
+                        className="chat-own-msg"
+                        initial={{ opacity: 0, x: 12 }}
+                        animate={{ opacity: 1, x: 0 }}
+                    >
+                        <div className="own-bubble">{msg.text}</div>
+                        <span className="own-time">{msg.time}</span>
+                    </motion.div>
+                ))}
+
                 {/* Typing Indicator */}
                 <div className="chat-typing">
                     <span className="typing-dots">○ ◇ □</span>
@@ -190,9 +212,16 @@ export default function Chat() {
                     <svg width="17" height="13" viewBox="0 0 17 13" fill="none"><path d="M1 1l7.5 5.5L16 1M1 12h15V1H1z" stroke="#64748b" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 </div>
                 <div className="chat-input-field">
-                    <span>Message #general...</span>
+                    <input
+                        type="text"
+                        placeholder="Message #general..."
+                        value={msgInput}
+                        onChange={e => setMsgInput(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleSend()}
+                        style={{ background: 'transparent', border: 'none', color: '#f1f5f9', fontFamily: "'DM Mono', monospace", fontSize: '11px', width: '100%', outline: 'none' }}
+                    />
                 </div>
-                <button className="chat-send-btn">
+                <button className="chat-send-btn" onClick={handleSend}>
                     SEND
                     <span className="send-shape">□</span>
                 </button>

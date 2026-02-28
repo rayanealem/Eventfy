@@ -1,4 +1,26 @@
 /* ===== AUTH SCREENS SHARED STYLES ===== */
+.auth-back {
+    position: absolute;
+    top: 48px;
+    left: 24px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    cursor: pointer;
+    z-index: 10;
+    transition: background 0.2s;
+}
+
+.auth-back:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
 .auth-screen {
     min-height: 100vh;
     display: flex;

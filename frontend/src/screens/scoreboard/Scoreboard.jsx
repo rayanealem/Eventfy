@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import './Scoreboard.css';
 
 const LEADERBOARD = [
@@ -24,6 +26,8 @@ const BADGES = [
 ];
 
 export default function Scoreboard() {
+    const navigate = useNavigate();
+    const [claimed, setClaimed] = useState({});
     return (
         <div className="sb-root">
             <div className="sb-noise" />
@@ -91,6 +95,8 @@ export default function Scoreboard() {
                             initial={{ opacity: 0, x: -8 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: i * 0.06 }}
+                            onClick={() => navigate(`/profile/${p.name.toLowerCase()}`)}
+                            style={{ cursor: 'pointer' }}
                         >
                             <div className="sb-lb-rank">
                                 {p.medal === 'gold' && <span className="sb-medal" style={{ color: '#ffd700' }}>🥇</span>}
@@ -136,10 +142,10 @@ export default function Scoreboard() {
                                 <span className="sb-ach-desc">{a.desc}</span>
                             </div>
                             <div className="sb-ach-status">
-                                {a.claimed ? (
+                                {(a.claimed || claimed[a.title]) ? (
                                     <span className="sb-ach-check">✓</span>
                                 ) : (
-                                    <button className="sb-ach-claim-btn">CLAIM</button>
+                                    <button className="sb-ach-claim-btn" onClick={() => setClaimed(prev => ({ ...prev, [a.title]: true }))}>CLAIM</button>
                                 )}
                             </div>
                         </motion.div>

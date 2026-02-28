@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import './PlayerProfile.css';
 
@@ -39,6 +40,7 @@ const PASSPORT_ENTRIES = [
 ];
 
 export default function PlayerProfile() {
+    const navigate = useNavigate();
     return (
         <div className="profile-root">
             <div className="profile-noise" />
@@ -77,7 +79,7 @@ export default function PlayerProfile() {
                         CS Student
                     </span>
                 </div>
-                <div className="profile-mode">○ PARTICIPANT MODE ○</div>
+                <div className="profile-mode" onClick={() => navigate('/profile/edit')} style={{ cursor: 'pointer' }}>○ PARTICIPANT MODE ○</div>
             </section>
 
             {/* Stats */}

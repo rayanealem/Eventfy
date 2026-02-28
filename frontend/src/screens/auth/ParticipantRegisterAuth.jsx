@@ -9,6 +9,7 @@ export default function ParticipantRegisterAuth() {
     const navigate = useNavigate();
     const [form, setForm] = useState({
         fullName: '', username: '', password: '', location: '', skillInput: '',
+        university: '', year: ''
     });
     const [skills, setSkills] = useState([...INITIAL_SKILLS]);
     const [isStudent, setIsStudent] = useState(true);
@@ -38,6 +39,11 @@ export default function ParticipantRegisterAuth() {
 
     return (
         <div className="auth-screen" id="participant-register-screen">
+            <button className="auth-back" onClick={() => navigate('/splash')}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M10 12L6 8L10 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+            </button>
             <div className="auth-header">
                 <motion.h1
                     className="auth-heading-large"
@@ -153,13 +159,37 @@ export default function ParticipantRegisterAuth() {
                     </button>
                 </div>
 
+                {isStudent && (
+                    <div className="input-group">
+                        <label htmlFor="reg-university">UNIVERSITY / INSTITUTE</label>
+                        <input
+                            id="reg-university"
+                            type="text"
+                            placeholder="University of Algiers"
+                            value={form.university}
+                            onChange={e => setForm(f => ({ ...f, university: e.target.value }))}
+                        />
+                        <div style={{ marginTop: '16px' }}>
+                            <label htmlFor="reg-year">STUDY YEAR</label>
+                            <input
+                                id="reg-year"
+                                type="text"
+                                placeholder="3rd Year LMD"
+                                value={form.year}
+                                onChange={e => setForm(f => ({ ...f, year: e.target.value }))}
+                            />
+                        </div>
+                    </div>
+                )}
+
                 <button type="submit" className="btn btn-coral" id="btn-claim-spot">
                     CLAIM YOUR SPOT ○
                 </button>
             </form>
 
-            <div className="auth-footer">
-                ALREADY A PLAYER? <Link to="/auth/participant/login" className="auth-link-white">LOGIN △</Link>
+            <div className="auth-footer" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div>ALREADY A PLAYER? <Link to="/auth/participant/login" className="auth-link-white">LOGIN △</Link></div>
+                <div>WANT TO HOST? <Link to="/auth/org/register" className="auth-link-teal">REGISTER AS ORGANIZATION</Link></div>
             </div>
         </div>
     );

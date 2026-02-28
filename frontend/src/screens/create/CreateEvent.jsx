@@ -20,6 +20,11 @@ const STEPS = [
 export default function CreateEvent() {
     const navigate = useNavigate();
     const [participantLimit, setParticipantLimit] = useState(100);
+    const [activeCategory, setActiveCategory] = useState('SPORT');
+    const [activeStep, setActiveStep] = useState(0);
+    const [waitlist, setWaitlist] = useState(true);
+    const [teamMode, setTeamMode] = useState(false);
+    const [pricing, setPricing] = useState('FREE');
 
     return (
         <div className="ce-root">
@@ -30,7 +35,7 @@ export default function CreateEvent() {
                 <div className="ce-header-top">
                     <button className="ce-back" onClick={() => navigate(-1)}>‹</button>
                     <h1 className="ce-title">CREATE EVENT □</h1>
-                    <button className="ce-close">✕</button>
+                    <button className="ce-close" onClick={() => { if (window.confirm('Discard draft?')) navigate(-1); }}>✕</button>
                 </div>
                 <div className="ce-progress">
                     <div className="ce-progress-line" />
@@ -58,7 +63,7 @@ export default function CreateEvent() {
 
                     <div className="ce-categories">
                         {CATEGORIES.map((c, i) => (
-                            <button key={i} className={`ce-cat-btn ${c.active ? 'active' : ''}`}>
+                            <button key={i} className={`ce-cat-btn ${activeCategory === c.label ? 'active' : ''}`} onClick={() => setActiveCategory(c.label)}>
                                 <span className="ce-cat-icon">{c.icon}</span>
                                 <span className="ce-cat-label">{c.label}</span>
                             </button>
@@ -96,29 +101,29 @@ export default function CreateEvent() {
                         <div className="ce-capacity-row">
                             <span className="ce-cap-label">Participant Limit</span>
                             <div className="ce-counter">
-                                <button className="ce-counter-btn">−</button>
+                                <button className="ce-counter-btn" onClick={() => setParticipantLimit(Math.max(1, participantLimit - 10))}>−</button>
                                 <span className="ce-counter-val">{participantLimit}</span>
-                                <button className="ce-counter-btn">+</button>
+                                <button className="ce-counter-btn" onClick={() => setParticipantLimit(participantLimit + 10)}>+</button>
                             </div>
                         </div>
 
                         <div className="ce-toggle-row">
                             <span className="ce-toggle-label">ENABLE WAITLIST ○</span>
-                            <div className="ce-toggle active">
+                            <div className={`ce-toggle ${waitlist ? 'active' : ''}`} onClick={() => setWaitlist(w => !w)} style={{ cursor: 'pointer' }}>
                                 <div className="ce-toggle-dot" />
                             </div>
                         </div>
 
                         <div className="ce-toggle-row">
                             <span className="ce-toggle-label">TEAM MODE □</span>
-                            <div className="ce-toggle">
+                            <div className={`ce-toggle ${teamMode ? 'active' : ''}`} onClick={() => setTeamMode(t => !t)} style={{ cursor: 'pointer' }}>
                                 <div className="ce-toggle-dot" />
                             </div>
                         </div>
 
                         <div className="ce-pricing">
-                            <button className="ce-price-btn active">FREE ○</button>
-                            <button className="ce-price-btn">PAID △</button>
+                            <button className={`ce-price-btn ${pricing === 'FREE' ? 'active' : ''}`} onClick={() => setPricing('FREE')}>FREE ○</button>
+                            <button className={`ce-price-btn ${pricing === 'PAID' ? 'active' : ''}`} onClick={() => setPricing('PAID')}>PAID △</button>
                         </div>
                     </div>
                 </section>
@@ -204,8 +209,8 @@ export default function CreateEvent() {
 
             {/* Footer */}
             <div className="ce-footer">
-                <button className="ce-deploy-btn">DEPLOY TO THE ARENA □</button>
-                <button className="ce-draft-btn">SAVE DRAFT △</button>
+                <button className="ce-deploy-btn" onClick={() => navigate('/feed')}>DEPLOY TO THE ARENA □</button>
+                <button className="ce-draft-btn" onClick={() => navigate(-1)}>SAVE DRAFT △</button>
             </div>
         </div>
     );

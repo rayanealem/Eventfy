@@ -1,25 +1,26 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import './Explore.css';
 
 const FILTERS = [
-    { label: 'ALL', shape: '○', active: true },
-    { label: 'SPORT', shape: '△', active: false },
-    { label: 'SCIENCE', shape: '□', active: false },
-    { label: 'ART', shape: '✦', active: false },
+    { label: 'ALL', shape: '○' },
+    { label: 'SPORT', shape: '△' },
+    { label: 'SCIENCE', shape: '□' },
+    { label: 'ART', shape: '✦' },
 ];
 
 const TRENDING = [
-    { title: 'Neon Sabotage 2024', tag: '△ SPORT', views: '+340 VIEWS', image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=200&h=250&fit=crop' },
-    { title: 'Deep Mind Synthesis', tag: '□ SCIENCE', views: '+1.2K VIEWS', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=250&fit=crop' },
-    { title: 'Cyber Gallery V.2', tag: '▽ ART', views: '+890 VIEWS', image: 'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=200&h=250&fit=crop' },
+    { id: '1', title: 'Neon Sabotage 2024', tag: '△ SPORT', views: '+340 VIEWS', image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=200&h=250&fit=crop' },
+    { id: '2', title: 'Deep Mind Synthesis', tag: '□ SCIENCE', views: '+1.2K VIEWS', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=250&fit=crop' },
+    { id: '3', title: 'Cyber Gallery V.2', tag: '▽ ART', views: '+890 VIEWS', image: 'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=200&h=250&fit=crop' },
 ];
 
 const ORGS = [
-    { name: 'Apex League', image: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=64&h=64&fit=crop' },
-    { name: 'K-Corp Labs', image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=64&h=64&fit=crop' },
-    { name: 'Vivid Intel', image: 'https://images.unsplash.com/photo-1497215842964-222b430dc094?w=64&h=64&fit=crop' },
-    { name: 'Core Logic', image: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=64&h=64&fit=crop' },
+    { id: 'org1', name: 'Apex League', image: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=64&h=64&fit=crop' },
+    { id: 'org2', name: 'K-Corp Labs', image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=64&h=64&fit=crop' },
+    { id: 'org3', name: 'Vivid Intel', image: 'https://images.unsplash.com/photo-1497215842964-222b430dc094?w=64&h=64&fit=crop' },
+    { id: 'org4', name: 'Core Logic', image: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=64&h=64&fit=crop' },
 ];
 
 const SKILLS_TEAL = [
@@ -42,6 +43,12 @@ const SKILLS_GOLD = [
 
 export default function Explore() {
     const navigate = useNavigate();
+    const [activeFilter, setActiveFilter] = useState('ALL');
+    const [following, setFollowing] = useState({});
+
+    const toggleFollow = (orgId) => {
+        setFollowing(prev => ({ ...prev, [orgId]: !prev[orgId] }));
+    };
 
     return (
         <div className="explore-root">
@@ -60,7 +67,7 @@ export default function Explore() {
                 {/* Filter Pills */}
                 <div className="explore-filters">
                     {FILTERS.map((f, i) => (
-                        <button key={i} className={`explore-pill ${f.active ? 'active' : ''}`}>
+                        <button key={i} className={`explore-pill ${activeFilter === f.label ? 'active' : ''}`} onClick={() => setActiveFilter(f.label)}>
                             <span className="pill-shape">{f.shape}</span>
                             <span className="pill-label">{f.label}</span>
                         </button>
@@ -87,7 +94,8 @@ export default function Explore() {
                                 initial={{ opacity: 0, y: 16 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.1 + i * 0.1 }}
-                                onClick={() => navigate('/event/1')}
+                                onClick={() => navigate(`/event/${item.id}`)}
+                                style={{ cursor: 'pointer' }}
                             >
                                 <div className="trending-image">
                                     <img src={item.image} alt={item.title} />
@@ -117,18 +125,24 @@ export default function Explore() {
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ delay: 0.2 + i * 0.08 }}
                             >
-                                <div className="org-avatar-wrap">
+                                <div className="org-avatar-wrap" onClick={() => navigate(`/org/${org.id}`)} style={{ cursor: 'pointer' }}>
                                     <div className="org-avatar-hex">
                                         <img src={org.image} alt={org.name} />
                                     </div>
                                 </div>
-                                <div className="org-name-row">
+                                <div className="org-name-row" onClick={() => navigate(`/org/${org.id}`)} style={{ cursor: 'pointer' }}>
                                     <span className="org-name">{org.name}</span>
                                     <svg width="15" height="14" viewBox="0 0 15 14" fill="none">
                                         <path d="M7.5 0l2 4.5h5L10 7.5l1.5 5L7.5 10 3.5 12.5 5 7.5 .5 4.5h5z" fill="#13ecc8" />
                                     </svg>
                                 </div>
-                                <button className="org-follow-btn">FOLLOW +</button>
+                                <button
+                                    className="org-follow-btn"
+                                    onClick={() => toggleFollow(org.id)}
+                                    style={following[org.id] ? { background: 'rgba(45,212,191,0.2)', borderColor: '#2dd4bf', color: '#2dd4bf' } : undefined}
+                                >
+                                    {following[org.id] ? 'FOLLOWING ✓' : 'FOLLOW +'}
+                                </button>
                             </motion.div>
                         ))}
                     </div>

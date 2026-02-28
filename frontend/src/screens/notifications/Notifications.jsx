@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import './Notifications.css';
 
 const TABS = [
@@ -68,6 +70,10 @@ const NOTIFICATIONS = [
 ];
 
 export default function Notifications() {
+    const navigate = useNavigate();
+    const [activeTab, setActiveTab] = useState('ALL');
+    const [followedBack, setFollowedBack] = useState({});
+    const [allRead, setAllRead] = useState(false);
     return (
         <div className="notif-root">
             <div className="notif-noise" />
@@ -75,7 +81,9 @@ export default function Notifications() {
             {/* Header */}
             <header className="notif-header">
                 <h1 className="notif-title">NOTIFICATIONS <span className="notif-shape">○</span></h1>
-                <button className="notif-mark-read">MARK ALL READ △</button>
+                <button className="notif-mark-read" onClick={() => setAllRead(true)} style={allRead ? { color: '#2dd4bf' } : undefined}>
+                    {allRead ? 'ALL READ ✓' : 'MARK ALL READ △'}
+                </button>
             </header>
 
             {/* Tabs */}
@@ -83,7 +91,8 @@ export default function Notifications() {
                 {TABS.map((tab, i) => (
                     <button
                         key={i}
-                        className={`notif-tab ${tab.active ? 'active' : ''}`}
+                        className={`notif-tab ${activeTab === tab.label.split(' ')[0] ? 'active' : ''}`}
+                        onClick={() => setActiveTab(tab.label.split(' ')[0])}
                     >
                         {tab.label}
                     </button>
@@ -130,10 +139,16 @@ export default function Notifications() {
                                 </div>
                                 {n.subtitle && <p className="notif-subtitle">{n.subtitle}</p>}
                                 {n.action && n.action.type === 'filled' && (
-                                    <button className="notif-action-filled">{n.action.label}</button>
+                                    <button className="notif-action-filled" onClick={() => navigate('/event/1')}>{n.action.label}</button>
                                 )}
                                 {n.action && n.action.type === 'outlined' && (
-                                    <button className="notif-action-outlined">{n.action.label}</button>
+                                    <button
+                                        className="notif-action-outlined"
+                                        onClick={() => setFollowedBack(prev => ({ ...prev, [n.titleBold]: !prev[n.titleBold] }))}
+                                        style={followedBack[n.titleBold] ? { background: 'rgba(45,212,191,0.2)', borderColor: '#2dd4bf', color: '#2dd4bf' } : undefined}
+                                    >
+                                        {followedBack[n.titleBold] ? 'FOLLOWING ✓' : n.action.label}
+                                    </button>
                                 )}
                                 {n.download && (
                                     <button className="notif-download">
