@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import './Chat.css';
 
@@ -46,6 +46,13 @@ export default function Chat() {
     const [msgInput, setMsgInput] = useState('');
     const [extraMsgs, setExtraMsgs] = useState([]);
 
+    // New state for missing features
+    const [showDMModal, setShowDMModal] = useState(false);
+    const [showBroadcast, setShowBroadcast] = useState(false);
+    const [showPollModal, setShowPollModal] = useState(false);
+    const fileRef = useRef(null);
+    const imgRef = useRef(null);
+
     const handleSend = () => {
         if (!msgInput.trim()) return;
         setExtraMsgs(prev => [...prev, { type: 'own', text: msgInput.trim(), time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
@@ -75,15 +82,33 @@ export default function Chat() {
                         </div>
                     </div>
                 </div>
-                <button className="chat-members-btn">
-                    <svg width="22" height="16" viewBox="0 0 22 16" fill="none">
-                        <circle cx="8" cy="5" r="3" stroke="white" strokeWidth="1.2" />
-                        <path d="M1 14c0-3 3.5-5 7-5s7 2 7 5" stroke="white" strokeWidth="1.2" strokeLinecap="round" />
-                        <circle cx="17" cy="5" r="2" stroke="white" strokeWidth="1" />
-                        <path d="M16 14c0-2 1.5-3.5 3.5-3.5" stroke="white" strokeWidth="1" strokeLinecap="round" />
-                    </svg>
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button className="chat-members-btn" onClick={() => setShowDMModal(true)} style={{ background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px' }}>
+                        + NEW DM ○
+                    </button>
+                    <button className="chat-members-btn" onClick={() => setShowBroadcast(s => !s)} style={{ background: 'rgba(255,0,0,0.1)', color: '#ff4444', padding: '4px 8px', borderRadius: '4px' }}>
+                        ALERT 🔴
+                    </button>
+                    <button className="chat-members-btn">
+                        <svg width="22" height="16" viewBox="0 0 22 16" fill="none">
+                            <circle cx="8" cy="5" r="3" stroke="white" strokeWidth="1.2" />
+                            <path d="M1 14c0-3 3.5-5 7-5s7 2 7 5" stroke="white" strokeWidth="1.2" strokeLinecap="round" />
+                            <circle cx="17" cy="5" r="2" stroke="white" strokeWidth="1" />
+                            <path d="M16 14c0-2 1.5-3.5 3.5-3.5" stroke="white" strokeWidth="1" strokeLinecap="round" />
+                        </svg>
+                    </button>
+                </div>
             </header>
+
+            {/* Broadcast Area */}
+            <AnimatePresence>
+                {showBroadcast && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ padding: '16px', background: '#330000', borderBottom: '1px solid #ff4444' }}>
+                        <textarea style={{ width: '100%', background: 'black', color: 'white', padding: '8px', minHeight: '60px', border: '1px solid #ff4444' }} placeholder="Enter flash alert..." />
+                        <button onClick={() => setShowBroadcast(false)} style={{ background: '#ff4444', color: 'black', padding: '8px 16px', marginTop: '8px', fontWeight: 'bold' }}>BROADCAST △</button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Chat Area */}
             <div className="chat-area">
@@ -206,10 +231,18 @@ export default function Chat() {
 
             {/* Input Bar */}
             <div className="chat-input-bar">
+                <input type="file" ref={fileRef} style={{ display: 'none' }} />
+                <input type="file" ref={imgRef} accept="image/*" style={{ display: 'none' }} />
                 <div className="chat-input-actions">
-                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6.5" stroke="#64748b" strokeWidth="1" /><path d="M7.5 4.5v6M4.5 7.5h6" stroke="#64748b" strokeWidth="1" strokeLinecap="round" /></svg>
-                    <svg width="17" height="17" viewBox="0 0 17 17" fill="none"><rect x="1" y="1" width="15" height="15" rx="2" stroke="#64748b" strokeWidth="1" /><circle cx="5.5" cy="5.5" r="1.5" fill="#64748b" /><path d="M1 12l4-4 3 3 2-2 6 6" stroke="#64748b" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                    <svg width="17" height="13" viewBox="0 0 17 13" fill="none"><path d="M1 1l7.5 5.5L16 1M1 12h15V1H1z" stroke="#64748b" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    <div onClick={() => fileRef.current?.click()} style={{ cursor: 'pointer' }}>
+                        <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6.5" stroke="#64748b" strokeWidth="1" /><path d="M7.5 4.5v6M4.5 7.5h6" stroke="#64748b" strokeWidth="1" strokeLinecap="round" /></svg>
+                    </div>
+                    <div onClick={() => imgRef.current?.click()} style={{ cursor: 'pointer' }}>
+                        <svg width="17" height="17" viewBox="0 0 17 17" fill="none"><rect x="1" y="1" width="15" height="15" rx="2" stroke="#64748b" strokeWidth="1" /><circle cx="5.5" cy="5.5" r="1.5" fill="#64748b" /><path d="M1 12l4-4 3 3 2-2 6 6" stroke="#64748b" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    </div>
+                    <div onClick={() => setShowPollModal(true)} style={{ cursor: 'pointer', fontSize: '12px', color: '#64748b' }}>
+                        △ POLL
+                    </div>
                 </div>
                 <div className="chat-input-field">
                     <input
@@ -226,6 +259,30 @@ export default function Chat() {
                     <span className="send-shape">□</span>
                 </button>
             </div>
+
+            {/* Modals */}
+            <AnimatePresence>
+                {showDMModal && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowDMModal(false)}>
+                        <div style={{ background: '#111', padding: '24px', border: '1px solid #333', width: '300px' }} onClick={e => e.stopPropagation()}>
+                            <h3 style={{ color: 'white', marginBottom: '16px' }}>NEW DM ○</h3>
+                            <input type="text" placeholder="Search users..." style={{ width: '100%', padding: '8px', background: '#222', color: 'white', border: 'none', marginBottom: '16px' }} />
+                            <button onClick={() => setShowDMModal(false)} style={{ background: '#2dd4bf', color: 'black', padding: '8px 16px', width: '100%', fontWeight: 'bold' }}>START CHAT</button>
+                        </div>
+                    </div>
+                )}
+                {showPollModal && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowPollModal(false)}>
+                        <div style={{ background: '#111', padding: '24px', border: '1px solid #333', width: '300px' }} onClick={e => e.stopPropagation()}>
+                            <h3 style={{ color: 'white', marginBottom: '16px' }}>CREATE POLL △</h3>
+                            <input type="text" placeholder="Question" style={{ width: '100%', padding: '8px', background: '#222', color: 'white', border: 'none', marginBottom: '8px' }} />
+                            <input type="text" placeholder="Option 1" style={{ width: '100%', padding: '8px', background: '#222', color: 'white', border: 'none', marginBottom: '8px' }} />
+                            <input type="text" placeholder="Option 2" style={{ width: '100%', padding: '8px', background: '#222', color: 'white', border: 'none', marginBottom: '16px' }} />
+                            <button onClick={() => setShowPollModal(false)} style={{ background: '#fbbf24', color: 'black', padding: '8px 16px', width: '100%', fontWeight: 'bold' }}>SEND POLL △</button>
+                        </div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

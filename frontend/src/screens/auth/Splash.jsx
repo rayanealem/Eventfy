@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import './Splash.css';
 
 const SLIDES = [
@@ -26,15 +25,6 @@ const SLIDES = [
 
 export default function Splash() {
     const navigate = useNavigate();
-    const [showModal, setShowModal] = useState(false);
-    const [activeSlide, setActiveSlide] = useState(0);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setActiveSlide(a => (a + 1) % SLIDES.length);
-        }, 3000);
-        return () => clearInterval(interval);
-    }, []);
 
     return (
         <div className="splash-root">
@@ -80,45 +70,43 @@ export default function Splash() {
                 </section>
 
                 {/* Onboarding Slider */}
-                <section className="splash-slides" style={{ position: 'relative', height: '140px' }}>
-                    <AnimatePresence mode="wait">
+                <section className="splash-slides">
+                    {SLIDES.map((slide, i) => (
                         <motion.div
-                            key={activeSlide}
+                            key={i}
                             className="splash-card"
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            transition={{ duration: 0.3 }}
-                            style={{ position: 'absolute', width: '100%' }}
+                            initial={{ opacity: 0, y: 16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 + i * 0.12, duration: 0.4 }}
                         >
                             <div className="splash-card-header">
-                                <div className="splash-card-icon" style={{ borderColor: SLIDES[activeSlide].iconColor }}>
-                                    {SLIDES[activeSlide].icon === 'circle' && (
-                                        <div className="icon-circle" style={{ background: SLIDES[activeSlide].iconColor }} />
+                                <div className="splash-card-icon" style={{ borderColor: slide.iconColor }}>
+                                    {slide.icon === 'circle' && (
+                                        <div className="icon-circle" style={{ background: slide.iconColor }} />
                                     )}
-                                    {SLIDES[activeSlide].icon === 'triangle' && (
+                                    {slide.icon === 'triangle' && (
                                         <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
-                                            <path d="M6 0L12 10H0L6 0Z" fill={SLIDES[activeSlide].iconColor} />
+                                            <path d="M6 0L12 10H0L6 0Z" fill={slide.iconColor} />
                                         </svg>
                                     )}
-                                    {SLIDES[activeSlide].icon === 'square' && (
-                                        <div className="icon-square" style={{ background: SLIDES[activeSlide].iconColor }} />
+                                    {slide.icon === 'square' && (
+                                        <div className="icon-square" style={{ background: slide.iconColor }} />
                                     )}
                                 </div>
-                                <h2 className="splash-card-title">{SLIDES[activeSlide].title}</h2>
+                                <h2 className="splash-card-title">{slide.title}</h2>
                             </div>
-                            <p className="splash-card-body">{SLIDES[activeSlide].body}</p>
+                            <p className="splash-card-body">{slide.body}</p>
                         </motion.div>
-                    </AnimatePresence>
+                    ))}
                 </section>
 
                 {/* Footer Actions */}
                 <section className="splash-footer">
                     {/* Progress Indicators */}
                     <div className="splash-progress">
-                        <span className="progress-shape" onClick={() => setActiveSlide(0)} style={{ cursor: 'pointer', color: activeSlide === 0 ? '#ff2d78' : 'rgba(255,45,120,0.3)' }}>○</span>
-                        <span className="progress-shape" onClick={() => setActiveSlide(1)} style={{ cursor: 'pointer', color: activeSlide === 1 ? '#ffd700' : 'rgba(255,215,0,0.3)' }}>△</span>
-                        <span className="progress-shape" onClick={() => setActiveSlide(2)} style={{ cursor: 'pointer', color: activeSlide === 2 ? '#00ffc2' : 'rgba(0,255,194,0.3)' }}>□</span>
+                        <span className="progress-shape" style={{ color: '#ff2d78' }}>○</span>
+                        <span className="progress-shape" style={{ color: 'rgba(255,215,0,0.5)' }}>△</span>
+                        <span className="progress-shape" style={{ color: 'rgba(255,255,255,0.2)' }}>□</span>
                     </div>
 
                     {/* Action Buttons */}
@@ -132,7 +120,7 @@ export default function Splash() {
                         </motion.button>
                         <motion.button
                             className="splash-btn-outline"
-                            onClick={() => setShowModal(true)}
+                            onClick={() => navigate('/auth/participant/login')}
                             whileTap={{ scale: 0.98 }}
                         >
                             I HAVE AN ACCOUNT
@@ -148,43 +136,6 @@ export default function Splash() {
                     </div>
                 </section>
             </div>
-
-            {/* Role-Chooser Modal */}
-            <AnimatePresence>
-                {showModal && (
-                    <motion.div
-                        className="splash-modal-overlay"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => setShowModal(false)}
-                        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            onClick={e => e.stopPropagation()}
-                            style={{ background: '#0f1119', border: '1px solid rgba(255,255,255,0.1)', padding: '32px 24px', width: '320px', maxWidth: '90%', display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}
-                        >
-                            <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '24px', color: '#fff', letterSpacing: '2px', textAlign: 'center', margin: 0 }}>WHO ARE YOU?</h2>
-                            <p style={{ fontFamily: "'DM Mono', monospace", fontSize: '10px', color: 'rgba(255,255,255,0.4)', letterSpacing: '1px', textAlign: 'center', margin: 0 }}>SELECT YOUR ROLE TO CONTINUE</p>
-                            <button
-                                onClick={() => navigate('/auth/participant/login')}
-                                style={{ width: '100%', padding: '16px', background: 'rgba(255,45,120,0.1)', border: '1px solid rgba(255,45,120,0.3)', color: '#ff2d78', fontFamily: "'Bebas Neue', sans-serif", fontSize: '20px', letterSpacing: '2px', cursor: 'pointer', textAlign: 'center' }}
-                            >
-                                ○ PARTICIPANT
-                            </button>
-                            <button
-                                onClick={() => navigate('/auth/org/login')}
-                                style={{ width: '100%', padding: '16px', background: 'rgba(19,236,236,0.1)', border: '1px solid rgba(19,236,236,0.3)', color: '#13ecec', fontFamily: "'Bebas Neue', sans-serif", fontSize: '20px', letterSpacing: '2px', cursor: 'pointer', textAlign: 'center' }}
-                            >
-                                △ ORGANIZATION
-                            </button>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </div>
     );
 }
