@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import AppShell from './AppShell';
+import { AuthGuard, GuestGuard, OrgGuard, AdminGuard } from './router/guards/AuthGuard';
 
 // Auth screens (eager load — entry points)
 import Splash from './screens/auth/Splash';
@@ -92,11 +93,11 @@ const router = createBrowserRouter([
             { index: true, element: <Navigate to="/splash" replace /> },
 
             // Auth (GuestGuard - public)
-            { path: 'splash', element: <Splash /> },
-            { path: 'auth/participant/login', element: <ParticipantLoginAuth /> },
-            { path: 'auth/participant/register', element: <ParticipantRegisterAuth /> },
-            { path: 'auth/org/login', element: <OrgLoginAuth /> },
-            { path: 'auth/org/register', element: <OrgRegisterAuth /> },
+            { path: 'splash', element: <GuestGuard><Splash /></GuestGuard> },
+            { path: 'auth/participant/login', element: <GuestGuard><ParticipantLoginAuth /></GuestGuard> },
+            { path: 'auth/participant/register', element: <GuestGuard><ParticipantRegisterAuth /></GuestGuard> },
+            { path: 'auth/org/login', element: <GuestGuard><OrgLoginAuth /></GuestGuard> },
+            { path: 'auth/org/register', element: <GuestGuard><OrgRegisterAuth /></GuestGuard> },
 
             // Onboarding (AuthGuard + NotCompleted)
             { path: 'onboarding/1', element: <Step1 /> },
@@ -107,50 +108,50 @@ const router = createBrowserRouter([
             { path: 'onboarding/6', element: <Step6 /> },
 
             // Core (AuthGuard)
-            { path: 'feed', element: <Feed /> },
-            { path: 'explore', element: <Explore /> },
-            { path: 'search', element: <SearchResults /> },
-            { path: 'event/:id', element: <EventDetail /> },
-            { path: 'event/create', element: <CreateEvent /> },
-            { path: 'event/:id/teams', element: <TeamLobby /> },
+            { path: 'feed', element: <AuthGuard><Feed /></AuthGuard> },
+            { path: 'explore', element: <AuthGuard><Explore /></AuthGuard> },
+            { path: 'search', element: <AuthGuard><SearchResults /></AuthGuard> },
+            { path: 'event/:id', element: <AuthGuard><EventDetail /></AuthGuard> },
+            { path: 'event/create', element: <OrgGuard><CreateEvent /></OrgGuard> },
+            { path: 'event/:id/teams', element: <AuthGuard><TeamLobby /></AuthGuard> },
 
             // Profile
-            { path: 'profile/:username', element: <PlayerProfile /> },
-            { path: 'profile/edit', element: <EditProfile /> },
-            { path: 'org/:orgId', element: <OrgProfile /> },
-            { path: 'org/setup', element: <OrgSetup /> },
-            { path: 'passport', element: <PlayerPassport /> },
+            { path: 'profile/:username', element: <AuthGuard><PlayerProfile /></AuthGuard> },
+            { path: 'profile/edit', element: <AuthGuard><EditProfile /></AuthGuard> },
+            { path: 'org/:orgId', element: <AuthGuard><OrgProfile /></AuthGuard> },
+            { path: 'org/setup', element: <AuthGuard><OrgSetup /></AuthGuard> },
+            { path: 'passport', element: <AuthGuard><PlayerPassport /></AuthGuard> },
 
             // Gamification
-            { path: 'hub', element: <GamificationHub /> },
-            { path: 'hub/leaderboard', element: <Leaderboard /> },
+            { path: 'hub', element: <AuthGuard><GamificationHub /></AuthGuard> },
+            { path: 'hub/leaderboard', element: <AuthGuard><Leaderboard /></AuthGuard> },
 
             // Social
-            { path: 'chat', element: <Chat /> },
-            { path: 'chat/:eventId', element: <Chat /> },
-            { path: 'stories/:orgId', element: <StoryViewer /> },
-            { path: 'stories/create', element: <StoryCreate /> },
-            { path: 'network', element: <Connections /> },
-            { path: 'notifications', element: <Notifications /> },
+            { path: 'chat', element: <AuthGuard><Chat /></AuthGuard> },
+            { path: 'chat/:eventId', element: <AuthGuard><Chat /></AuthGuard> },
+            { path: 'stories/:orgId', element: <AuthGuard><StoryViewer /></AuthGuard> },
+            { path: 'stories/create', element: <OrgGuard><StoryCreate /></OrgGuard> },
+            { path: 'network', element: <AuthGuard><Connections /></AuthGuard> },
+            { path: 'notifications', element: <AuthGuard><Notifications /></AuthGuard> },
 
             // QR
-            { path: 'ticket/:eventId', element: <QRTicket /> },
-            { path: 'scan', element: <QRScanner /> },
+            { path: 'ticket/:eventId', element: <AuthGuard><QRTicket /></AuthGuard> },
+            { path: 'scan', element: <AuthGuard><QRScanner /></AuthGuard> },
 
             // Volunteer / Organizer
-            { path: 'volunteer/:eventId', element: <VolunteerMode /> },
-            { path: 'manage/:eventId', element: <CommandCenter /> },
-            { path: 'manage/:eventId/analytics', element: <Analytics /> },
-            { path: 'post/create', element: <NewPost /> },
+            { path: 'volunteer/:eventId', element: <AuthGuard><VolunteerMode /></AuthGuard> },
+            { path: 'manage/:eventId', element: <OrgGuard><CommandCenter /></OrgGuard> },
+            { path: 'manage/:eventId/analytics', element: <OrgGuard><Analytics /></OrgGuard> },
+            { path: 'post/create', element: <OrgGuard><NewPost /></OrgGuard> },
 
             // Business
-            { path: 'recruit', element: <RecruiterDashboard /> },
-            { path: 'sponsor', element: <SponsorshipPortal /> },
-            { path: 'travel', element: <TravelMode /> },
+            { path: 'recruit', element: <AuthGuard><RecruiterDashboard /></AuthGuard> },
+            { path: 'sponsor', element: <AuthGuard><SponsorshipPortal /></AuthGuard> },
+            { path: 'travel', element: <AuthGuard><TravelMode /></AuthGuard> },
 
             // Settings & Admin
-            { path: 'settings', element: <Settings /> },
-            { path: 'admin', element: <AdminPanel /> },
+            { path: 'settings', element: <AuthGuard><Settings /></AuthGuard> },
+            { path: 'admin', element: <AdminGuard><AdminPanel /></AdminGuard> },
 
             // Certificate
             { path: 'verify/:certId', element: <CertVerify /> },

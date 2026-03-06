@@ -1,0 +1,345 @@
+"""Users router — /users/*"""
+
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from datetime import datetime
+from config import supabase
+from middleware.auth import get_current_user, get_optional_user
+from models.user import SkillCreate, ConnectionRequest
+
+router = APIRouter()
+
+
+@router.get("/{username}")
+async def get_user_profile(username: str):
+    """Get public profile by username."""
+    profile = (
+        supabase.table("profiles")
+        .select("*")
+        .eq("username", username)
+        .single()
+        .execute()
+    )
+    if not profile.data:
+        raise HTTPException(404, "User not found")
+
+    # Don't expose private profiles (unless it's the user themselves)
+    if profile.data.get("visibility") == "private":
+        return {"id": profile.data["id"], "username": username, "visibility": "private"}
+
+    return profile.data
+
+
+@router.get("/{username}/passport")
+async def get_user_passport(username: str):
+    """Get full passport data — events, badges, certs, skills."""
+    profile = (
+        supabase.table("profiles")
+        .select("*")
+        .eq("username", username)
+        .single()
+        .execute()
+    )
+    if not profile.data:
+        raise HTTPException(404, "User not found")
+
+    uid = profile.data["id"]
+
+    # Badges
+    badges = (
+        supabase.table("user_badges")
+        .select("*, badges(*)")
+        .eq("user_id", uid)
+        .execute()
+    )
+
+    # Events attended
+    events = (
+        supabase.table("event_registrations")
+        .select("*, events(title, event_type, cover_url, starts_at, org_id)")
+        .eq("user_id", uid)
+        .eq("checked_in", True)
+        .execute()
+    )
+
+    # Certificates
+    certs = (
+        supabase.table("certificates")
+        .select("*")
+        .eq("user_id", uid)
+        .execute()
+    )
+
+    # Skills
+    skills = (
+        supabase.table("user_skills")
+        .select("*, skills(name, category)")
+        .eq("user_id", uid)
+        .execute()
+    )
+
+    # XP history (last 20)
+    xp_history = (
+        supabase.table("xp_transactions")
+        .select("*")
+        .eq("user_id", uid)
+        .order("created_at", desc=True)
+        .limit(20)
+        .execute()
+    )
+
+    return {
+        "profile": profile.data,
+        "badges": badges.data or [],
+        "events_attended": events.data or [],
+        "certificates": certs.data or [],
+        "skills": skills.data or [],
+        "xp_history": xp_history.data or [],
+    }
+
+
+@router.get("/me/feed")
+async def get_my_feed(
+    scope: str = "local",
+    page: int = 0,
+    page_size: int = 20,
+    user=Depends(get_current_user)
+):
+    """Personalized event feed."""
+    query = (
+        supabase.table("events")
+        .select("*, organizations(name, logo_url, slug, verified)")
+        .in_("status", ["scheduled", "live"])
+        .order("starts_at", desc=False)
+        .range(page * page_size, (page + 1) * page_size - 1)
+    )
+
+    if scope == "local" and user.get("wilaya"):
+        query = query.eq("wilaya", user["wilaya"])
+    elif scope == "international":
+        query = query.eq("is_international", True)
+
+    events = query.execute()
+
+    # Get user's registered event IDs
+    regs = (
+        supabase.table("event_registrations")
+        .select("event_id")
+        .eq("user_id", user["id"])
+        .in_("status", ["confirmed", "pending_approval"])
+        .execute()
+    )
+    registered_ids = [r["event_id"] for r in (regs.data or [])]
+
+    return {
+        "events": events.data or [],
+        "registered_event_ids": registered_ids,
+    }
+
+
+@router.get("/me/events")
+async def get_my_events(user=Depends(get_current_user)):
+    """Get events I'm registered for."""
+    regs = (
+        supabase.table("event_registrations")
+        .select("*, events(*, organizations(name, logo_url, slug))")
+        .eq("user_id", user["id"])
+        .order("registered_at", desc=True)
+        .execute()
+    )
+    return regs.data or []
+
+
+@router.get("/me/notifications")
+async def get_my_notifications(
+    page: int = 0,
+    page_size: int = 20,
+    user=Depends(get_current_user)
+):
+    """Get my notifications (paginated)."""
+    notifs = (
+        supabase.table("notifications")
+        .select("*")
+        .eq("user_id", user["id"])
+        .order("created_at", desc=True)
+        .range(page * page_size, (page + 1) * page_size - 1)
+        .execute()
+    )
+    return notifs.data or []
+
+
+@router.patch("/me/notifications/read")
+async def mark_notifications_read(user=Depends(get_current_user)):
+    """Mark all notifications as read."""
+    supabase.table("notifications").update({
+        "is_read": True,
+    }).eq("user_id", user["id"]).eq("is_read", False).execute()
+    return {"message": "All notifications marked as read"}
+
+
+@router.get("/me/skills")
+async def get_my_skills(user=Depends(get_current_user)):
+    """Get my skills."""
+    skills = (
+        supabase.table("user_skills")
+        .select("*, skills(name, category)")
+        .eq("user_id", user["id"])
+        .execute()
+    )
+    return skills.data or []
+
+
+@router.post("/me/skills")
+async def add_skill(body: SkillCreate, user=Depends(get_current_user)):
+    """Add a skill to my profile."""
+    # Find or create skill
+    existing = (
+        supabase.table("skills")
+        .select("id")
+        .eq("name", body.skill_name)
+        .execute()
+    )
+
+    if existing.data:
+        skill_id = existing.data[0]["id"]
+    else:
+        new_skill = (
+            supabase.table("skills")
+            .insert({"name": body.skill_name})
+            .execute()
+        )
+        skill_id = new_skill.data[0]["id"]
+
+    # Link to user
+    supabase.table("user_skills").insert({
+        "user_id": user["id"],
+        "skill_id": skill_id,
+    }).execute()
+
+    return {"skill_id": skill_id, "skill_name": body.skill_name}
+
+
+@router.delete("/me/skills/{skill_id}")
+async def remove_skill(skill_id: str, user=Depends(get_current_user)):
+    """Remove a skill from my profile."""
+    supabase.table("user_skills").delete().eq(
+        "user_id", user["id"]
+    ).eq("skill_id", skill_id).execute()
+    return {"message": "Skill removed"}
+
+
+@router.get("/me/connections")
+async def get_my_connections(user=Depends(get_current_user)):
+    """Get all my connections."""
+    sent = (
+        supabase.table("connections")
+        .select("*, profiles!connections_addressee_id_fkey(username, full_name, avatar_url, shape, shape_color)")
+        .eq("requester_id", user["id"])
+        .eq("status", "accepted")
+        .execute()
+    )
+    received = (
+        supabase.table("connections")
+        .select("*, profiles!connections_requester_id_fkey(username, full_name, avatar_url, shape, shape_color)")
+        .eq("addressee_id", user["id"])
+        .eq("status", "accepted")
+        .execute()
+    )
+    # Pending requests received
+    pending = (
+        supabase.table("connections")
+        .select("*, profiles!connections_requester_id_fkey(username, full_name, avatar_url, shape, shape_color)")
+        .eq("addressee_id", user["id"])
+        .eq("status", "pending")
+        .execute()
+    )
+    return {
+        "connections": (sent.data or []) + (received.data or []),
+        "pending_requests": pending.data or [],
+    }
+
+
+@router.post("/me/connections/{target_user_id}")
+async def send_connection_request(target_user_id: str, user=Depends(get_current_user)):
+    """Send a connection request."""
+    if target_user_id == user["id"]:
+        raise HTTPException(400, "Cannot connect with yourself")
+
+    supabase.table("connections").insert({
+        "requester_id": user["id"],
+        "addressee_id": target_user_id,
+        "status": "pending",
+    }).execute()
+
+    # Send notification
+    supabase.table("notifications").insert({
+        "user_id": target_user_id,
+        "type": "connection_request",
+        "title": "New Connection Request",
+        "body": f"{user['full_name']} wants to connect with you",
+        "data": {"requester_id": user["id"]},
+    }).execute()
+
+    return {"message": "Connection request sent"}
+
+
+@router.patch("/me/connections/{target_user_id}")
+async def respond_connection(
+    target_user_id: str,
+    body: ConnectionRequest,
+    user=Depends(get_current_user)
+):
+    """Accept or decline a connection request."""
+    supabase.table("connections").update({
+        "status": body.status,
+        "updated_at": datetime.utcnow().isoformat(),
+    }).eq("requester_id", target_user_id).eq("addressee_id", user["id"]).execute()
+    return {"status": body.status}
+
+
+@router.delete("/me/connections/{target_user_id}")
+async def remove_connection(target_user_id: str, user=Depends(get_current_user)):
+    """Remove a connection."""
+    supabase.table("connections").delete().or_(
+        f"and(requester_id.eq.{user['id']},addressee_id.eq.{target_user_id}),"
+        f"and(requester_id.eq.{target_user_id},addressee_id.eq.{user['id']})"
+    ).execute()
+    return {"message": "Connection removed"}
+
+
+@router.get("/me/xp")
+async def get_xp_history(
+    page: int = 0,
+    page_size: int = 20,
+    user=Depends(get_current_user)
+):
+    """Get XP transaction history."""
+    xp = (
+        supabase.table("xp_transactions")
+        .select("*")
+        .eq("user_id", user["id"])
+        .order("created_at", desc=True)
+        .range(page * page_size, (page + 1) * page_size - 1)
+        .execute()
+    )
+    return xp.data or []
+
+
+@router.post("/me/avatar")
+async def upload_avatar(file: UploadFile = File(...), user=Depends(get_current_user)):
+    """Upload avatar to Supabase Storage."""
+    content = await file.read()
+    path = f"{user['id']}/avatar.webp"
+
+    supabase.storage.from_("avatars").upload(
+        path, content,
+        file_options={"content-type": file.content_type or "image/webp", "upsert": "true"}
+    )
+
+    public_url = supabase.storage.from_("avatars").get_public_url(path)
+
+    supabase.table("profiles").update({
+        "avatar_url": public_url,
+        "updated_at": datetime.utcnow().isoformat(),
+    }).eq("id", user["id"]).execute()
+
+    return {"avatar_url": public_url}
