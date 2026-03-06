@@ -58,40 +58,57 @@ async def list_events(
 @router.get("/feed")
 async def event_feed(
     scope: str = "local",
-    page: int = 0,
-    page_size: int = 20,
+    event_type: str = None,
+    page: int = 1,
+    limit: int = 10,
     user=Depends(get_optional_user),
 ):
     """Smart personalized event feed."""
     query = (
         supabase.table("events")
-        .select("*, organizations(name, logo_url, slug, verified)")
-        .in_("status", ["scheduled", "live"])
+        .select("""
+            id, title, slug, description, event_type, status,
+            starts_at, ends_at, venue_name, city, wilaya,
+            cover_url, tags, capacity, registration_count,
+            checkin_count, view_count, is_paid, is_international,
+            fundraising_goal, fundraising_current,
+            organizations!org_id (
+                id, name, slug, logo_url, verified
+            )
+        """)
+        .in_("status", ["live", "scheduled"])
         .order("starts_at", desc=False)
-        .range(page * page_size, (page + 1) * page_size - 1)
+        .range((page - 1) * limit, page * limit - 1)
     )
 
-    if scope == "local" and user and user.get("wilaya"):
+    if event_type:
+        query = query.eq("event_type", event_type)
+
+    if user and scope == "local" and user.get("wilaya"):
         query = query.eq("wilaya", user["wilaya"])
+    elif scope == "national":
+        query = query.eq("is_international", False)
     elif scope == "international":
         query = query.eq("is_international", True)
 
     events = query.execute()
 
+    # Get which events this user is registered for
     registered_ids = []
     if user:
-        regs = (
+        registrations = (
             supabase.table("event_registrations")
             .select("event_id")
             .eq("user_id", user["id"])
-            .in_("status", ["confirmed", "pending_approval"])
             .execute()
         )
-        registered_ids = [r["event_id"] for r in (regs.data or [])]
+        registered_ids = [r["event_id"] for r in (registrations.data or [])]
 
     return {
         "events": events.data or [],
         "registered_event_ids": registered_ids,
+        "page": page,
+        "has_more": len(events.data or []) == limit,
     }
 
 
@@ -112,11 +129,18 @@ async def trending_events(page: int = 0, page_size: int = 20):
 # ── CRUD ───────────────────────────────────────────────
 
 @router.get("/{event_id}")
-async def get_event(event_id: str):
+async def get_event(event_id: str, user=Depends(get_optional_user)):
     """Get event detail with polymorphic type-specific data."""
+    # Core event data with org
     event = (
         supabase.table("events")
-        .select("*, organizations(name, logo_url, slug, verified, id)")
+        .select("""
+            *,
+            organizations!org_id (
+                id, name, slug, logo_url, cover_url, verified, description,
+                follower_count, event_count
+            )
+        """)
         .eq("id", event_id)
         .single()
         .execute()
@@ -125,35 +149,63 @@ async def get_event(event_id: str):
         raise HTTPException(404, "Event not found")
 
     result = event.data
+    event_type = result["event_type"]
 
-    # Fetch type-specific details
-    etype = result["event_type"]
-    if etype == "sport":
+    # Polymorphic type data — unified key "type_details"
+    if event_type == "sport":
         details = supabase.table("event_sport_details").select("*").eq("event_id", event_id).execute()
-        result["sport_details"] = details.data[0] if details.data else None
-    elif etype == "science":
+        result["type_details"] = details.data[0] if details.data else None
+
+    elif event_type == "science":
         details = supabase.table("event_science_details").select("*").eq("event_id", event_id).execute()
-        result["science_details"] = details.data[0] if details.data else None
         speakers = supabase.table("event_speakers").select("*").eq("event_id", event_id).order("sort_order").execute()
+        result["type_details"] = details.data[0] if details.data else None
         result["speakers"] = speakers.data or []
-        doi = supabase.table("event_doi_links").select("*").eq("event_id", event_id).execute()
-        result["doi_links"] = doi.data or []
-    elif etype == "charity":
+
+    elif event_type == "charity":
         details = supabase.table("event_charity_details").select("*").eq("event_id", event_id).execute()
-        result["charity_details"] = details.data[0] if details.data else None
-    elif etype == "cultural":
+        result["type_details"] = details.data[0] if details.data else None
+
+    elif event_type == "cultural":
         details = supabase.table("event_cultural_details").select("*").eq("event_id", event_id).execute()
-        result["cultural_details"] = details.data[0] if details.data else None
         performers = supabase.table("event_performers").select("*").eq("event_id", event_id).order("sort_order").execute()
+        tiers = supabase.table("event_ticket_tiers").select("*").eq("event_id", event_id).order("sort_order").execute()
+        result["type_details"] = details.data[0] if details.data else None
         result["performers"] = performers.data or []
+        result["ticket_tiers"] = tiers.data or []
 
-    # Ticket tiers
-    tiers = supabase.table("event_ticket_tiers").select("*").eq("event_id", event_id).order("sort_order").execute()
-    result["ticket_tiers"] = tiers.data or []
-
-    # Volunteer roles
-    roles = supabase.table("volunteer_roles").select("*").eq("event_id", event_id).order("sort_order").execute()
+    # Volunteer roles (all event types)
+    roles = supabase.table("volunteer_roles").select("*").eq("event_id", event_id).execute()
     result["volunteer_roles"] = roles.data or []
+
+    # Current user's registration status (only if authenticated)
+    result["my_registration"] = None
+    result["my_volunteer_application"] = None
+    if user:
+        reg = (
+            supabase.table("event_registrations")
+            .select("*")
+            .eq("event_id", event_id)
+            .eq("user_id", user["id"])
+            .execute()
+        )
+        result["my_registration"] = reg.data[0] if reg.data else None
+
+        # User's volunteer application (if any)
+        if reg.data:
+            vol_app = (
+                supabase.table("volunteer_applications")
+                .select("*, volunteer_roles(name)")
+                .eq("event_id", event_id)
+                .eq("user_id", user["id"])
+                .execute()
+            )
+            result["my_volunteer_application"] = vol_app.data[0] if vol_app.data else None
+
+    # Increment view count
+    supabase.table("events").update({
+        "view_count": result["view_count"] + 1
+    }).eq("id", event_id).execute()
 
     return result
 

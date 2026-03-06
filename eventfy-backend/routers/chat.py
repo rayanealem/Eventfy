@@ -42,7 +42,7 @@ async def get_messages(channel_id: str, page: int = 0, page_size: int = 50, user
         .eq("channel_id", channel_id).is_("deleted_at", "null")
         .order("created_at", desc=False)
         .range(page * page_size, (page + 1) * page_size - 1).execute())
-    return msgs.data or []
+    return {"messages": msgs.data or []}
 
 
 @router.post("/channels/{channel_id}/messages")

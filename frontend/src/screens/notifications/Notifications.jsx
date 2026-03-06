@@ -1,79 +1,98 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabase';
 import './Notifications.css';
 
 const TABS = [
-    { label: 'ALL ○', active: true },
-    { label: 'EVENTS △', active: false },
-    { label: 'SOCIAL □', active: false },
-    { label: 'SYSTEM ◇', active: false },
+    { label: 'ALL ○', key: 'all' },
+    { label: 'EVENTS △', key: 'events' },
+    { label: 'SOCIAL □', key: 'social' },
+    { label: 'SYSTEM ◇', key: 'system' },
 ];
 
-const NOTIFICATIONS = [
-    {
-        type: 'event',
-        label: 'EVENT ALERT',
-        labelColor: '#ff4d4d',
-        borderColor: '#ff4d4d',
-        time: '2m ago',
-        title: 'INTER-UNI FOOTBALL CUP starts in 2 hours ○',
-        action: { label: 'VIEW EVENT □', type: 'filled' },
-        icon: '🗓️',
-        iconBg: 'rgba(255, 77, 77, 0.1)',
-    },
-    {
-        type: 'social',
-        label: 'NEW FOLLOWER',
-        labelColor: '#00e5cc',
-        borderColor: 'transparent',
-        time: '14m ago',
-        title: 'Sarah started following you △',
-        titleBold: 'Sarah',
-        action: { label: 'FOLLOW BACK ○', type: 'outlined' },
-        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40&h=40&fit=crop&crop=face',
-    },
-    {
-        type: 'achievement',
-        label: 'ACHIEVEMENT',
-        labelColor: '#ffd700',
-        borderColor: 'transparent',
-        time: '1h ago',
-        title: '+100 XP earned ◇',
-        subtitle: 'Level 4 Completed: Red Light, Green Light',
-        icon: '🏆',
-        iconBg: 'rgba(255, 215, 0, 0.2)',
-        glow: true,
-    },
-    {
-        type: 'system',
-        label: 'SYSTEM',
-        labelColor: '#94a3b8',
-        borderColor: 'transparent',
-        time: '3h ago',
-        title: 'Your certificate is ready □',
-        download: true,
-        icon: '⚙️',
-        iconBg: '#1e293b',
-    },
-    {
-        type: 'announcement',
-        label: 'ANNOUNCEMENT',
-        labelColor: '#64748b',
-        borderColor: 'transparent',
-        time: 'Yesterday',
-        title: 'System maintenance scheduled for 03:00 AM UTC.',
-        icon: '📡',
-        iconBg: '#1e293b',
-        faded: true,
-    },
-];
+// Type-based styling from integration spec
+const TYPE_STYLE = {
+    event_update: { label: 'EVENT ALERT', shape: '○', color: '#FF4D4D', icon: '🗓️' },
+    registration_confirmed: { label: 'REGISTERED', shape: '○', color: '#FF4D4D', icon: '✓' },
+    event_starts_soon: { label: 'STARTING SOON', shape: '○', color: '#FF4D4D', icon: '⏰' },
+    flash_alert: { label: 'FLASH ALERT', shape: '◇', color: '#FFD700', icon: '⚡' },
+    new_follower: { label: 'NEW FOLLOWER', shape: '△', color: '#00E5CC', icon: '👤' },
+    connection_request: { label: 'CONNECTION', shape: '△', color: '#00E5CC', icon: '🔗' },
+    new_message: { label: 'NEW MESSAGE', shape: '△', color: '#00E5CC', icon: '💬' },
+    badge_earned: { label: 'ACHIEVEMENT', shape: '□', color: '#FFD700', icon: '🏆' },
+    xp_gained: { label: 'XP EARNED', shape: '□', color: '#FFD700', icon: '⚡' },
+    level_up: { label: 'LEVEL UP', shape: '□', color: '#FFD700', icon: '🎯' },
+    volunteer_approved: { label: 'VOLUNTEER', shape: '△', color: '#00E5CC', icon: '✓' },
+    golden_ticket: { label: 'GOLDEN TICKET', shape: '◇', color: '#FFD700', icon: '🎫' },
+};
+
+function timeAgo(date) {
+    const now = new Date();
+    const d = new Date(date);
+    const seconds = Math.floor((now - d) / 1000);
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+    return d.toLocaleDateString();
+}
 
 export default function Notifications() {
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('ALL');
-    const [followedBack, setFollowedBack] = useState({});
-    const [allRead, setAllRead] = useState(false);
+    const { profile } = useAuth();
+    const [activeTab, setActiveTab] = useState('all');
+    const [notifications, setNotifications] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        loadNotifications();
+    }, [activeTab, profile]);
+
+    async function loadNotifications() {
+        if (!profile) return;
+        setLoading(true);
+        try {
+            let query = supabase
+                .from('notifications')
+                .select('*')
+                .eq('user_id', profile.id)
+                .order('created_at', { ascending: false });
+
+            if (activeTab === 'events') query = query.in('type', ['event_update', 'registration_confirmed', 'event_starts_soon', 'flash_alert']);
+            if (activeTab === 'social') query = query.in('type', ['new_follower', 'connection_request', 'new_message']);
+            if (activeTab === 'system') query = query.in('type', ['badge_earned', 'xp_gained', 'level_up', 'volunteer_approved']);
+
+            const { data } = await query;
+            setNotifications(data || []);
+        } catch (e) {
+            console.error('Failed to load notifications:', e);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function markAllRead() {
+        if (!profile) return;
+        await supabase.from('notifications')
+            .update({ is_read: true })
+            .eq('user_id', profile.id);
+        setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    }
+
+    function handleNotificationTap(notif) {
+        // Mark as read
+        supabase.from('notifications').update({ is_read: true }).eq('id', notif.id);
+        setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, is_read: true } : n));
+        // Navigate
+        if (notif.data?.event_id) navigate(`/event/${notif.data.event_id}`);
+        else if (notif.data?.username) navigate(`/profile/${notif.data.username}`);
+        else if (notif.data?.org_id) navigate(`/org/${notif.data.org_id}`);
+    }
+
+    const allRead = notifications.length > 0 && notifications.every(n => n.is_read);
+
     return (
         <div className="notif-root">
             <div className="notif-noise" />
@@ -81,18 +100,18 @@ export default function Notifications() {
             {/* Header */}
             <header className="notif-header">
                 <h1 className="notif-title">NOTIFICATIONS <span className="notif-shape">○</span></h1>
-                <button className="notif-mark-read" onClick={() => setAllRead(true)} style={allRead ? { color: '#2dd4bf' } : undefined}>
+                <button className="notif-mark-read" onClick={markAllRead} style={allRead ? { color: '#2dd4bf' } : undefined}>
                     {allRead ? 'ALL READ ✓' : 'MARK ALL READ △'}
                 </button>
             </header>
 
             {/* Tabs */}
             <div className="notif-tabs">
-                {TABS.map((tab, i) => (
+                {TABS.map((tab) => (
                     <button
-                        key={i}
-                        className={`notif-tab ${activeTab === tab.label.split(' ')[0] ? 'active' : ''}`}
-                        onClick={() => setActiveTab(tab.label.split(' ')[0])}
+                        key={tab.key}
+                        className={`notif-tab ${activeTab === tab.key ? 'active' : ''}`}
+                        onClick={() => setActiveTab(tab.key)}
                     >
                         {tab.label}
                     </button>
@@ -101,64 +120,51 @@ export default function Notifications() {
 
             {/* Notification Items */}
             <div className="notif-list">
-                {NOTIFICATIONS.map((n, i) => (
-                    <motion.div
-                        key={i}
-                        className={`notif-item ${n.glow ? 'glow' : ''} ${n.faded ? 'faded' : ''}`}
-                        style={{ borderLeftColor: n.borderColor }}
-                        initial={{ opacity: 0, x: -8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.08 }}
-                    >
-                        <div className="notif-item-inner">
-                            <div className="notif-icon-wrap">
-                                {n.avatar ? (
-                                    <div className="notif-avatar">
-                                        <img src={n.avatar} alt="" />
+                {loading && (
+                    <div style={{ textAlign: 'center', padding: '40px', color: '#64748b', fontFamily: 'DM Mono, monospace', fontSize: '12px' }}>
+                        LOADING...
+                    </div>
+                )}
+                {!loading && notifications.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '40px', color: '#64748b', fontFamily: 'DM Mono, monospace', fontSize: '12px' }}>
+                        NO NOTIFICATIONS
+                    </div>
+                )}
+                {notifications.map((n, i) => {
+                    const style = TYPE_STYLE[n.type] || { label: 'NOTIFICATION', shape: '○', color: '#94a3b8', icon: '📋' };
+                    const isGolden = n.type === 'golden_ticket';
+                    return (
+                        <motion.div
+                            key={n.id}
+                            className={`notif-item ${isGolden ? 'glow' : ''} ${n.is_read ? 'faded' : ''}`}
+                            style={{ borderLeftColor: n.is_read ? 'transparent' : style.color, opacity: n.is_read ? 0.6 : 1 }}
+                            initial={{ opacity: 0, x: -8 }}
+                            animate={{ opacity: n.is_read ? 0.6 : 1, x: 0 }}
+                            transition={{ delay: i * 0.08 }}
+                            onClick={() => handleNotificationTap(n)}
+                        >
+                            <div className="notif-item-inner">
+                                <div className="notif-icon-wrap">
+                                    <div className="notif-icon" style={{ background: `${style.color}15`, borderColor: isGolden ? `${style.color}33` : 'transparent' }}>
+                                        <span>{style.icon}</span>
                                     </div>
-                                ) : (
-                                    <div className="notif-icon" style={{ background: n.iconBg, borderColor: n.glow ? `${n.labelColor}33` : 'transparent' }}>
-                                        <span>{n.icon}</span>
-                                    </div>
-                                )}
-                            </div>
-                            <div className="notif-content">
-                                <div className="notif-meta">
-                                    <span className="notif-label" style={{ color: n.labelColor }}>{n.label}</span>
-                                    <span className="notif-time">{n.time}</span>
                                 </div>
-                                <div className="notif-text-wrap">
-                                    {n.titleBold ? (
+                                <div className="notif-content">
+                                    <div className="notif-meta">
+                                        <span className="notif-label" style={{ color: style.color }}>{style.label}</span>
+                                        <span className="notif-time">{timeAgo(n.created_at)}</span>
+                                    </div>
+                                    <div className="notif-text-wrap">
                                         <p className="notif-text">
-                                            <strong>{n.titleBold}</strong>
-                                            <span className="notif-text-rest"> started following you △</span>
+                                            {n.title} {style.shape}
                                         </p>
-                                    ) : (
-                                        <p className="notif-text">{n.title}</p>
-                                    )}
+                                    </div>
+                                    {n.body && n.body !== n.title && <p className="notif-subtitle">{n.body}</p>}
                                 </div>
-                                {n.subtitle && <p className="notif-subtitle">{n.subtitle}</p>}
-                                {n.action && n.action.type === 'filled' && (
-                                    <button className="notif-action-filled" onClick={() => navigate('/event/1')}>{n.action.label}</button>
-                                )}
-                                {n.action && n.action.type === 'outlined' && (
-                                    <button
-                                        className="notif-action-outlined"
-                                        onClick={() => setFollowedBack(prev => ({ ...prev, [n.titleBold]: !prev[n.titleBold] }))}
-                                        style={followedBack[n.titleBold] ? { background: 'rgba(45,212,191,0.2)', borderColor: '#2dd4bf', color: '#2dd4bf' } : undefined}
-                                    >
-                                        {followedBack[n.titleBold] ? 'FOLLOWING ✓' : n.action.label}
-                                    </button>
-                                )}
-                                {n.download && (
-                                    <button className="notif-download">
-                                        <span className="dl-icon">↓</span> DOWNLOAD PDF
-                                    </button>
-                                )}
                             </div>
-                        </div>
-                    </motion.div>
-                ))}
+                        </motion.div>
+                    );
+                })}
             </div>
         </div>
     );

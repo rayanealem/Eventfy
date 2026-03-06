@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api';
 import './Auth.css';
 
 export default function OrgRegisterAuth() {
     const navigate = useNavigate();
     const [isPending, setIsPending] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
     const [form, setForm] = useState({
         orgName: '', username: '', taxId: '', email: '', password: '', wilaya: '', orgType: '',
     });
@@ -20,9 +24,53 @@ export default function OrgRegisterAuth() {
         return 4;
     };
 
-    const handleSubmit = (e) => {
+    // Map UI org type to backend enum
+    const orgTypeMap = { 'CLUB': 'university_club', 'COMPANY': 'company', 'NGO': 'ngo' };
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        setIsPending(true);
+        if (!form.email || !form.password || !form.username || !form.orgName || !form.orgType) {
+            setError('Please fill all required fields');
+            return;
+        }
+        setLoading(true);
+        setError('');
+        try {
+            // 1. Create Supabase auth user (trigger auto-creates profile)
+            const { data, error: authError } = await supabase.auth.signUp({
+                email: form.email,
+                password: form.password,
+                options: {
+                    data: {
+                        username: form.username,
+                        full_name: form.orgName,
+                    }
+                }
+            });
+            if (authError) throw authError;
+
+            // Check if email confirmation is required
+            if (data.user && !data.session) {
+                setError('Check your email to confirm your account before proceeding.');
+                setLoading(false);
+                return;
+            }
+
+            // 2. Create organization via backend API (uses JWT from session)
+            await api('POST', '/auth/register/org', {
+                org_name: form.orgName,
+                org_type: orgTypeMap[form.orgType] || 'other',
+                official_email: form.email,
+                wilaya: form.wilaya || null,
+                registration_number: form.taxId || null,
+            });
+
+            setIsPending(true);
+        } catch (err) {
+            setError(err.message || 'Registration failed');
+        } finally {
+            setLoading(false);
+        }
     };
 
     if (isPending) {
@@ -177,7 +225,7 @@ export default function OrgRegisterAuth() {
                             <option value="31">31 - Oran</option>
                             <option value="25">25 - Constantine</option>
                             <option value="09">09 - Blida</option>
-                            <option value="19">19 - Sétif</option>
+                            <option value="19">19 - Setif</option>
                         </select>
                         <span className="select-chevron" style={{ color: 'var(--color-teal)' }}>∨ ∨</span>
                     </div>
@@ -204,8 +252,10 @@ export default function OrgRegisterAuth() {
                     </div>
                 </div>
 
-                <button type="submit" className="btn btn-teal" id="btn-request-access">
-                    ESTABLISH YOUR SECTOR △
+                {error && <p className="auth-error" style={{ color: '#FF4D4D', fontSize: '12px', textAlign: 'center', marginBottom: '12px' }}>{error}</p>}
+
+                <button type="submit" className="btn btn-teal" id="btn-request-access" disabled={loading}>
+                    {loading ? 'SUBMITTING...' : 'ESTABLISH YOUR SECTOR △'}
                 </button>
             </form>
 

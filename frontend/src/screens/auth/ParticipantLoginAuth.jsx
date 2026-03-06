@@ -1,16 +1,63 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { supabase } from '../../lib/supabase';
 import './Auth.css';
 
 export default function ParticipantLoginAuth() {
     const navigate = useNavigate();
     const [form, setForm] = useState({ email: '', password: '' });
     const [showPass, setShowPass] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        navigate('/feed');
+    const handleSubmit = async (e) => {
+        e?.preventDefault();
+        if (!form.email || !form.password) return;
+        setLoading(true);
+        setError('');
+        try {
+            const { data, error: authError } = await supabase.auth.signInWithPassword({
+                email: form.email,
+                password: form.password,
+            });
+            if (authError) throw authError;
+            // Check onboarding status
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('onboarding_done')
+                .eq('id', data.user.id)
+                .single();
+            navigate(profile?.onboarding_done ? '/feed' : '/onboarding/1');
+        } catch (err) {
+            setError(err.message || 'Login failed. Check your credentials.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Demo login shortcut for testing
+    const handleDemoLogin = async () => {
+        setForm({ email: 'ahmed@eventfy.dz', password: 'Demo1234!' });
+        setLoading(true);
+        setError('');
+        try {
+            const { data, error: authError } = await supabase.auth.signInWithPassword({
+                email: 'ahmed@eventfy.dz',
+                password: 'Demo1234!',
+            });
+            if (authError) throw authError;
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('onboarding_done')
+                .eq('id', data.user.id)
+                .single();
+            navigate(profile?.onboarding_done ? '/feed' : '/onboarding/1');
+        } catch (err) {
+            setError(err.message || 'Demo login failed');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -77,8 +124,10 @@ export default function ParticipantLoginAuth() {
                     <Link to="#">FORGOT ACCESS?</Link>
                 </div>
 
-                <button type="submit" className="btn btn-coral" id="btn-enter">
-                    ENTER □
+                {error && <p className="auth-error" style={{ color: '#FF4D4D', fontSize: '12px', textAlign: 'center', marginBottom: '12px' }}>{error}</p>}
+
+                <button type="submit" className="btn btn-coral" id="btn-enter" disabled={loading}>
+                    {loading ? 'ENTERING...' : 'ENTER □'}
                 </button>
 
                 <div className="divider-text">OR</div>

@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { api } from '../../lib/api';
 import './EventDetail.css';
 
 const ARTISTS = [
@@ -39,16 +41,56 @@ const TIERS = [
     },
 ];
 
+const TYPE_SHAPES = { sport: '○', science: '△', charity: '□', cultural: '◇' };
+
 export default function EventDetail() {
     const navigate = useNavigate();
     const { id } = useParams();
-    // Dummy event object to demonstrate polymorphism
-    const event = { id, type: 'cultural', orgId: 'org123' };
+    const { profile } = useAuth();
 
-    // activeTab: 'INFO' | 'COMMUNITY' | 'VOLUNTEERS' | 'SPONSORS'
+    const [event, setEvent] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('INFO');
     const [selectedTier, setSelectedTier] = useState(null);
     const [isRegistered, setIsRegistered] = useState(false);
+
+    useEffect(() => { loadEvent(); }, [id]);
+
+    async function loadEvent() {
+        setLoading(true);
+        try {
+            const data = await api('GET', `/events/${id}`);
+            setEvent(data);
+            setIsRegistered(!!data.my_registration);
+        } catch (e) {
+            console.error('Failed to load event:', e);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function handleRegister() {
+        if (isRegistered) return;
+        setIsRegistered(true); // optimistic
+        try {
+            await api('POST', `/events/${id}/register`);
+        } catch (e) {
+            setIsRegistered(false);
+            console.error('Register failed:', e);
+        }
+    }
+
+    if (loading || !event) {
+        return (
+            <div className="event-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+                <span style={{ color: '#64748b', fontFamily: 'DM Mono, monospace', fontSize: '12px' }}>LOADING EVENT...</span>
+            </div>
+        );
+    }
+
+    const org = event.organizations || {};
+    const typeShape = TYPE_SHAPES[event.event_type] || '○';
+    const typeDetails = event.type_details || {};
 
     return (
         <div className="event-root">
@@ -61,8 +103,8 @@ export default function EventDetail() {
                         <path d="M10 12L6 8L10 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 </button>
-                <span className="event-topnav-title" onClick={() => navigate('/org/' + event.orgId)} style={{ cursor: 'pointer' }}>MISSION: EVENTFY ◇</span>
-                <button className="event-share" onClick={() => { if (navigator.share) navigator.share({ title: 'ALGIERS MUSIC FESTIVAL', url: `/event/${id}` }); }}>
+                <span className="event-topnav-title" onClick={() => navigate('/org/' + (org.slug || ''))} style={{ cursor: 'pointer' }}>MISSION: {org.name || 'EVENTFY'} {typeShape}</span>
+                <button className="event-share" onClick={() => { if (navigator.share) navigator.share({ title: event.title, url: `/event/${id}` }); }}>
                     <svg width="18" height="20" viewBox="0 0 18 20" fill="none">
                         <path d="M2 10l7-8M9 2l7 8M9 2v14" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
@@ -71,19 +113,19 @@ export default function EventDetail() {
 
             {/* Hero */}
             <div className="event-hero">
-                <img src="https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=600&h=400&fit=crop" alt="Event" />
+                <img src={event.cover_url || "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=600&h=400&fit=crop"} alt="Event" />
                 <div className="event-hero-gradient" />
                 <div className="event-hero-content">
-                    <div className="event-hero-badge">◇ CULTURAL MISSION</div>
-                    <h1 className="event-hero-title">ALGIERS{'\n'}MUSIC FESTIVAL</h1>
+                    <div className="event-hero-badge">{typeShape} {event.event_type?.toUpperCase()} MISSION</div>
+                    <h1 className="event-hero-title">{event.title?.toUpperCase()}</h1>
                     <div className="event-hero-meta">
                         <span className="event-meta-item">
                             <svg width="9" height="10" viewBox="0 0 9 10" fill="none"><rect x="1" y="1" width="7" height="8" rx="1" stroke="#94a3b8" strokeWidth="1" /><line x1="3" y1="0" x2="3" y2="2" stroke="#94a3b8" strokeWidth="1" /><line x1="6" y1="0" x2="6" y2="2" stroke="#94a3b8" strokeWidth="1" /></svg>
-                            NOV 24, 2024
+                            {event.starts_at ? new Date(event.starts_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase() : 'TBD'}
                         </span>
                         <span className="event-meta-item">
                             <svg width="8" height="10" viewBox="0 0 8 10" fill="none"><path d="M4 0C2 0 0 1.5 0 4c0 3 4 6 4 6s4-3 4-6c0-2.5-2-4-4-4z" fill="#94a3b8" /><circle cx="4" cy="4" r="1.5" fill="black" /></svg>
-                            ALGIERS ARENA
+                            {event.venue_name?.toUpperCase() || event.city?.toUpperCase() || 'ONLINE'}
                         </span>
                     </div>
                 </div>
@@ -101,16 +143,23 @@ export default function EventDetail() {
             <div className="event-content">
                 {activeTab === 'INFO' && (
                     <>
-                        {event.type === 'cultural' && (
+                        {event.event_type === 'cultural' && (
                             <>
                                 {/* Lineup */}
                                 <section className="event-section">
                                     <div className="event-section-header">
                                         <h2 className="event-section-title">THE LINEUP</h2>
-                                        <span className="event-section-count">04 PERFORMERS</span>
+                                        <span className="event-section-count">{String((event.performers || ARTISTS).length).padStart(2, '0')} PERFORMERS</span>
                                     </div>
                                     <div className="event-artists">
-                                        {ARTISTS.map((a, i) => (
+                                        {(event.performers && event.performers.length > 0 ? event.performers.map(p => ({
+                                            name: p.name?.toUpperCase() || 'PERFORMER',
+                                            stage: p.stage || p.role || 'MAIN STAGE',
+                                            time: p.time_slot || '',
+                                            timeBg: p.sort_order === 0 ? '#f45c25' : 'rgba(255,255,255,0.1)',
+                                            image: p.image_url || `https://api.dicebear.com/7.x/shapes/svg?seed=${p.name}`,
+                                            highlighted: p.sort_order === 0,
+                                        })) : ARTISTS).map((a, i) => (
                                             <motion.div
                                                 key={i}
                                                 className="event-artist"
@@ -137,7 +186,25 @@ export default function EventDetail() {
                                 <section className="event-section">
                                     <h2 className="event-section-title">ACCESS TIERS</h2>
                                     <div className="event-tiers">
-                                        {TIERS.map((tier, i) => (
+                                        {(event.ticket_tiers && event.ticket_tiers.length > 0 ? event.ticket_tiers.map((t, idx) => ({
+                                            name: t.name?.toUpperCase() || `TIER ${idx + 1}`,
+                                            shape: ['□', '△', '○'][idx % 3],
+                                            shapeColor: ['#2dd4bf', '#fbbf24', '#f45c25'][idx % 3],
+                                            subtitle: t.description?.toUpperCase() || '',
+                                            price: t.price ? `DZD ${Number(t.price).toLocaleString()}` : 'FREE',
+                                            nameColor: idx === 1 ? '#fbbf24' : 'white',
+                                            subtitleColor: idx === 1 ? 'rgba(251,191,36,0.6)' : '#64748b',
+                                            bg: idx === 1 ? 'rgba(251,191,36,0.05)' : 'rgba(255,255,255,0.05)',
+                                            border: idx === 1 ? 'rgba(251,191,36,0.3)' : 'rgba(255,255,255,0.1)',
+                                            items: t.perks || t.features || [],
+                                            itemColor: '#94a3b8',
+                                            dotColor: ['#475569', '#fbbf24', '#f45c25'][idx % 3],
+                                            buttonBg: idx > 0 ? '#fbbf24' : 'rgba(45,212,191,0.2)',
+                                            buttonBorder: idx > 0 ? 'transparent' : '#2dd4bf',
+                                            buttonText: `SELECT ${['□', '△', '○'][idx % 3]}`,
+                                            buttonColor: idx > 0 ? 'black' : '#2dd4bf',
+                                            recommended: idx === 1,
+                                        })) : TIERS).map((tier, i) => (
                                             <motion.div
                                                 key={i}
                                                 className="event-tier"
@@ -229,7 +296,7 @@ export default function EventDetail() {
                                 </section>
                             </>
                         )}
-                        {event.type === 'sport' && (
+                        {event.event_type === 'sport' && (
                             <section className="event-section" style={{ textAlign: 'center', padding: '40px 0' }}>
                                 <h2 className="event-section-title" style={{ marginBottom: '16px' }}>TEAM SELECTION</h2>
                                 <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', marginBottom: '24px' }}>Teams are forming for this sporting event.</p>
@@ -238,13 +305,13 @@ export default function EventDetail() {
                                 </button>
                             </section>
                         )}
-                        {event.type === 'science' && (
+                        {event.event_type === 'science' && (
                             <section className="event-section" style={{ textAlign: 'center', padding: '40px 0' }}>
                                 <h2 className="event-section-title">SCIENCE TRACK</h2>
                                 <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', marginTop: '16px' }}>Panels, workshops, and hackathons.</p>
                             </section>
                         )}
-                        {event.type === 'charity' && (
+                        {event.event_type === 'charity' && (
                             <section className="event-section" style={{ textAlign: 'center', padding: '40px 0' }}>
                                 <h2 className="event-section-title">DONATION GOALS</h2>
                                 <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', marginTop: '16px' }}>Help us reach our charitable milestones.</p>
@@ -278,7 +345,7 @@ export default function EventDetail() {
 
             {/* Sticky Footer */}
             <div className="event-footer">
-                <button className="event-cta" onClick={() => setIsRegistered(r => !r)} style={isRegistered ? { background: '#2dd4bf' } : undefined}>
+                <button className="event-cta" onClick={handleRegister} style={isRegistered ? { background: '#2dd4bf' } : undefined}>
                     <span>{isRegistered ? "YOU'RE IN ✓" : 'ENTER THE GAME'}</span>
                     {!isRegistered && <div className="cta-circle">○</div>}
                 </button>

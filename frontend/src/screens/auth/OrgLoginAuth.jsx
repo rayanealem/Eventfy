@@ -1,16 +1,47 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { supabase } from '../../lib/supabase';
 import './Auth.css';
 
 export default function OrgLoginAuth() {
     const navigate = useNavigate();
     const [form, setForm] = useState({ email: '', password: '' });
     const [showPass, setShowPass] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        navigate('/feed');
+        if (!form.email || !form.password) return;
+        setLoading(true);
+        setError('');
+        try {
+            const { data, error: authError } = await supabase.auth.signInWithPassword({
+                email: form.email,
+                password: form.password,
+            });
+            if (authError) throw authError;
+
+            // Check onboarding and role
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('onboarding_done, role')
+                .eq('id', data.user.id)
+                .single();
+
+            if (profile?.role !== 'organizer') {
+                setError('This account is not an organization account. Use participant login.');
+                await supabase.auth.signOut();
+                return;
+            }
+
+            navigate(profile?.onboarding_done ? '/feed' : '/onboarding/1');
+        } catch (err) {
+            setError(err.message || 'Login failed. Check your credentials.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -74,8 +105,10 @@ export default function OrgLoginAuth() {
                     <Link to="#">Forgot Password?</Link>
                 </div>
 
-                <button type="submit" className="btn btn-teal" id="btn-org-enter">
-                    ENTER △
+                {error && <p className="auth-error" style={{ color: '#FF4D4D', fontSize: '12px', textAlign: 'center', marginBottom: '12px' }}>{error}</p>}
+
+                <button type="submit" className="btn btn-teal" id="btn-org-enter" disabled={loading}>
+                    {loading ? 'ENTERING...' : 'ENTER △'}
                 </button>
             </form>
 

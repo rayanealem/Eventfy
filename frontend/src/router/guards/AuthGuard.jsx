@@ -36,7 +36,7 @@ export function AuthGuard({ children }) {
  * Redirects authenticated users to /feed.
  */
 export function GuestGuard({ children }) {
-    const { user, loading } = useAuth()
+    const { user, profile, loading } = useAuth()
 
     if (loading) {
         return (
@@ -49,7 +49,12 @@ export function GuestGuard({ children }) {
         )
     }
 
-    if (user) return <Navigate to="/feed" replace />
+    if (user) {
+        if (profile && !profile.onboarding_done) {
+            return <Navigate to="/onboarding/1" replace />
+        }
+        return <Navigate to="/feed" replace />
+    }
     return children
 }
 

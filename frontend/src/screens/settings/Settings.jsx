@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import './Settings.css';
 
 const ACCOUNT_ITEMS = [
@@ -32,6 +33,7 @@ const ACCOUNT_ITEMS = [
 
 export default function Settings() {
     const navigate = useNavigate();
+    const { signOut } = useAuth();
     const [pushNotif, setPushNotif] = useState(true);
     const [emailDigests, setEmailDigests] = useState(false);
     const [showLocation, setShowLocation] = useState(false);
@@ -172,10 +174,10 @@ export default function Settings() {
 
                 {/* Log Out / Delete */}
                 <div className="settings-danger">
-                    <button className="logout-btn" onClick={() => navigate('/splash')}>
+                    <button className="logout-btn" onClick={async () => { await signOut(); navigate('/splash'); }}>
                         LOG OUT <span className="logout-x">✗</span>
                     </button>
-                    <button className="delete-account" onClick={() => { if (window.confirm('Are you sure you want to delete your account?')) navigate('/splash'); }}>
+                    <button className="delete-account" onClick={async () => { if (window.confirm('Are you sure you want to delete your account?')) { await signOut(); navigate('/splash'); } }}>
                         DELETE ACCOUNT PERMANENTLY
                     </button>
                 </div>

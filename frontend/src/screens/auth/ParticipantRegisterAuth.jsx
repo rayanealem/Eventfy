@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { supabase } from '../../lib/supabase';
 import './Auth.css';
 
 const INITIAL_SKILLS = ['STRATEGY', 'STRENGTH'];
@@ -8,12 +9,14 @@ const INITIAL_SKILLS = ['STRATEGY', 'STRENGTH'];
 export default function ParticipantRegisterAuth() {
     const navigate = useNavigate();
     const [form, setForm] = useState({
-        fullName: '', username: '', password: '', location: '', skillInput: '',
+        fullName: '', username: '', email: '', password: '', location: '', skillInput: '',
         university: '', year: ''
     });
     const [skills, setSkills] = useState([...INITIAL_SKILLS]);
     const [isStudent, setIsStudent] = useState(true);
     const [showPass, setShowPass] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
     const passwordStrength = () => {
         const len = form.password.length;
@@ -32,9 +35,41 @@ export default function ParticipantRegisterAuth() {
         }
     };
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        navigate('/onboarding/1');
+    const handleSubmit = async (e) => {
+        e?.preventDefault();
+        if (!form.email || !form.password || !form.username || !form.fullName) {
+            setError('All fields are required');
+            return;
+        }
+        setLoading(true);
+        setError('');
+        try {
+            // Create Supabase auth user (handle_new_user trigger auto-creates profile)
+            const { data, error: authError } = await supabase.auth.signUp({
+                email: form.email,
+                password: form.password,
+                options: {
+                    data: {
+                        username: form.username,
+                        full_name: form.fullName,
+                    }
+                }
+            });
+            if (authError) throw authError;
+
+            // Check if email confirmation is required
+            if (data.user && !data.session) {
+                setError('Check your email to confirm your account before logging in.');
+                setLoading(false);
+                return;
+            }
+
+            navigate('/onboarding/1');
+        } catch (err) {
+            setError(err.message || 'Registration failed');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -78,6 +113,17 @@ export default function ParticipantRegisterAuth() {
                             onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
                         />
                     </div>
+                </div>
+
+                <div className="input-group">
+                    <label htmlFor="reg-email">EMAIL</label>
+                    <input
+                        id="reg-email"
+                        type="email"
+                        placeholder="player@eventfy.dz"
+                        value={form.email}
+                        onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                    />
                 </div>
 
                 <div className="input-group">
@@ -182,8 +228,10 @@ export default function ParticipantRegisterAuth() {
                     </div>
                 )}
 
-                <button type="submit" className="btn btn-coral" id="btn-claim-spot">
-                    CLAIM YOUR SPOT ○
+                {error && <p className="auth-error" style={{ color: '#FF4D4D', fontSize: '12px', textAlign: 'center', marginBottom: '12px' }}>{error}</p>}
+
+                <button type="submit" className="btn btn-coral" id="btn-claim-spot" disabled={loading}>
+                    {loading ? 'REGISTERING...' : 'CLAIM YOUR SPOT ○'}
                 </button>
             </form>
 

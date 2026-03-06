@@ -45,33 +45,19 @@ async def register_participant(body: ParticipantRegister):
 
 
 @router.post("/register/org")
-async def register_org(body: OrgRegister):
-    """Create org account — creates user + org (status=pending)."""
+async def register_org(body: OrgRegister, user=Depends(get_current_user)):
+    """Create org for the current authenticated user (status=pending)."""
     try:
-        # 1. Create auth user
-        result = supabase.auth.sign_up({
-            "email": body.email,
-            "password": body.password,
-            "options": {
-                "data": {
-                    "username": body.username,
-                    "full_name": body.full_name,
-                }
-            }
-        })
-        if result.user is None:
-            raise HTTPException(400, "Registration failed")
+        user_id = user["id"]
 
-        user_id = result.user.id
-
-        # 2. Update profile role to organizer
+        # 1. Update profile role to organizer
         supabase.table("profiles").update({
             "role": "organizer",
             "wilaya": body.wilaya,
             "city": body.city,
         }).eq("id", user_id).execute()
 
-        # 3. Create organization
+        # 2. Create organization
         slug = _slugify(body.org_name)
         org = supabase.table("organizations").insert({
             "owner_id": user_id,
@@ -87,7 +73,7 @@ async def register_org(body: OrgRegister):
             "status": "pending",
         }).execute()
 
-        # 4. Add owner as org member
+        # 3. Add owner as org member
         supabase.table("org_members").insert({
             "org_id": org.data[0]["id"],
             "user_id": user_id,
@@ -112,16 +98,37 @@ async def logout(user=Depends(get_current_user)):
 
 @router.get("/me")
 async def get_me(user=Depends(get_current_user)):
-    """Get current user profile + their orgs."""
+    """Get current user profile with badges, skills, and managed orgs."""
+    # Get profile with badges and skill counts
+    profile = (
+        supabase.table("profiles")
+        .select("""
+            *,
+            user_badges (
+                badge_id,
+                badges ( name, icon_url, shape, color )
+            ),
+            user_skills (
+                skill_id, verified,
+                skills ( name, category )
+            )
+        """)
+        .eq("id", user["id"])
+        .single()
+        .execute()
+    )
+
+    # Get orgs this user owns/manages
     orgs = (
         supabase.table("org_members")
-        .select("*, organizations(*)")
+        .select("*, organizations(id, name, slug, logo_url, status, verified)")
         .eq("user_id", user["id"])
         .execute()
     )
+
     return {
-        "profile": user,
-        "organizations": [m["organizations"] for m in (orgs.data or [])],
+        **(profile.data or user),
+        "managed_orgs": [m["organizations"] for m in (orgs.data or [])],
     }
 
 

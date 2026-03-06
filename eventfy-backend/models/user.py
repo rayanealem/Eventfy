@@ -55,10 +55,6 @@ class ParticipantRegister(BaseModel):
 
 
 class OrgRegister(BaseModel):
-    email: str
-    password: str = Field(min_length=6)
-    username: str = Field(min_length=3, max_length=30)
-    full_name: str = Field(min_length=1)
     org_name: str
     org_type: str
     official_email: str
