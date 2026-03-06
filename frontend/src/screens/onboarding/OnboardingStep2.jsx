@@ -1,8 +1,50 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../context/AuthContext';
 import './OnboardingSteps.css';
 
 export default function OnboardingStep2() {
     const navigate = useNavigate();
+    const { user, profile, refreshProfile } = useAuth();
+
+    const [username, setUsername] = useState(profile?.username || '');
+    const [shape, setShape] = useState(profile?.shape || 'triangle');
+    const [color, setColor] = useState(profile?.shape_color || '#13ecec');
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (profile) {
+            if (profile.username) setUsername(profile.username);
+            if (profile.shape) setShape(profile.shape);
+            if (profile.shape_color) setColor(profile.shape_color);
+        }
+    }, [profile]);
+
+    const handleNext = async () => {
+        if (!user) {
+            navigate('/onboarding/3');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ username, shape, shape_color: color })
+                .eq('id', user.id);
+
+            if (error) throw error;
+            await refreshProfile();
+            navigate('/onboarding/3');
+        } catch (err) {
+            console.error('Error updating profile:', err);
+            // Navigate anyway so user doesn't get stuck
+            navigate('/onboarding/3');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <div className="obs-root">
@@ -30,7 +72,7 @@ export default function OnboardingStep2() {
                     <h2 className="obs-step-title">STEP 2: WHO ARE YOU? ○</h2>
 
                     <div className="obs-avatar-zone">
-                        <div className="obs-hex-upload">
+                        <div className="obs-hex-upload" style={{ background: color }}>
                             <span className="obs-upload-icon">↑</span>
                         </div>
                         <span className="obs-upload-label">Upl0ad Identity</span>
@@ -39,29 +81,34 @@ export default function OnboardingStep2() {
                     <div className="obs-symbol-section">
                         <span className="obs-sub-label">Select Your Symbol</span>
                         <div className="obs-symbols">
-                            <button className="obs-sym">○</button>
-                            <button className="obs-sym active">△</button>
-                            <button className="obs-sym">□</button>
-                            <button className="obs-sym">◇</button>
+                            <button className={`obs-sym ${shape === 'circle' ? 'active' : ''}`} onClick={() => setShape('circle')}>○</button>
+                            <button className={`obs-sym ${shape === 'triangle' ? 'active' : ''}`} onClick={() => setShape('triangle')}>△</button>
+                            <button className={`obs-sym ${shape === 'square' ? 'active' : ''}`} onClick={() => setShape('square')}>□</button>
+                            <button className={`obs-sym ${shape === 'diamond' ? 'active' : ''}`} onClick={() => setShape('diamond')}>◇</button>
                         </div>
                         <div className="obs-colors">
-                            <div className="obs-color active" style={{ background: '#13ecec' }} />
-                            <div className="obs-color" style={{ background: '#ff4d4d' }} />
-                            <div className="obs-color" style={{ background: '#fc0' }} />
-                            <div className="obs-color" style={{ background: '#fff' }} />
+                            <div className={`obs-color ${color === '#13ecec' ? 'active' : ''}`} style={{ background: '#13ecec' }} onClick={() => setColor('#13ecec')} />
+                            <div className={`obs-color ${color === '#ff4d4d' ? 'active' : ''}`} style={{ background: '#ff4d4d' }} onClick={() => setColor('#ff4d4d')} />
+                            <div className={`obs-color ${color === '#fc0' ? 'active' : ''}`} style={{ background: '#fc0' }} onClick={() => setColor('#fc0')} />
+                            <div className={`obs-color ${color === '#fff' ? 'active' : ''}`} style={{ background: '#fff' }} onClick={() => setColor('#fff')} />
                         </div>
                     </div>
 
                     <div className="obs-username-field">
                         <span className="obs-field-label">Username Entry</span>
                         <div className="obs-username-input-wrap">
-                            <input className="obs-text-input" defaultValue="@ahmed_dev" />
-                            <span className="obs-avail">✓ AVAILABLE</span>
+                            <input
+                                className="obs-text-input"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                placeholder="@username"
+                            />
+                            {username.length > 2 && <span className="obs-avail">✓ AVAILABLE</span>}
                         </div>
                     </div>
 
-                    <button className="obs-cta-btn cyan round" onClick={() => navigate('/onboarding/3')}>
-                        SAVE & CONTINUE △
+                    <button className="obs-cta-btn cyan round" onClick={handleNext} disabled={loading}>
+                        {loading ? 'SAVING...' : 'SAVE & CONTINUE △'}
                     </button>
                 </section>
             </div>

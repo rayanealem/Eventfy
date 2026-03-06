@@ -1,20 +1,70 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../context/AuthContext';
 import './OnboardingSteps.css';
-
-const SKILLS_DATA = [
-    { label: 'Python', active: true },
-    { label: 'React', active: false },
-    { label: 'Design', active: true },
-    { label: 'Cybersec', active: false },
-    { label: 'Marketing', active: false },
-    { label: 'Gaming', active: true },
-    { label: 'AI/ML', active: false },
-    { label: 'Blockchain', active: false },
-    { label: 'Event Planning', active: false },
-];
 
 export default function OnboardingStep3() {
     const navigate = useNavigate();
+    const { user } = useAuth();
+
+    const [skills, setSkills] = useState([]);
+    const [selectedIds, setSelectedIds] = useState(new Set());
+    const [loadingData, setLoadingData] = useState(true);
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        const fetchSkills = async () => {
+            const { data, error } = await supabase
+                .from('skills')
+                .select('id, name, category')
+                .limit(20);
+
+            if (!error && data) {
+                setSkills(data);
+            }
+            setLoadingData(false);
+        };
+        fetchSkills();
+    }, []);
+
+    const toggleSkill = (id) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    const handleNext = async () => {
+        if (!user || selectedIds.size === 0) {
+            navigate('/onboarding/4');
+            return;
+        }
+
+        setSaving(true);
+        try {
+            const inserts = Array.from(selectedIds).map(skillId => ({
+                user_id: user.id,
+                skill_id: skillId,
+                verified: false
+            }));
+
+            // Upsert user skills
+            const { error } = await supabase
+                .from('user_skills')
+                .upsert(inserts, { onConflict: 'user_id,skill_id' });
+
+            if (error) throw error;
+            navigate('/onboarding/4');
+        } catch (err) {
+            console.error('Error saving skills:', err);
+            navigate('/onboarding/4');
+        } finally {
+            setSaving(false);
+        }
+    };
 
     return (
         <div className="obs-root">
@@ -38,13 +88,28 @@ export default function OnboardingStep3() {
             <div className="obs-main single-step">
                 <section className="obs-step">
                     <h2 className="obs-step-title">STEP 3: WHAT ARE YOU<br />MADE OF? △</h2>
-                    <div className="obs-skills-cloud">
-                        {SKILLS_DATA.map((s, i) => (
-                            <button key={i} className={`obs-pill ${s.active ? 'active' : ''}`}>{s.label}</button>
-                        ))}
-                    </div>
-                    <button className="obs-cta-btn outline" onClick={() => navigate('/onboarding/4')}>
-                        CONTINUE □
+
+                    {loadingData ? (
+                        <div style={{ padding: '2rem', textAlign: 'center', color: '#fff' }}>Loading skill matrix...</div>
+                    ) : (
+                        <div className="obs-skills-cloud">
+                            {skills.map((s) => {
+                                const isActive = selectedIds.has(s.id);
+                                return (
+                                    <button
+                                        key={s.id}
+                                        className={`obs-pill ${isActive ? 'active' : ''}`}
+                                        onClick={() => toggleSkill(s.id)}
+                                    >
+                                        {s.name}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    <button className="obs-cta-btn outline round" onClick={handleNext} disabled={saving}>
+                        {saving ? 'SAVING...' : 'CONTINUE □'}
                     </button>
                 </section>
             </div>
