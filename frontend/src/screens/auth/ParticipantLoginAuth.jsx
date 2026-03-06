@@ -22,13 +22,18 @@ export default function ParticipantLoginAuth() {
                 password: form.password,
             });
             if (authError) throw authError;
-            // Check onboarding status
+            // Check onboarding status and role
             const { data: profile } = await supabase
                 .from('profiles')
-                .select('onboarding_done')
+                .select('onboarding_done, role')
                 .eq('id', data.user.id)
                 .single();
-            navigate(profile?.onboarding_done ? '/feed' : '/onboarding/1');
+
+            if (profile?.role === 'organizer') {
+                navigate(profile?.onboarding_done ? '/feed' : '/org/setup');
+            } else {
+                navigate(profile?.onboarding_done ? '/feed' : '/onboarding/1');
+            }
         } catch (err) {
             setError(err.message || 'Login failed. Check your credentials.');
         } finally {
@@ -49,10 +54,15 @@ export default function ParticipantLoginAuth() {
             if (authError) throw authError;
             const { data: profile } = await supabase
                 .from('profiles')
-                .select('onboarding_done')
+                .select('onboarding_done, role')
                 .eq('id', data.user.id)
                 .single();
-            navigate(profile?.onboarding_done ? '/feed' : '/onboarding/1');
+
+            if (profile?.role === 'organizer') {
+                navigate(profile?.onboarding_done ? '/feed' : '/org/setup');
+            } else {
+                navigate(profile?.onboarding_done ? '/feed' : '/onboarding/1');
+            }
         } catch (err) {
             setError(err.message || 'Demo login failed');
         } finally {

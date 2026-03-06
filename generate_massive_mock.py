@@ -8,10 +8,6 @@ def esc(s):
     return "'" + str(s).replace("'", "''") + "'"
 
 def generate():
-    out = open("05_massive_mock_data.sql", "w", encoding="utf-8")
-    out.write("-- EVENTFY MASSIVE MOCK DATA\\n")
-    out.write("-- Generated via Python Script\\n\\n")
-
     cities = ["Algiers", "Oran", "Constantine", "Annaba", "Setif", "Batna", "Tizi Ouzou", "Bejaia"]
     shapes = ["circle", "triangle", "square", "diamond"]
     colors = ["#FF2D78", "#00E5CC", "#FFD700", "#FF4D4D", "#3B82F6"]
@@ -24,6 +20,7 @@ def generate():
     # Generate 1000 Users
     print("Generating users...")
     users = []
+    auth_inserts = []
     user_inserts = []
     for i in range(1000):
         uid = str(uuid.uuid4())
@@ -38,16 +35,36 @@ def generate():
         xp = random.randint(0, 15000)
         lvl = (xp // 1000) + 1
         
+        email = f"{username}@example.com"
+        
+        raw_user_meta = f'{{"full_name":"{fn}","username":"{username}"}}'
+        
+        # auth.users
+        auth_inserts.append(f"({esc(uid)}, 'authenticated', 'authenticated', {esc(email)}, crypt('password123', gen_salt('bf')), NOW(), '{{\"provider\":\"email\",\"providers\":[\"email\"]}}'::jsonb, {esc(raw_user_meta)}::jsonb, NOW(), NOW())")
+        
+        # public.profiles
         user_inserts.append(f"({esc(uid)}, {esc(username)}, {esc(fn)}, {esc(bio)}, {esc(city)}, {esc(city)}, {esc(shape)}, {esc(color)}, {is_student}, 'participant', {xp}, {lvl}, TRUE)")
 
-    out.write("-- USERS (1000)\\n")
-    # batch insert
-    batch_size = 50
-    for i in range(0, len(user_inserts), batch_size):
-        batch = user_inserts[i:i+batch_size]
-        out.write("INSERT INTO profiles (id, username, full_name, bio, wilaya, city, shape, shape_color, is_student, role, xp, level, onboarding_done)\\nVALUES\\n")
-        out.write(",\\n".join(batch) + "\\nON CONFLICT (id) DO NOTHING;\\n\\n")
+    with open("05_massive_mock_data_0_auth.sql", "w", encoding="utf-8") as out:
+        out.write("-- AUTH USERS (1000)\n")
+        out.write("CREATE EXTENSION IF NOT EXISTS pgcrypto;\n\n")
+        batch_size = 50
+        for i in range(0, len(auth_inserts), batch_size):
+            batch = auth_inserts[i:i+batch_size]
+            out.write("INSERT INTO auth.users (id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)\nVALUES\n")
+            out.write(",\n".join(batch) + "\nON CONFLICT (id) DO NOTHING;\n\n")
 
+    with open("05_massive_mock_data_1_profiles.sql", "w", encoding="utf-8") as out:
+        out.write("-- PROFILES (1000)\n")
+        batch_size = 50
+        for i in range(0, len(user_inserts), batch_size):
+            batch = user_inserts[i:i+batch_size]
+            out.write("INSERT INTO public.profiles (id, username, full_name, bio, wilaya, city, shape, shape_color, is_student, role, xp, level, onboarding_done)\nVALUES\n")
+            out.write(",\n".join(batch) + "\nON CONFLICT (id) DO UPDATE SET \\\n"
+                      "bio = EXCLUDED.bio, wilaya = EXCLUDED.wilaya, city = EXCLUDED.city, \\\n"
+                      "shape = EXCLUDED.shape, shape_color = EXCLUDED.shape_color, \\\n"
+                      "is_student = EXCLUDED.is_student, role = EXCLUDED.role, \\\n"
+                      "xp = EXCLUDED.xp, level = EXCLUDED.level, onboarding_done = EXCLUDED.onboarding_done;\n\n")
 
     # Generate 50 Orgs
     print("Generating Orgs...")
@@ -67,11 +84,12 @@ def generate():
         
         org_inserts.append(f"({esc(oid)}, {esc(owner)}, {esc(name)}, {esc(slug)}, {esc(otype)}, {esc(email)}, {esc(desc)}, 'approved', TRUE, {fcount}, {esc(city)}, {esc(city)})")
 
-    out.write("-- ORGS (50)\\n")
-    for i in range(0, len(org_inserts), batch_size):
-        batch = org_inserts[i:i+batch_size]
-        out.write("INSERT INTO organizations (id, owner_id, name, slug, org_type, official_email, description, status, verified, follower_count, wilaya, city)\\nVALUES\\n")
-        out.write(",\\n".join(batch) + "\\nON CONFLICT (id) DO NOTHING;\\n\\n")
+    with open("05_massive_mock_data_2_orgs.sql", "w", encoding="utf-8") as out:
+        out.write("-- ORGS (50)\n")
+        for i in range(0, len(org_inserts), batch_size):
+            batch = org_inserts[i:i+batch_size]
+            out.write("INSERT INTO public.organizations (id, owner_id, name, slug, org_type, official_email, description, status, verified, follower_count, wilaya, city)\nVALUES\n")
+            out.write(",\n".join(batch) + "\nON CONFLICT (id) DO NOTHING;\n\n")
 
     # Generate 300 Events
     print("Generating Events...")
@@ -100,11 +118,12 @@ def generate():
         
         event_inserts.append(f"({esc(eid)}, {esc(org)}, {esc(creator)}, {esc(title)}, {esc(slug)}, {esc(etype)}, {esc(status)}, '{start.isoformat()}', '{end.isoformat()}', {esc(city)}, {esc(city)}, {cap}, {xp}, TRUE)")
 
-    out.write("-- EVENTS (300)\\n")
-    for i in range(0, len(event_inserts), batch_size):
-        batch = event_inserts[i:i+batch_size]
-        out.write("INSERT INTO events (id, org_id, created_by, title, slug, event_type, status, starts_at, ends_at, wilaya, city, capacity, xp_checkin, is_paid)\\nVALUES\\n")
-        out.write(",\\n".join(batch) + "\\nON CONFLICT (id) DO NOTHING;\\n\\n")
+    with open("05_massive_mock_data_3_events.sql", "w", encoding="utf-8") as out:
+        out.write("-- EVENTS (300)\n")
+        for i in range(0, len(event_inserts), batch_size):
+            batch = event_inserts[i:i+batch_size]
+            out.write("INSERT INTO public.events (id, org_id, created_by, title, slug, event_type, status, starts_at, ends_at, wilaya, city, capacity, xp_checkin, is_paid)\nVALUES\n")
+            out.write(",\n".join(batch) + "\nON CONFLICT (id) DO NOTHING;\n\n")
 
     # Generate Registrations (approx 5-20 per event)
     print("Generating Registrations...")
@@ -117,11 +136,23 @@ def generate():
             checked_in = "TRUE" if status == 'confirmed' and random.random() > 0.5 else "FALSE"
             reg_inserts.append(f"(gen_random_uuid(), {esc(eid)}, {esc(u)}, {esc(status)}, {checked_in})")
 
-    out.write("-- REGISTRATIONS (10000+)\\n")
-    for i in range(0, len(reg_inserts), batch_size):
-        batch = reg_inserts[i:i+batch_size]
-        out.write("INSERT INTO event_registrations (id, event_id, user_id, status, checked_in)\\nVALUES\\n")
-        out.write(",\\n".join(batch) + "\\nON CONFLICT DO NOTHING;\\n\\n")
+    with open("05_massive_mock_data_4_regs_1.sql", "w", encoding="utf-8") as out1, \
+         open("05_massive_mock_data_4_regs_2.sql", "w", encoding="utf-8") as out2:
+        out1.write("-- REGISTRATIONS PART 1\n")
+        out2.write("-- REGISTRATIONS PART 2\n")
+        
+        half = len(reg_inserts) // 2
+        
+        for i in range(0, half, batch_size):
+            batch = reg_inserts[i:i+batch_size]
+            out1.write("INSERT INTO public.event_registrations (id, event_id, user_id, status, checked_in)\nVALUES\n")
+            out1.write(",\n".join(batch) + "\nON CONFLICT DO NOTHING;\n\n")
+            
+        for i in range(half, len(reg_inserts), batch_size):
+            batch = reg_inserts[i:i+batch_size]
+            out2.write("INSERT INTO public.event_registrations (id, event_id, user_id, status, checked_in)\nVALUES\n")
+            out2.write(",\n".join(batch) + "\nON CONFLICT DO NOTHING;\n\n")
+
 
     # Generate Posts (500)
     print("Generating Posts...")
@@ -134,14 +165,14 @@ def generate():
         comments = random.randint(0, 50)
         post_inserts.append(f"({esc(pid)}, {esc(author)}, {esc(content)}, {likes}, {comments})")
 
-    out.write("-- POSTS (500)\\n")
-    for i in range(0, len(post_inserts), batch_size):
-        batch = post_inserts[i:i+batch_size]
-        out.write("INSERT INTO posts (id, author_id, content, like_count, comment_count)\\nVALUES\\n")
-        out.write(",\\n".join(batch) + "\\nON CONFLICT DO NOTHING;\\n\\n")
+    with open("05_massive_mock_data_5_posts.sql", "w", encoding="utf-8") as out:
+        out.write("-- POSTS (500)\n")
+        for i in range(0, len(post_inserts), batch_size):
+            batch = post_inserts[i:i+batch_size]
+            out.write("INSERT INTO public.posts (id, author_id, content, like_count, comment_count)\nVALUES\n")
+            out.write(",\n".join(batch) + "\nON CONFLICT DO NOTHING;\n\n")
 
-    out.close()
-    print("Massive mock data generated in 05_massive_mock_data.sql")
+    print("Massive mock data generated in 7 separate SQL files!")
 
 if __name__ == '__main__':
     generate()

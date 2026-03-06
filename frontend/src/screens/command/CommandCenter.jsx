@@ -1,55 +1,117 @@
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { api } from '../../lib/api';
+import { supabase } from '../../lib/supabase';
 import './CommandCenter.css';
 
-const STATS = [
-    { label: 'Check-ins', value: '247/500', color: '#2dd4bf', bars: [50, 75, 100, 66, 83] },
-    { label: 'Volunteers', value: '18/24', sub: 'ON DUTY', color: '#f44725', hasActive: true },
-    { label: 'Live Chat', value: '1,247', color: '#fff', bars: [50, 75, 100, 66, 83] },
-    { label: 'Total XP', value: '24,800', color: '#fbbf24', rank: 'RANK: GOLD' },
-];
-
-const LOG_ENTRIES = [
-    { time: '[14:22:01]', msg: 'Player #4821 checked in - Zone A', color: '#2dd4bf' },
-    { time: '[14:21:45]', msg: 'Volunteer #12 assigned to Zone B', color: '#cbd5e1' },
-    { time: '[14:20:30]', msg: "New Announcement: 'Round 2 Starting'", color: '#f44725' },
-    { time: '[14:19:12]', msg: 'Network latency spike detected (+45ms)', color: '#cbd5e1' },
-    { time: '[14:18:55]', msg: 'Global XP Multiplier active (x1.5)', color: '#fbbf24' },
-    { time: '[14:17:40]', msg: 'Player #1092 checked in - Main Hall', color: '#2dd4bf' },
-    { time: '[14:17:02]', msg: 'System diagnostic complete. All clear.', color: '#cbd5e1' },
-];
-
 export default function CommandCenter() {
+    const { eventId } = useParams();
     const navigate = useNavigate();
+    const [event, setEvent] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [updating, setUpdating] = useState(false);
+
+    // Live feed logic
+    const [logEntries, setLogEntries] = useState([
+        { time: `[${new Date().toLocaleTimeString()}]`, msg: 'Command Center Initialized', color: '#cbd5e1' }
+    ]);
+
+    useEffect(() => {
+        loadEvent();
+
+        // Listen to checkin updates
+        const channel = supabase.channel(`cc_${eventId}`)
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'event_registrations', filter: `event_id=eq.${eventId}` },
+                (payload) => {
+                    if (payload.new.checked_in && !payload.old.checked_in) {
+                        addLog(`Player checked in! (Reg ID: ${payload.new.id.substring(0, 8)})`, '#2dd4bf');
+                        // Refresh capacity stats
+                        loadEvent();
+                    }
+                }
+            ).subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [eventId]);
+
+    const loadEvent = async () => {
+        try {
+            const res = await api.get(`/events/${eventId}`);
+            setEvent(res.data);
+        } catch (error) {
+            console.error("Failed to load event:", error);
+            addLog("Failed to sync event data.", "#f44725");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const addLog = (msg, color = '#cbd5e1') => {
+        const time = `[${new Date().toLocaleTimeString()}]`;
+        setLogEntries(prev => [{ time, msg, color }, ...prev].slice(0, 20));
+    };
+
+    const handleStatusToggle = async () => {
+        if (!event) return;
+        const newStatus = event.status === 'live' ? 'completed' :
+            event.status === 'scheduled' ? 'live' : 'scheduled';
+
+        try {
+            setUpdating(true);
+            await api.patch(`/events/${eventId}`, { status: newStatus });
+            setEvent(prev => ({ ...prev, status: newStatus }));
+            addLog(`Event status changed to: ${newStatus.toUpperCase()}`, '#fbbf24');
+        } catch (error) {
+            console.error(error);
+            addLog(`Failed to update status.`, '#f44725');
+            alert("Error updating status. Are you sure you are the organizer?");
+        } finally {
+            setUpdating(false);
+        }
+    };
+
+    if (loading || !event) return <div style={{ color: '#00ffc2', padding: '2rem' }}>BOOTING COMMAND CENTER...</div>;
+
+    const stats = [
+        { label: 'Check-ins', value: `${event.checkin_count || 0}/${event.capacity || '∞'}`, color: '#2dd4bf', bars: [50, 75, 100, 66, 83] },
+        { label: 'Registrations', value: `${event.registration_count || 0}`, sub: 'TOTAL VOLUMES', color: '#f44725', hasActive: true },
+        { label: 'Views', value: `${event.view_count || 0}`, color: '#fff', bars: [20, 40, 60, 80, 100] },
+        { label: 'Total XP Pool', value: `${event.xp_checkin * (event.capacity || 100)}`, color: '#fbbf24', rank: 'REWARD TIER' },
+    ];
+
+    const isLive = event.status === 'live';
+
     return (
         <div className="cc-root">
             <div className="cc-noise" />
             <div className="cc-glow-tr" />
             <div className="cc-glow-bl" />
 
-            {/* Header */}
             <header className="cc-header">
                 <div className="cc-header-row">
-                    <h1 className="cc-title">COMMAND CENTER □</h1>
-                    <div className="cc-live-badge">
-                        <div className="cc-live-dot" />
-                        <span className="cc-live-text">● LIVE</span>
+                    <h1 className="cc-title">{event.title.toUpperCase()} □</h1>
+                    <div className="cc-live-badge" onClick={handleStatusToggle} style={{ cursor: 'pointer', background: isLive ? 'rgba(244,71,37,0.1)' : 'rgba(255,255,255,0.1)' }}>
+                        {isLive && <div className="cc-live-dot" />}
+                        <span className="cc-live-text" style={{ color: isLive ? '#f44725' : '#fff' }}>
+                            {updating ? "UPDATING..." : `● ${event.status.toUpperCase()}`}
+                        </span>
                     </div>
                 </div>
                 <div className="cc-timer-row">
                     <div className="cc-network">
                         <span className="cc-net-icon">📡</span>
-                        <span className="cc-net-label">Eventfy Net-04</span>
+                        <span className="cc-net-label">Eventfy Net-04 • ORG LINK</span>
                     </div>
-                    <span className="cc-timer">01:24:30</span>
+                    <span className="cc-timer">{new Date(event.starts_at).toLocaleDateString()}</span>
                 </div>
             </header>
 
-            {/* Main */}
             <div className="cc-main">
-                {/* Stats Grid */}
                 <div className="cc-stats-grid">
-                    {STATS.map((s, i) => (
+                    {stats.map((s, i) => (
                         <motion.div key={i} className="cc-stat-card"
                             initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.05 }}>
@@ -81,17 +143,15 @@ export default function CommandCenter() {
                     ))}
                 </div>
 
-                {/* Live Feed */}
                 <div className="cc-feed-section">
                     <div className="cc-feed-head">
                         <span className="cc-feed-title">LIVE FEED</span>
                         <span className="cc-feed-sub">Auto-scrolling log</span>
                     </div>
                     <div className="cc-feed-terminal">
-                        {LOG_ENTRIES.map((e, i) => (
+                        {logEntries.map((e, i) => (
                             <motion.div key={i} className="cc-log-entry"
-                                initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: i * 0.04 }}>
+                                initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }}>
                                 <span className="cc-log-time" style={{ color: e.color, opacity: 0.5 }}>{e.time}</span>
                                 <span className="cc-log-msg" style={{ color: e.color }}>{e.msg}</span>
                             </motion.div>
@@ -100,30 +160,24 @@ export default function CommandCenter() {
                 </div>
             </div>
 
-            {/* Footer */}
             <div className="cc-footer">
                 <div className="cc-footer-top">
                     <div className="cc-action-pill">
+                        <div className="cc-pill-btn" onClick={() => navigate(`/manage/${eventId}/analytics`)}>
+                            <span className="cc-pill-icon">📊</span>
+                            <span className="cc-pill-label" style={{ color: '#fbbf24' }}>Analytics</span>
+                        </div>
+                        <div className="cc-pill-divider" />
                         <div className="cc-pill-btn">
                             <span className="cc-pill-icon">📢</span>
                             <span className="cc-pill-label" style={{ color: '#f44725' }}>Announce</span>
                         </div>
-                        <div className="cc-pill-divider" />
-                        <div className="cc-pill-btn">
-                            <span className="cc-pill-icon">🔔</span>
-                            <span className="cc-pill-label" style={{ color: '#2dd4bf' }}>Push</span>
-                        </div>
-                        <div className="cc-pill-divider" />
-                        <div className="cc-pill-btn">
-                            <span className="cc-pill-icon">📄</span>
-                            <span className="cc-pill-label" style={{ color: '#94a3b8' }}>Export</span>
-                        </div>
                     </div>
-                    <div className="cc-emergency-fab">⚠</div>
+                    <div className="cc-emergency-fab" onClick={() => navigate('/explore')}>✕</div>
                 </div>
-                <div className="cc-scan-fab" onClick={() => navigate('/qr')} style={{ cursor: 'pointer' }}>
+                <div className="cc-scan-fab" onClick={() => navigate('/scan')} style={{ cursor: 'pointer' }}>
                     <span className="cc-scan-icon">⬡</span>
-                    <span className="cc-scan-label">SCAN △</span>
+                    <span className="cc-scan-label">SCAN QR △</span>
                 </div>
             </div>
         </div>

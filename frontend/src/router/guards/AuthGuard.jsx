@@ -1,12 +1,13 @@
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 
 /**
  * AuthGuard — requires authenticated user with completed onboarding.
- * Redirects to /splash if not logged in, or /onboarding/1 if onboarding incomplete.
+ * Redirects to /splash if not logged in, or /onboarding/1 (or /org/setup) if onboarding incomplete.
  */
 export function AuthGuard({ children }) {
     const { user, profile, loading } = useAuth()
+    const location = useLocation()
 
     if (loading) {
         return (
@@ -24,8 +25,17 @@ export function AuthGuard({ children }) {
     }
 
     if (!user) return <Navigate to="/splash" replace />
+
     if (user && profile && !profile.onboarding_done) {
-        return <Navigate to="/onboarding/1" replace />
+        if (profile.role === 'organizer') {
+            if (!location.pathname.startsWith('/org/setup')) {
+                return <Navigate to="/org/setup" replace />
+            }
+        } else {
+            if (!location.pathname.startsWith('/onboarding')) {
+                return <Navigate to="/onboarding/1" replace />
+            }
+        }
     }
 
     return children
@@ -33,7 +43,7 @@ export function AuthGuard({ children }) {
 
 /**
  * GuestGuard — only allows unauthenticated users.
- * Redirects authenticated users to /feed.
+ * Redirects authenticated users to /feed or onboarding.
  */
 export function GuestGuard({ children }) {
     const { user, profile, loading } = useAuth()
@@ -51,6 +61,9 @@ export function GuestGuard({ children }) {
 
     if (user) {
         if (profile && !profile.onboarding_done) {
+            if (profile.role === 'organizer') {
+                return <Navigate to="/org/setup" replace />
+            }
             return <Navigate to="/onboarding/1" replace />
         }
         return <Navigate to="/feed" replace />
@@ -64,6 +77,7 @@ export function GuestGuard({ children }) {
  */
 export function OrgGuard({ children }) {
     const { profile, loading } = useAuth()
+    const location = useLocation()
 
     if (loading) {
         return (
@@ -78,6 +92,10 @@ export function OrgGuard({ children }) {
 
     if (!profile || profile.role !== 'organizer') {
         return <Navigate to="/feed" replace />
+    }
+
+    if (!profile.onboarding_done && !location.pathname.startsWith('/org/setup')) {
+        return <Navigate to="/org/setup" replace />
     }
 
     return children

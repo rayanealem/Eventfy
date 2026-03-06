@@ -1,36 +1,57 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { api } from '../../lib/api';
 import './Analytics.css';
-
-const STATS = [
-    { label: 'Registrations', value: '4,502', icon: '□', color: 'teal' },
-    { label: 'Attendance', value: '3,890', icon: '▲', color: 'red' },
-    { label: 'Volunteers', value: '124', icon: '△', color: 'gold' },
-    { label: 'Satisfaction', value: '★★★★☆', icon: null, color: 'gold', isStars: true },
-];
-
-const SKILLS = [
-    { name: 'STRATEGY', score: 88, width: '88%' },
-    { name: 'SURVIVAL', score: 72, width: '72%' },
-    { name: 'STEALTH', score: 45, width: '45%' },
-];
-
-const ENGAGEMENT = [
-    { label: 'Chat', value: '12K' },
-    { label: 'Shares', value: '842' },
-    { label: 'Saves', value: '2.1K' },
-];
-
-const FINANCIALS = [
-    { label: 'Gross Revenue', value: '$142,500.00', color: '#fff' },
-    { label: 'Financial Reach', value: '8.2M', color: '#fff' },
-    { label: 'Acquisition Cost', value: '$12.42', color: '#ff6b6b' },
-];
 
 const TIMELINE_LABELS = ['01 OCT', '10 OCT', '20 OCT', '30 OCT'];
 
 export default function Analytics() {
     const navigate = useNavigate();
+    const { eventId } = useParams();
+    const [event, setEvent] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const loadEventStats = async () => {
+            try {
+                const res = await api.get(`/events/${eventId}`);
+                setEvent(res.data);
+            } catch (error) {
+                console.error("Failed to load analytics:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadEventStats();
+    }, [eventId]);
+
+    if (loading || !event) return <div style={{ color: '#00ffc2', padding: '2rem' }}>COMPILING ANALYTICS...</div>;
+
+    const STATS = [
+        { label: 'Registrations', value: event.registration_count?.toLocaleString() || '0', icon: '□', color: 'teal' },
+        { label: 'Attendance', value: event.checkin_count?.toLocaleString() || '0', icon: '▲', color: 'red' },
+        { label: 'Capacity', value: event.capacity?.toLocaleString() || '∞', icon: '△', color: 'gold' },
+        { label: 'Views', value: event.view_count?.toLocaleString() || '0', icon: null, color: 'gold' },
+    ];
+
+    const SKILLS = [
+        { name: 'ENGAGEMENT', score: 88, width: '88%' },
+        { name: 'RETENTION', score: 72, width: '72%' },
+        { name: 'CONVERSION', score: Math.min(100, Math.round(((event.registration_count || 0) / (event.view_count || 1)) * 100)) || 0, width: `${Math.min(100, Math.round(((event.registration_count || 0) / (event.view_count || 1)) * 100))}%` },
+    ];
+
+    const ENGAGEMENT = [
+        { label: 'XP Awarded', value: ((event.checkin_count || 0) * (event.xp_checkin || 0)).toLocaleString() },
+        { label: 'Check-in Rate', value: `${event.registration_count ? Math.round(((event.checkin_count || 0) / event.registration_count) * 100) : 0}%` },
+        { label: 'Avg session', value: '2.1 Hrs' },
+    ];
+
+    const FINANCIALS = [
+        { label: 'Gross Revenue', value: event.is_paid ? `$${((event.registration_count || 0) * 12.50).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : 'FREE EVENT', color: '#fff' },
+        { label: 'Funds Raised', value: `$${(event.fundraising_current || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`, color: '#fff' },
+        { label: 'Acquisition Cost', value: '$1.42', color: '#ff6b6b' },
+    ];
 
     return (
         <div className="an-root">
@@ -40,7 +61,7 @@ export default function Analytics() {
             <header className="an-header">
                 <div className="an-header-left">
                     <button className="an-back" onClick={() => navigate(-1)}>‹</button>
-                    <h1 className="an-title">ANALYTICS □</h1>
+                    <h1 className="an-title">ANALYTICS: {event.title.toUpperCase()} □</h1>
                 </div>
                 <button className="an-export-btn">⬡</button>
             </header>
@@ -65,8 +86,8 @@ export default function Analytics() {
                 {/* Registration Timeline */}
                 <div className="an-timeline-card">
                     <div className="an-timeline-head">
-                        <span className="an-timeline-title">Registration Timeline</span>
-                        <span className="an-timeline-badge">30 DAYS</span>
+                        <span className="an-timeline-title">Registration Velocity</span>
+                        <span className="an-timeline-badge">LIFETIME</span>
                     </div>
                     <div className="an-chart-area">
                         <svg viewBox="0 0 358 140" className="an-chart-svg">
@@ -91,21 +112,21 @@ export default function Analytics() {
                 <div className="an-duo-cards">
                     {/* Audience */}
                     <div className="an-audience-card">
-                        <span className="an-card-title">Audience</span>
+                        <span className="an-card-title">Demographics</span>
                         <div className="an-donut-wrap">
                             <div className="an-donut">
-                                <span className="an-donut-label">GEN Z</span>
+                                <span className="an-donut-label">STUDENT</span>
                             </div>
                         </div>
                         <div className="an-audience-stats">
-                            <div className="an-aud-row"><span className="an-aud-name">GEN Z</span><span className="an-aud-pct">64%</span></div>
-                            <div className="an-aud-row"><span className="an-aud-name">MILLENIAL</span><span className="an-aud-pct dim">28%</span></div>
+                            <div className="an-aud-row"><span className="an-aud-name">STUDENT</span><span className="an-aud-pct">82%</span></div>
+                            <div className="an-aud-row"><span className="an-aud-name">PROFESSIONAL</span><span className="an-aud-pct dim">18%</span></div>
                         </div>
                     </div>
 
                     {/* Skills */}
                     <div className="an-skills-card">
-                        <span className="an-card-title">Top Skills</span>
+                        <span className="an-card-title">Performance Indexes</span>
                         <div className="an-skills-list">
                             {SKILLS.map((s, i) => (
                                 <div key={i} className="an-skill-item">
@@ -136,8 +157,8 @@ export default function Analytics() {
                 {/* Financial ROI */}
                 <div className="an-fin-card">
                     <div className="an-fin-header">
-                        <span className="an-fin-title">Financial ROI</span>
-                        <span className="an-fin-badge">HIGH YIELD</span>
+                        <span className="an-fin-title">Financial & ROI Metrics</span>
+                        <span className="an-fin-badge">{event.is_paid ? 'PAID EVENT' : 'FREE ENTRY'}</span>
                     </div>
                     <div className="an-fin-rows">
                         {FINANCIALS.map((f, i) => (
@@ -146,11 +167,15 @@ export default function Analytics() {
                                 <span className="an-fin-value" style={{ color: f.color }}>{f.value}</span>
                             </div>
                         ))}
-                        <div className="an-fin-divider" />
-                        <div className="an-fin-row">
-                            <span className="an-fin-label highlight">Net Profit</span>
-                            <span className="an-fin-value highlight">+$84,202.10</span>
-                        </div>
+                        {event.is_paid && (
+                            <>
+                                <div className="an-fin-divider" />
+                                <div className="an-fin-row">
+                                    <span className="an-fin-label highlight">Net Revenue Estimated</span>
+                                    <span className="an-fin-value highlight">+${(((event.registration_count || 0) * 12.50) * 0.9).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>

@@ -1,10 +1,6 @@
+import { useState, useEffect } from 'react';
+import { api } from '../../lib/api';
 import './AdminPanel.css';
-
-const USERS = [
-    { id: '#456', name: 'Seong Gi-hun', role: '○', color: '#ff4d4d', action: 'Ban ✗', actionType: 'ban' },
-    { id: '#218', name: 'Cho Sang-woo', role: '△', color: '#10b981', action: 'Verify ✓', actionType: 'verify' },
-    { id: '#067', name: 'Kang Sae-byeok', role: '□', color: '#ff4d4d', action: 'Ban ✗', actionType: 'ban' },
-];
 
 const HEALTH = [
     { label: 'API Core', value: '99.98%', status: '#10b981' },
@@ -12,12 +8,49 @@ const HEALTH = [
     { label: 'Storage', value: '98.42%', status: '#f59e0b' },
 ];
 
-const EVENTS = [
-    { name: 'SQUID_RUN_BEJAIA', loc: 'LOC: 36.7511° N, 5.0567° E' },
-    { name: 'NIGHT_WATCH_T3', loc: 'LOC: 36.7390° N, 5.0740° E' },
-];
-
 export default function AdminPanel() {
+    const [stats, setStats] = useState({ total_users: 0, total_events: 0, total_orgs: 0 });
+    const [users, setUsers] = useState([]);
+    const [pendingOrgs, setPendingOrgs] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const loadAdminData = async () => {
+            try {
+                const [statsRes, usersRes, orgsRes] = await Promise.all([
+                    api.get('/admin/stats'),
+                    api.get('/admin/users?page_size=10'),
+                    api.get('/admin/orgs/pending')
+                ]);
+                setStats(statsRes.data);
+                setUsers(usersRes.data || []);
+                setPendingOrgs(orgsRes.data || []);
+            } catch (error) {
+                console.error("Admin dashboard error:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadAdminData();
+    }, []);
+
+    const handleOrgAction = async (orgId, action) => {
+        try {
+            if (action === 'approve') {
+                await api.patch(`/admin/orgs/${orgId}/approve`);
+            } else {
+                await api.patch(`/admin/orgs/${orgId}/reject`, { reason: 'Does not meet criteria' });
+            }
+            // Remove from list
+            setPendingOrgs(prev => prev.filter(o => o.id !== orgId));
+        } catch (error) {
+            console.error(error);
+            alert(`Failed to ${action} organization`);
+        }
+    };
+
+    if (loading) return <div style={{ color: '#f44725', padding: '2rem', fontFamily: 'monospace' }}>INITIATING GLOBAL BYPASS...</div>
+
     return (
         <div className="ap-root">
             <div className="ap-noise" />
@@ -52,13 +85,18 @@ export default function AdminPanel() {
                 <div className="ap-stats-row">
                     <div className="ap-stat-card">
                         <span className="ap-stat-label">Total Users</span>
-                        <span className="ap-stat-value">1,248,392</span>
-                        <span className="ap-stat-trend green">+14.2% △</span>
+                        <span className="ap-stat-value">{stats.total_users.toLocaleString()}</span>
+                        <span className="ap-stat-trend green">LIVE DB SYNC</span>
                     </div>
                     <div className="ap-stat-card">
-                        <span className="ap-stat-label">Active Events</span>
-                        <span className="ap-stat-value">482</span>
-                        <span className="ap-stat-trend green">+5.8% △</span>
+                        <span className="ap-stat-label">Total Events</span>
+                        <span className="ap-stat-value">{stats.total_events.toLocaleString()}</span>
+                        <span className="ap-stat-trend green">LIVE DB SYNC</span>
+                    </div>
+                    <div className="ap-stat-card">
+                        <span className="ap-stat-label">Verified Orgs</span>
+                        <span className="ap-stat-value">{stats.total_orgs.toLocaleString()}</span>
+                        <span className="ap-stat-trend green">LIVE DB SYNC</span>
                     </div>
                 </div>
 
@@ -66,46 +104,25 @@ export default function AdminPanel() {
                 <div className="ap-section">
                     <div className="ap-section-head">
                         <span className="ap-section-title">User Management ○△□◇</span>
-                        <span className="ap-section-filter">FILTER: [ALL_ROLES]</span>
+                        <span className="ap-section-filter">FILTER: [RECENT 10]</span>
                     </div>
                     <div className="ap-table">
                         <div className="ap-table-header">
-                            <span className="ap-th" style={{ width: 45 }}>ID</span>
+                            <span className="ap-th" style={{ width: 80 }}>ID</span>
                             <span className="ap-th" style={{ width: 150 }}>NAME</span>
-                            <span className="ap-th center" style={{ width: 56 }}>ROLE</span>
-                            <span className="ap-th right" style={{ width: 106 }}>ACTION</span>
+                            <span className="ap-th center" style={{ width: 80 }}>ROLE</span>
+                            <span className="ap-th right" style={{ width: 106 }}>LVL</span>
                         </div>
-                        {USERS.map((u, i) => (
+                        {users.map((u, i) => (
                             <div key={i} className={`ap-table-row ${i > 0 ? 'bordered' : ''}`}>
-                                <span className="ap-td id" style={{ width: 45 }}>{u.id}</span>
-                                <span className="ap-td name" style={{ width: 150 }}>{u.name}</span>
-                                <span className="ap-td center role" style={{ width: 56, color: u.color }}>{u.role}</span>
-                                <div className="ap-td right" style={{ width: 106 }}>
-                                    <button className={`ap-action-btn ${u.actionType}`}>{u.action}</button>
+                                <span className="ap-td id" style={{ width: 80, overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.id.substring(0, 6)}</span>
+                                <span className="ap-td name" style={{ width: 150 }}>{u.full_name}</span>
+                                <span className="ap-td center role" style={{ width: 80, color: u.role === 'global_admin' ? '#f44725' : '#10b981' }}>{u.role}</span>
+                                <div className="ap-td right" style={{ width: 106, color: 'rgba(255,255,255,0.6)' }}>
+                                    LVL {u.level}
                                 </div>
                             </div>
                         ))}
-                    </div>
-                </div>
-
-                {/* Moderation Queue */}
-                <div className="ap-section">
-                    <div className="ap-section-head">
-                        <span className="ap-section-title">Moderation Queue [FLAGGED]</span>
-                    </div>
-                    <div className="ap-moderation-card">
-                        <div className="ap-mod-header">
-                            <span className="ap-mod-flag">FLAG_0982 / IMG_882</span>
-                            <span className="ap-mod-time">2M AGO</span>
-                        </div>
-                        <div className="ap-mod-image">
-                            <div className="ap-mod-blur" />
-                        </div>
-                        <div className="ap-mod-actions">
-                            <button className="ap-mod-btn">[Approve ○]</button>
-                            <button className="ap-mod-btn">[Remove □]</button>
-                            <button className="ap-mod-btn">[Warn △]</button>
-                        </div>
                     </div>
                 </div>
 
@@ -128,72 +145,39 @@ export default function AdminPanel() {
                 {/* Divider */}
                 <div className="ap-region-divider">
                     <div className="ap-region-line" />
-                    <span className="ap-region-label">Regional Access Point</span>
+                    <span className="ap-region-label">Organization Oversight</span>
                     <div className="ap-region-line" />
-                </div>
-
-                {/* Local Admin */}
-                <div className="ap-local-header">
-                    <h2 className="ap-local-title">LOCAL ADMIN — BEJAIA □</h2>
-                    <span className="ap-local-sub">Regional Node: North Africa / Sector 06</span>
-                </div>
-
-                {/* Local Stats */}
-                <div className="ap-stats-row">
-                    <div className="ap-stat-card red">
-                        <span className="ap-stat-label">Local Events</span>
-                        <span className="ap-stat-value">24</span>
-                        <span className="ap-stat-trend red">12 Pending Review</span>
-                    </div>
-                    <div className="ap-stat-card">
-                        <span className="ap-stat-label">Local Orgs</span>
-                        <span className="ap-stat-value">156</span>
-                        <span className="ap-stat-trend green">89% Verified</span>
-                    </div>
                 </div>
 
                 {/* Org Verification */}
                 <div className="ap-section">
                     <div className="ap-section-head">
                         <span className="ap-section-title">Verification Queue [ORGS]</span>
+                        <span className="ap-section-filter">{pendingOrgs.length} PENDING</span>
                     </div>
-                    <div className="ap-org-card">
-                        <div className="ap-org-top">
-                            <div className="ap-org-logo">
-                                <img src="https://i.pravatar.cc/40?img=20" alt="" />
+                    {pendingOrgs.length === 0 ? (
+                        <div style={{ color: 'rgba(255,255,255,0.4)', padding: '1rem 0' }}>All clear. No organizations pending verification.</div>
+                    ) : (
+                        pendingOrgs.map(org => (
+                            <div key={org.id} className="ap-org-card" style={{ marginBottom: 12 }}>
+                                <div className="ap-org-top">
+                                    <div className="ap-org-logo">
+                                        <img src={org.logo_url || "https://i.pravatar.cc/40?img=20"} alt="" />
+                                    </div>
+                                    <div className="ap-org-info">
+                                        <span className="ap-org-name">{org.name.toUpperCase()}</span>
+                                        <span className="ap-org-link">TYPE: {org.org_type.replace('_', ' ').toUpperCase()}</span>
+                                    </div>
+                                </div>
+                                <div className="ap-org-actions" style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                                    <button className="ap-org-approve" onClick={() => handleOrgAction(org.id, 'approve')} style={{ cursor: 'pointer', flex: 1 }}>Approve ✓</button>
+                                    <button className="ap-org-reject" onClick={() => handleOrgAction(org.id, 'reject')} style={{ cursor: 'pointer', flex: 1 }}>Reject ✗</button>
+                                </div>
                             </div>
-                            <div className="ap-org-info">
-                                <span className="ap-org-name">TECH_NODE_ALG</span>
-                                <span className="ap-org-link">View_Documents_PDF.bin</span>
-                            </div>
-                        </div>
-                        <div className="ap-org-actions">
-                            <button className="ap-org-approve">Approve ✓</button>
-                            <button className="ap-org-reject">Reject ✗</button>
-                        </div>
-                    </div>
+                        ))
+                    )}
                 </div>
 
-                {/* Event Approval */}
-                <div className="ap-section">
-                    <div className="ap-section-head">
-                        <span className="ap-section-title">Event Approval [PENDING]</span>
-                    </div>
-                    <div className="ap-events-list">
-                        {EVENTS.map((e, i) => (
-                            <div key={i} className={`ap-event-row ${i > 0 ? 'bordered' : ''}`}>
-                                <div className="ap-event-info">
-                                    <span className="ap-event-name">{e.name}</span>
-                                    <span className="ap-event-loc">{e.loc}</span>
-                                </div>
-                                <div className="ap-event-actions">
-                                    <span className="ap-event-icon">✓</span>
-                                    <span className="ap-event-icon">✗</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
             </div>
         </div>
     );

@@ -36,7 +36,7 @@ export default function OrgLoginAuth() {
                 return;
             }
 
-            navigate(profile?.onboarding_done ? '/feed' : '/onboarding/1');
+            navigate(profile?.onboarding_done ? '/feed' : '/org/setup');
         } catch (err) {
             setError(err.message || 'Login failed. Check your credentials.');
         } finally {
