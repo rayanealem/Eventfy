@@ -4,6 +4,7 @@ from routers import (
     auth, users, events, organizations, qr, chat,
     stories, gamification, admin, search, posts,
     notifications, volunteers, teams, registrations,
+    sponsorships,
 )
 
 app = FastAPI(
@@ -16,8 +17,11 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
+        "http://127.0.0.1:5173",
         "http://localhost:3000",
+        "http://127.0.0.1:3000",
         "https://eventfy.app",
+        "*" # Allow all for local dev if needed, but origins above are safer
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -40,6 +44,7 @@ app.include_router(gamification.router,  prefix="/v1/gamification",  tags=["gami
 app.include_router(posts.router,         prefix="/v1/posts",         tags=["posts"])
 app.include_router(admin.router,         prefix="/v1/admin",         tags=["admin"])
 app.include_router(search.router,        prefix="/v1/search",        tags=["search"])
+app.include_router(sponsorships.router,  prefix="/v1/sponsorships",  tags=["sponsorships"])
 
 
 @app.get("/")

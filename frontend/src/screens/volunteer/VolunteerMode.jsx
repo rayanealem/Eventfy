@@ -1,21 +1,30 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useAuth } from '../../context/AuthContext';
+import { api } from '../../lib/api';
 import './VolunteerMode.css';
 
-const TASKS = [
-    { text: 'Scan VIP Guest QR codes', done: true },
-    { text: 'Verify identification documents', done: true },
-    { text: 'Hand out event wristbands', done: false },
-    { text: 'Update digital guest list', done: false },
-];
-
-const TEAM = [
-    { img: 'https://i.pravatar.cc/50?img=11', online: true, border: '#008080' },
-    { img: 'https://i.pravatar.cc/50?img=25', online: true, border: '#008080' },
-    { img: 'https://i.pravatar.cc/50?img=32', online: false, border: '#475569' },
-    { img: 'https://i.pravatar.cc/50?img=44', online: true, border: '#008080' },
-];
-
 export default function VolunteerMode() {
+    const { profile } = useAuth();
+    const [assignments, setAssignments] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        loadAssignments();
+    }, []);
+
+    const loadAssignments = async () => {
+        try {
+            const data = await api('GET', '/volunteer/applications/my');
+            setAssignments(data || []);
+        } catch (e) {
+            console.error("Error loading volunteer data", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const activeAssignment = assignments.find(a => a.status === 'ACCEPTED') || assignments[0];
     return (
         <div className="vm-root">
             <div className="vm-noise" />
@@ -40,71 +49,87 @@ export default function VolunteerMode() {
             {/* Main */}
             <div className="vm-main">
                 {/* Assignment Card */}
-                <motion.div className="vm-assignment" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-                    <span className="vm-assign-label">YOUR ASSIGNMENT</span>
-                    <div className="vm-assign-header">
-                        <div className="vm-assign-info">
-                            <h2 className="vm-assign-title">REGISTRATION △</h2>
-                            <div className="vm-assign-loc">
-                                <span className="vm-loc-icon">📍</span>
-                                <span className="vm-loc-text">LOCATION: DESK A</span>
+                {loading ? (
+                    <div className="vm-assignment" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '200px' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.5)' }}>LOADING ASSIGNMENTS...</span>
+                    </div>
+                ) : activeAssignment ? (
+                    <motion.div className="vm-assignment" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+                        <span className="vm-assign-label">YOUR ASSIGNMENT</span>
+                        <div className="vm-assign-header">
+                            <div className="vm-assign-info">
+                                <h2 className="vm-assign-title">{activeAssignment.role?.toUpperCase() || 'GENERAL STAFF'} △</h2>
+                                <div className="vm-assign-loc">
+                                    <span className="vm-loc-icon">📍</span>
+                                    <span className="vm-loc-text">LOCATION: {activeAssignment.events?.location || 'HQ'}</span>
+                                </div>
+                            </div>
+                            <div className="vm-active-badge">
+                                {activeAssignment.status === 'ACCEPTED' ? 'ACTIVE △' : activeAssignment.status?.toUpperCase() || 'PENDING'}
                             </div>
                         </div>
-                        <div className="vm-active-badge">ACTIVE △</div>
+                        <div className="vm-assign-img">
+                            <img src={activeAssignment.events?.cover_image_url || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&h=300&fit=crop"} alt="" />
+                            <div className="vm-assign-gradient" />
+                            <div className="vm-signal-dots">
+                                <span className="vm-sig-dot s1" />
+                                <span className="vm-sig-dot s2" />
+                                <span className="vm-sig-dot s3" />
+                            </div>
+                        </div>
+                    </motion.div>
+                ) : (
+                    <div className="vm-assignment" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '200px' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.5)' }}>NO ACTIVE ASSIGNMENTS</span>
                     </div>
-                    <div className="vm-assign-img">
-                        <img src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&h=300&fit=crop" alt="" />
-                        <div className="vm-assign-gradient" />
-                        <div className="vm-signal-dots">
-                            <span className="vm-sig-dot s1" />
-                            <span className="vm-sig-dot s2" />
-                            <span className="vm-sig-dot s3" />
+                )}
+
+                {/* Tasks Checklist - Fallback content, needs specific tasks from DB if implemented */}
+                {activeAssignment && (
+                    <div className="vm-tasks">
+                        <div className="vm-tasks-header">
+                            <span className="vm-tasks-title">TASKS CHECKLIST</span>
+                            <span className="vm-tasks-count">0/3 COMPLETE</span>
+                        </div>
+                        <div className="vm-progress-bar">
+                            <div className="vm-progress-fill" style={{ width: '0%' }} />
+                        </div>
+                        <div className="vm-task-list">
+                            <div className="vm-task-item">
+                                <div className="vm-checkbox"></div>
+                                <span className="vm-task-text">Check-in at Location</span>
+                            </div>
+                            <div className="vm-task-item">
+                                <div className="vm-checkbox"></div>
+                                <span className="vm-task-text">Receive briefing from lead</span>
+                            </div>
+                            <div className="vm-task-item">
+                                <div className="vm-checkbox"></div>
+                                <span className="vm-task-text">Complete shift objectives</span>
+                            </div>
                         </div>
                     </div>
-                </motion.div>
-
-                {/* Tasks Checklist */}
-                <div className="vm-tasks">
-                    <div className="vm-tasks-header">
-                        <span className="vm-tasks-title">TASKS CHECKLIST</span>
-                        <span className="vm-tasks-count">2/4 COMPLETE</span>
-                    </div>
-                    <div className="vm-progress-bar">
-                        <div className="vm-progress-fill" />
-                    </div>
-                    <div className="vm-task-list">
-                        {TASKS.map((t, i) => (
-                            <motion.div
-                                key={i}
-                                className={`vm-task-item ${t.done ? 'done' : ''}`}
-                                initial={{ opacity: 0, x: -6 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: i * 0.06 }}
-                            >
-                                <div className={`vm-checkbox ${t.done ? 'checked' : ''}`}>
-                                    {t.done && <span>✓</span>}
-                                </div>
-                                <span className="vm-task-text">{t.text}</span>
-                            </motion.div>
-                        ))}
-                    </div>
-                </div>
+                )}
 
                 {/* Team Status */}
-                <div className="vm-team">
-                    <span className="vm-team-title">TEAM STATUS</span>
-                    <div className="vm-team-row">
-                        <div className="vm-team-avatars">
-                            {TEAM.map((m, i) => (
-                                <div key={i} className="vm-team-avatar" style={{ borderColor: m.border }}>
-                                    <img src={m.img} alt="" />
-                                    <span className={`vm-online-dot ${m.online ? 'online' : 'away'}`} />
+                {activeAssignment && (
+                    <div className="vm-team">
+                        <span className="vm-team-title">SHIFT CONTACTS</span>
+                        <div className="vm-team-row">
+                            <div className="vm-team-avatars">
+                                <div className="vm-team-avatar" style={{ borderColor: '#008080' }}>
+                                    <img src="https://i.pravatar.cc/50?img=11" alt="" />
+                                    <span className="vm-online-dot online" />
                                 </div>
-                            ))}
+                                <div className="vm-team-avatar" style={{ borderColor: '#475569' }}>
+                                    <img src="https://i.pravatar.cc/50?img=25" alt="" />
+                                    <span className="vm-online-dot away" />
+                                </div>
+                            </div>
+                            <button className="vm-chat-btn">CONTACT LEAD □</button>
                         </div>
-                        <button className="vm-chat-btn">CHAT WITH TEAM □</button>
                     </div>
-                </div>
+                )}
 
                 {/* XP Reward */}
                 <div className="vm-xp-feedback">

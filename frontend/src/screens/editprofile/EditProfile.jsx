@@ -2,12 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
+import { supabase } from '../../lib/supabase';
 import './EditProfile.css';
-
-const AVAILABLE_SKILLS = [
-    'Python', 'React', 'Design', 'Cybersec', 'Marketing',
-    'Gaming', 'AI/ML', 'Blockchain', 'Node.js', 'Data Science',
-];
 
 const SHAPES = ['○', '△', '□', '◇'];
 const COLORS = ['#13ecec', '#ff4d4d', '#ffcc00', '#fff', '#f4257b'];
@@ -28,7 +24,9 @@ export default function EditProfile() {
         shape: '△',
         shape_color: '#13ecec',
     });
+    const [skillsLoaded, setSkillsLoaded] = useState([]);
     const [activeSkills, setActiveSkills] = useState([]);
+    const [loadingData, setLoadingData] = useState(true);
 
     // Load profile data into form
     useEffect(() => {
@@ -43,6 +41,27 @@ export default function EditProfile() {
                 shape_color: profile.shape_color || '#13ecec',
             });
         }
+
+        const fetchSkillsData = async () => {
+            if (!profile) return;
+            // Fetch available skills
+            const { data: allSkills } = await supabase
+                .from('skills')
+                .select('id, name');
+            if (allSkills) setSkillsLoaded(allSkills);
+
+            // Fetch user's skills
+            const { data: userSkills } = await supabase
+                .from('user_skills')
+                .select('skill_id')
+                .eq('user_id', profile.id);
+            if (userSkills) {
+                setActiveSkills(userSkills.map(us => us.skill_id));
+            }
+            setLoadingData(false);
+        };
+        fetchSkillsData();
+
     }, [profile]);
 
     const handleSave = async () => {
@@ -58,6 +77,30 @@ export default function EditProfile() {
                 shape: form.shape,
                 shape_color: form.shape_color,
             });
+
+            // Update user_skills via Supabase client directly
+            if (profile) {
+                const loadedSkillIds = skillsLoaded.map(s => s.id);
+                if (loadedSkillIds.length > 0) {
+                    await supabase
+                        .from('user_skills')
+                        .delete()
+                        .eq('user_id', profile.id)
+                        .in('skill_id', loadedSkillIds);
+                }
+
+                if (activeSkills.length > 0) {
+                    const inserts = activeSkills.map(skillId => ({
+                        user_id: profile.id,
+                        skill_id: skillId,
+                        verified: false
+                    }));
+                    await supabase
+                        .from('user_skills')
+                        .insert(inserts);
+                }
+            }
+
             await refreshProfile();
             setSaved(true);
             setTimeout(() => setSaved(false), 2000);
@@ -156,17 +199,21 @@ export default function EditProfile() {
                 {/* Skills */}
                 <section className="edp-field-group">
                     <label className="edp-label">SKILLS & ATTRIBUTES △</label>
-                    <div className="edp-skills">
-                        {AVAILABLE_SKILLS.map((s, i) => (
-                            <button
-                                key={i}
-                                className={`edp-skill ${activeSkills.includes(s) ? 'active' : ''}`}
-                                onClick={() => toggleSkill(s)}
-                            >
-                                {s}
-                            </button>
-                        ))}
-                    </div>
+                    {loadingData ? (
+                        <div style={{ color: '#64748b' }}>Loading skills...</div>
+                    ) : (
+                        <div className="edp-skills">
+                            {skillsLoaded.map((s) => (
+                                <button
+                                    key={s.id}
+                                    className={`edp-skill ${activeSkills.includes(s.id) ? 'active' : ''}`}
+                                    onClick={() => toggleSkill(s.id)}
+                                >
+                                    {s.name}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </section>
 
                 {/* Symbol Picker */}

@@ -1,16 +1,57 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useAuth } from '../../context/AuthContext';
+import { api } from '../../lib/api';
 import './TeamLobby.css';
 
-const TEAMS = [
-    { name: 'VANGUARD_X', count: '3/4', countColor: '#2dd4bf', skills: ['STRENGTH', 'LUCK'], avatars: 2, borderColor: '#2dd4bf', opacity: 1 },
-    { name: 'NULL_VOID', count: '1/4', countColor: 'rgba(255,255,255,.4)', skills: ['AGILITY'], avatars: 1, borderColor: 'rgba(255,255,255,.2)', opacity: 0.8 },
-    { name: 'REBEL_SQUAD', count: '2/4', countColor: 'rgba(255,255,255,.4)', skills: ['INTEL'], avatars: 2, borderColor: 'rgba(255,255,255,.2)', opacity: 0.8 },
-    { name: 'PLAYER_ONE', count: '1/4', countColor: 'rgba(255,255,255,.4)', skills: ['LUCK'], avatars: 1, borderColor: 'rgba(255,255,255,.2)', opacity: 0.8 },
-];
-
 export default function TeamLobby() {
+    const { profile } = useAuth();
     const [teamName, setTeamName] = useState('');
+    const [teams, setTeams] = useState([]);
+
+    // Default active event or use params
+    const activeEventId = 'e2b5e28d-19cd-4a37-b6f7-bcca155e88d0';
+
+    useEffect(() => {
+        loadTeams();
+    }, []);
+
+    const loadTeams = async () => {
+        try {
+            const data = await api('GET', `/teams/${activeEventId}`);
+            setTeams(data || []);
+        } catch (e) {
+            console.error("Failed to load teams", e);
+            // Fallback empty UI instead of mock
+            setTeams([]);
+        }
+    };
+
+    const handleCreateTeam = async () => {
+        if (!teamName.trim()) return;
+        try {
+            await api('POST', '/teams', {
+                event_id: activeEventId,
+                name: teamName.trim()
+            });
+            setTeamName('');
+            loadTeams();
+        } catch (e) {
+            console.error("Error creating team:", e);
+        }
+    };
+
+    const handleJoinTeam = async (teamId) => {
+        try {
+            await api('POST', `/teams/${teamId}/join`);
+            loadTeams();
+        } catch (e) {
+            console.error("Error joining team:", e);
+        }
+    };
+
+    // Find my team
+    const myTeam = teams.find(t => t.members?.some(m => m.user_id === profile?.id));
 
     return (
         <div className="tl-root">
@@ -45,7 +86,7 @@ export default function TeamLobby() {
                         onChange={(e) => setTeamName(e.target.value)}
                     />
                     <div className="tl-create-btns">
-                        <button className="tl-create-btn">CREATE TEAM □</button>
+                        <button className="tl-create-btn" onClick={handleCreateTeam}>CREATE TEAM □</button>
                         <button className="tl-copy-btn">COPY LINK △</button>
                     </div>
                 </div>
@@ -59,78 +100,98 @@ export default function TeamLobby() {
                 </div>
 
                 <div className="tl-grid">
-                    {TEAMS.map((team, i) => (
-                        <motion.div
-                            key={i}
-                            className="tl-team-card"
-                            style={{ borderLeftColor: team.borderColor, opacity: team.opacity }}
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: team.opacity, y: 0 }}
-                            transition={{ delay: i * 0.08 }}
-                        >
-                            <div className="tl-team-header">
-                                <span className="tl-team-name">{team.name}</span>
-                                <span className="tl-team-count" style={{ color: team.countColor }}>{team.count}</span>
-                            </div>
-                            <div className="tl-team-avatars">
-                                {[...Array(team.avatars)].map((_, j) => (
-                                    <div key={j} className="tl-team-avatar">
-                                        <img src={`https://i.pravatar.cc/32?img=${i * 3 + j + 10}`} alt="" />
-                                        {j === 0 && <span className="tl-star">★</span>}
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="tl-team-skills">
-                                {team.skills.map((skill, j) => (
-                                    <span key={j} className="tl-skill-pill">{skill}</span>
-                                ))}
-                            </div>
-                        </motion.div>
-                    ))}
+                    {teams.filter(t => t.id !== myTeam?.id).map((team, i) => {
+                        const count = team.members?.length || 0;
+                        const max = team.max_members || 5;
+                        const borderColor = count >= max ? 'rgba(255,255,255,.2)' : '#2dd4bf';
+                        const countColor = count >= max ? 'rgba(255,255,255,.4)' : '#2dd4bf';
+
+                        return (
+                            <motion.div
+                                key={team.id || i}
+                                className="tl-team-card"
+                                style={{ borderLeftColor: borderColor, cursor: count < max ? 'pointer' : 'default' }}
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: i * 0.08 }}
+                                onClick={() => count < max ? handleJoinTeam(team.id) : null}
+                            >
+                                <div className="tl-team-header">
+                                    <span className="tl-team-name">{team.name}</span>
+                                    <span className="tl-team-count" style={{ color: countColor }}>{count}/{max}</span>
+                                </div>
+                                <div className="tl-team-avatars">
+                                    {(team.members || []).map((m, j) => (
+                                        <div key={j} className="tl-team-avatar">
+                                            <img src={m.profiles?.avatar_url || `https://i.pravatar.cc/32?u=${m.user_id}`} alt="" />
+                                            {m.user_id === team.leader_id && <span className="tl-star">★</span>}
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="tl-team-skills">
+                                    {(team.skills_needed || []).map((skill, j) => (
+                                        <span key={j} className="tl-skill-pill">{skill}</span>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        );
+                    })}
                 </div>
 
                 {/* Your Team */}
-                <motion.div
-                    className="tl-your-team"
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.4 }}
-                >
-                    <div className="tl-yt-header">
-                        <span className="tl-yt-title">YOUR TEAM: ALPHA_7</span>
-                        <span className="tl-yt-badge">ACTIVE</span>
-                    </div>
+                {myTeam && (
+                    <motion.div
+                        className="tl-your-team"
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.4 }}
+                    >
+                        <div className="tl-yt-header">
+                            <span className="tl-yt-title">YOUR TEAM: {myTeam.name}</span>
+                            <span className="tl-yt-badge">ACTIVE</span>
+                        </div>
 
-                    <div className="tl-yt-members">
-                        <div className="tl-yt-avatars">
-                            {[1, 2, 3].map((_, i) => (
-                                <div key={i} className={`tl-yt-avatar ${i === 0 ? 'leader' : ''}`}>
-                                    <img src={`https://i.pravatar.cc/48?img=${20 + i}`} alt="" />
-                                </div>
-                            ))}
-                            <div className="tl-yt-avatar-placeholder">+</div>
+                        <div className="tl-yt-members">
+                            <div className="tl-yt-avatars">
+                                {(myTeam.members || []).map((m, i) => (
+                                    <div key={i} className={`tl-yt-avatar ${m.user_id === myTeam.leader_id ? 'leader' : ''}`}>
+                                        <img src={m.profiles?.avatar_url || `https://i.pravatar.cc/48?u=${m.user_id}`} alt="" />
+                                    </div>
+                                ))}
+                                {(myTeam.members?.length || 0) < (myTeam.max_members || 5) && (
+                                    <div className="tl-yt-avatar-placeholder">+</div>
+                                )}
+                            </div>
+                            <div className="tl-yt-capacity">
+                                <span className="tl-yt-cap-label">CAPACITY</span>
+                                <span className="tl-yt-cap-value">{myTeam.members?.length || 0}/{myTeam.max_members || 5} PLAYERS</span>
+                            </div>
                         </div>
-                        <div className="tl-yt-capacity">
-                            <span className="tl-yt-cap-label">CAPACITY</span>
-                            <span className="tl-yt-cap-value">3/4 PLAYERS</span>
-                        </div>
-                    </div>
 
-                    <div className="tl-yt-skills">
-                        <div className="tl-yt-skills-label">
-                            <span>TEAM SKILLS COVERAGE</span>
-                            <span>75%</span>
+                        <div className="tl-yt-skills">
+                            <div className="tl-yt-skills-label">
+                                <span>TEAM SKILLS COVERAGE</span>
+                                <span>{Math.round(((myTeam.members?.length || 0) / (myTeam.max_members || 5)) * 100)}%</span>
+                            </div>
+                            <div className="tl-yt-bar">
+                                <div className="tl-yt-bar-fill" style={{ width: `${Math.round(((myTeam.members?.length || 0) / (myTeam.max_members || 5)) * 100)}%` }} />
+                            </div>
                         </div>
-                        <div className="tl-yt-bar">
-                            <div className="tl-yt-bar-fill" />
-                        </div>
-                    </div>
 
-                    <div className="tl-yt-actions">
-                        <button className="tl-leave-btn">LEAVE △</button>
-                        <button className="tl-ready-btn">READY ○</button>
-                    </div>
-                </motion.div>
+                        <div className="tl-yt-actions">
+                            <button className="tl-leave-btn" onClick={async () => {
+                                await api('DELETE', `/teams/${myTeam.id}/members/${profile?.id}`);
+                                loadTeams();
+                            }}>LEAVE △</button>
+                            {profile?.id === myTeam.leader_id && (
+                                <button className="tl-ready-btn" onClick={async () => {
+                                    await api('PATCH', `/teams/${myTeam.id}/ready`);
+                                    loadTeams();
+                                }}>READY ○</button>
+                            )}
+                        </div>
+                    </motion.div>
+                )}
             </div>
         </div>
     );

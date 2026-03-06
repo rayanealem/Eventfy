@@ -14,22 +14,36 @@ export default function OnboardingStep5() {
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
-        const fetchOrgs = async () => {
-            const { data, error } = await supabase
+        const fetchData = async () => {
+            // Fetch suggested organizations
+            const { data: orgsData, error: orgsError } = await supabase
                 .from('organizations')
                 .select('id, name, follower_count, logo_url')
                 .eq('status', 'approved')
-                .limit(4);
+                .limit(10); // Show more than 4 for better onboarding
 
-            if (!error && data) {
-                setOrgs(data);
-                // Pre-select all by default to encourage following
-                setFollowedIds(new Set(data.map(o => o.id)));
+            if (!orgsError && orgsData) {
+                setOrgs(orgsData);
+
+                if (user) {
+                    // Fetch existing follows
+                    const { data: userFollows } = await supabase
+                        .from('org_followers')
+                        .select('org_id')
+                        .eq('user_id', user.id);
+
+                    if (userFollows && userFollows.length > 0) {
+                        setFollowedIds(new Set(userFollows.map(f => f.org_id)));
+                    } else {
+                        // If no follows, pre-select suggestions to encourage following
+                        setFollowedIds(new Set(orgsData.map(o => o.id)));
+                    }
+                }
             }
             setLoadingData(false);
         };
-        fetchOrgs();
-    }, []);
+        fetchData();
+    }, [user]);
 
     const toggleFollow = (id) => {
         setFollowedIds(prev => {
@@ -48,16 +62,29 @@ export default function OnboardingStep5() {
 
         setSaving(true);
         try {
-            // Prepare insert array
-            const inserts = Array.from(followedIds).map(orgId => ({
-                user_id: user.id,
-                org_id: orgId
-            }));
+            // 1. Delete existing follows for the currently displayed orgs
+            const loadedOrgIds = orgs.map(o => o.id);
+            if (loadedOrgIds.length > 0) {
+                const { error: deleteError } = await supabase
+                    .from('org_followers')
+                    .delete()
+                    .eq('user_id', user.id)
+                    .in('org_id', loadedOrgIds);
+                if (deleteError) throw deleteError;
+            }
 
-            // Ignore conflicts if already following
-            const { error } = await supabase
-                .from('org_followers')
-                .upsert(inserts, { onConflict: 'user_id,org_id' });
+            // 2. Insert new follows
+            if (followedIds.size > 0) {
+                const inserts = Array.from(followedIds).map(orgId => ({
+                    user_id: user.id,
+                    org_id: orgId
+                }));
+
+                const { error: insertError } = await supabase
+                    .from('org_followers')
+                    .insert(inserts);
+                if (insertError) throw insertError;
+            }
 
             if (error) throw error;
             navigate('/onboarding/6');

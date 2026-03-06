@@ -44,12 +44,9 @@ export default function OnboardingStep4() {
 
         setLoading(true);
         try {
-            // Extract the wilaya name part or just store the whole string
-            const wilayaValue = wilaya.includes('-') ? wilaya.split('-')[1].trim() : wilaya;
-
             const { error } = await supabase
                 .from('profiles')
-                .update({ wilaya: wilayaValue, university })
+                .update({ wilaya, university })
                 .eq('id', user.id);
 
             if (error) throw error;

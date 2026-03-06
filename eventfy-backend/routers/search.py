@@ -61,6 +61,43 @@ async def search_skills(q: str = Query(..., min_length=1)):
     return skills.data or []
 
 
+@router.get("/talent")
+async def search_talent(
+    q: str = None,
+    skill: str = None,
+    page: int = 0,
+    page_size: int = 20,
+    user=Depends(get_optional_user)
+):
+    """Search for users in the talent pool."""
+    query = (supabase.table("profiles")
+        .select("id, username, full_name, avatar_url, shape, shape_color, xp, level, bio, user_skills(skill_id, skills(name))")
+        .eq("show_in_talent_pool", True)
+        .order("xp", desc=True)
+        .range(page * page_size, (page + 1) * page_size - 1))
+    
+    if q:
+        query = query.or_(f"username.ilike.%{q}%,full_name.ilike.%{q}%,bio.ilike.%{q}%")
+        
+    # Supabase PostgREST doesn't support filtering top-level by a nested array easily without an RPC or complex view,
+    # so we will fetch and then filter locally if skill is provided. For massive data, an RPC is better, but this works for demo.
+    
+    users = query.execute()
+    data = users.data or []
+    
+    if skill and skill != "ALL SKILLS":
+        # filter locally
+        filtered = []
+        for u in data:
+            u_skills = [us.get("skills", {}).get("name", "") for us in u.get("user_skills", []) if us.get("skills")]
+            # simplistic check
+            if any(skill.lower() in s.lower() for s in u_skills):
+                filtered.append(u)
+        return filtered
+        
+    return data
+
+
 @router.get("/events/nearby")
 async def nearby_events(
     lat: float = Query(...), lng: float = Query(...),

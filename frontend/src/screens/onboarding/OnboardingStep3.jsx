@@ -14,19 +14,32 @@ export default function OnboardingStep3() {
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
-        const fetchSkills = async () => {
-            const { data, error } = await supabase
-                .from('skills')
-                .select('id, name, category')
-                .limit(20);
+        const fetchData = async () => {
+            if (!user) return;
 
-            if (!error && data) {
-                setSkills(data);
+            // Fetch available skills
+            const { data: skillsData, error: skillsError } = await supabase
+                .from('skills')
+                .select('id, name, category');
+
+            if (!skillsError && skillsData) {
+                setSkills(skillsData);
             }
+
+            // Fetch user's currently selected skills
+            const { data: userSkillsData } = await supabase
+                .from('user_skills')
+                .select('skill_id')
+                .eq('user_id', user.id);
+
+            if (userSkillsData) {
+                setSelectedIds(new Set(userSkillsData.map(us => us.skill_id)));
+            }
+
             setLoadingData(false);
         };
-        fetchSkills();
-    }, []);
+        fetchData();
+    }, [user]);
 
     const toggleSkill = (id) => {
         setSelectedIds(prev => {
@@ -45,16 +58,29 @@ export default function OnboardingStep3() {
 
         setSaving(true);
         try {
-            const inserts = Array.from(selectedIds).map(skillId => ({
-                user_id: user.id,
-                skill_id: skillId,
-                verified: false
-            }));
+            const loadedSkillIds = skills.map(s => s.id);
+            if (loadedSkillIds.length > 0) {
+                const { error: deleteError } = await supabase
+                    .from('user_skills')
+                    .delete()
+                    .eq('user_id', user.id)
+                    .in('skill_id', loadedSkillIds);
+                if (deleteError) throw deleteError;
+            }
 
-            // Upsert user skills
-            const { error } = await supabase
-                .from('user_skills')
-                .upsert(inserts, { onConflict: 'user_id,skill_id' });
+            if (selectedIds.size > 0) {
+                const inserts = Array.from(selectedIds).map(skillId => ({
+                    user_id: user.id,
+                    skill_id: skillId,
+                    verified: false
+                }));
+
+                const { error: insertError } = await supabase
+                    .from('user_skills')
+                    .insert(inserts);
+
+                if (insertError) throw insertError;
+            }
 
             if (error) throw error;
             navigate('/onboarding/4');

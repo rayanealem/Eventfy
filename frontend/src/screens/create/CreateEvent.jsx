@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { api } from '../../lib/api';
 import './CreateEvent.css';
 
 const CATEGORIES = [
-    { icon: '○', label: 'SPORT', active: true },
-    { icon: '◇', label: 'SCIENCE', active: false },
-    { icon: '□', label: 'CHARITY', active: false },
-    { icon: '◇', label: 'CULTURAL', active: false },
+    { icon: '○', label: 'SPORT', val: 'sport' },
+    { icon: '◇', label: 'SCIENCE', val: 'science' },
+    { icon: '□', label: 'CHARITY', val: 'charity' },
+    { icon: '◇', label: 'CULTURAL', val: 'cultural' },
 ];
 
 const STEPS = [
@@ -19,12 +21,81 @@ const STEPS = [
 
 export default function CreateEvent() {
     const navigate = useNavigate();
+    const { profile } = useAuth();
+
+    // Form State
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [date, setDate] = useState('');
+    const [time, setTime] = useState('');
+    const [location, setLocation] = useState('');
+
     const [participantLimit, setParticipantLimit] = useState(100);
-    const [activeCategory, setActiveCategory] = useState('SPORT');
+    const [activeCategory, setActiveCategory] = useState('sport');
     const [activeStep, setActiveStep] = useState(0);
     const [waitlist, setWaitlist] = useState(true);
     const [teamMode, setTeamMode] = useState(false);
     const [pricing, setPricing] = useState('FREE');
+
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleDeploy = async () => {
+        if (!title || !date || !time) {
+            alert("Title, Date, and Time are required!");
+            return;
+        }
+
+        const org = profile?.organizations?.[0];
+        if (!org) {
+            alert("You must belong to an organization to create events.");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            // Construct datetime
+            const startsAt = new Date(`${date}T${time}`).toISOString();
+            // Default ends_at to 2 hours later
+            const endsAt = new Date(new Date(startsAt).getTime() + 2 * 60 * 60 * 1000).toISOString();
+
+            const payload = {
+                org_id: org.id,
+                title,
+                description,
+                event_type: activeCategory,
+                visibility: "open",
+                starts_at: startsAt,
+                ends_at: endsAt,
+                registration_closes_at: startsAt,
+                venue_name: location,
+                address: location, // Duplicate for now
+                wilaya: "16 - Algiers", // Default testing
+                city: "Algiers",
+                is_online: false,
+                is_international: false,
+                capacity: participantLimit,
+                waitlist_enabled: waitlist,
+                team_mode: teamMode,
+                is_paid: pricing === 'PAID',
+                xp_checkin: 100,
+                xp_completion: 200,
+                xp_winner: 0,
+                xp_volunteer_multiplier: true
+            };
+
+            const created = await api('POST', '/events', payload);
+
+            // Auto publish for this prototype so it shows in feed
+            await api('POST', `/events/${created.id}/publish`);
+
+            navigate('/feed');
+        } catch (e) {
+            console.error("Deploy failed:", e);
+            alert("Failed to create event: " + e.message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     return (
         <div className="ce-root">
@@ -63,21 +134,56 @@ export default function CreateEvent() {
 
                     <div className="ce-categories">
                         {CATEGORIES.map((c, i) => (
-                            <button key={i} className={`ce-cat-btn ${activeCategory === c.label ? 'active' : ''}`} onClick={() => setActiveCategory(c.label)}>
+                            <button key={i} className={`ce-cat-btn ${activeCategory === c.val ? 'active' : ''}`} onClick={() => setActiveCategory(c.val)}>
                                 <span className="ce-cat-icon">{c.icon}</span>
                                 <span className="ce-cat-label">{c.label}</span>
                             </button>
                         ))}
                     </div>
 
+                    <div className="ce-field ce-full-width" style={{ marginTop: '20px' }}>
+                        <label className="ce-field-label">Event Title</label>
+                        <input
+                            type="text"
+                            className="ce-input"
+                            placeholder="Enter event name..."
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', color: 'white' }}
+                        />
+                    </div>
+
+                    <div className="ce-field ce-full-width">
+                        <label className="ce-field-label">Description</label>
+                        <textarea
+                            className="ce-input"
+                            placeholder="What is this event about?"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', color: 'white', minHeight: '60px', resize: 'vertical' }}
+                        />
+                    </div>
+
                     <div className="ce-fields-row">
                         <div className="ce-field">
                             <label className="ce-field-label">Date</label>
-                            <div className="ce-input">mm/dd/yyyy</div>
+                            <input
+                                type="date"
+                                className="ce-input"
+                                value={date}
+                                onChange={(e) => setDate(e.target.value)}
+                                style={{ background: 'transparent', border: 'none', outline: 'none', color: 'white', fontFamily: "DM Mono" }}
+                            />
                         </div>
                         <div className="ce-field">
                             <label className="ce-field-label">Time</label>
-                            <div className="ce-input">--:-- --</div>
+                            <input
+                                type="time"
+                                className="ce-input"
+                                value={time}
+                                onChange={(e) => setTime(e.target.value)}
+                                style={{ background: 'transparent', border: 'none', outline: 'none', color: 'white', fontFamily: "DM Mono" }}
+                            />
                         </div>
                     </div>
 
@@ -85,7 +191,13 @@ export default function CreateEvent() {
                         <label className="ce-field-label">Location</label>
                         <div className="ce-input ce-input-icon">
                             <span className="ce-loc-icon">📍</span>
-                            <span className="ce-placeholder">Enter Arena Coordinates...</span>
+                            <input
+                                type="text"
+                                placeholder="Enter Arena Coordinates..."
+                                value={location}
+                                onChange={(e) => setLocation(e.target.value)}
+                                style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', color: 'white' }}
+                            />
                         </div>
                     </div>
                 </section>
@@ -209,7 +321,13 @@ export default function CreateEvent() {
 
             {/* Footer */}
             <div className="ce-footer">
-                <button className="ce-deploy-btn" onClick={() => navigate('/feed')}>DEPLOY TO THE ARENA □</button>
+                <button
+                    className="ce-deploy-btn"
+                    onClick={handleDeploy}
+                    disabled={isSubmitting}
+                >
+                    {isSubmitting ? 'DEPLOYING...' : 'DEPLOY TO THE ARENA □'}
+                </button>
                 <button className="ce-draft-btn" onClick={() => navigate(-1)}>SAVE DRAFT △</button>
             </div>
         </div>

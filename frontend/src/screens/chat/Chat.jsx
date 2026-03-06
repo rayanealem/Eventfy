@@ -1,6 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { api } from '../../lib/api';
+import { supabase } from '../../lib/supabase';
 import './Chat.css';
 
 const MESSAGES = [
@@ -43,8 +46,12 @@ const MESSAGES = [
 
 export default function Chat() {
     const navigate = useNavigate();
+    const { eventId } = useParams();
+    const { user } = useAuth();
     const [msgInput, setMsgInput] = useState('');
-    const [extraMsgs, setExtraMsgs] = useState([]);
+    const [messages, setMessages] = useState([]);
+    const [channelId, setChannelId] = useState(null);
+    const bottomRef = useRef(null);
 
     // New state for missing features
     const [showDMModal, setShowDMModal] = useState(false);
@@ -53,10 +60,47 @@ export default function Chat() {
     const fileRef = useRef(null);
     const imgRef = useRef(null);
 
-    const handleSend = () => {
-        if (!msgInput.trim()) return;
-        setExtraMsgs(prev => [...prev, { type: 'own', text: msgInput.trim(), time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
-        setMsgInput('');
+    useEffect(() => {
+        if (!eventId) return;
+        // 1. Load channel + message history
+        api('GET', `/chat/channels/${eventId}`).then(data => {
+            setChannelId(data.general_channel_id);
+            setMessages(data.messages);
+            setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+        }).catch(err => console.error("Failed to load chat", err));
+    }, [eventId]);
+
+    useEffect(() => {
+        if (!channelId) return;
+        // 2. Subscribe to realtime new messages
+        const channelConfig = supabase
+            .channel(`chat:${channelId}`)
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'messages',
+                filter: `channel_id=eq.${channelId}`,
+            }, payload => {
+                // Fetch the sender profile manually or just append the minimal data
+                // In a true production app, we might want to attach profile data
+                // For simplicity, we just append it
+                setMessages(prev => [...prev, payload.new]);
+                setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+            })
+            .subscribe();
+
+        return () => supabase.removeChannel(channelConfig);
+    }, [channelId]);
+
+    const handleSend = async () => {
+        if (!msgInput.trim() || !channelId) return;
+        const text = msgInput.trim();
+        setMsgInput(''); // clear immediately
+        try {
+            await api('POST', `/chat/channels/${channelId}/messages`, { content: text, msg_type: 'text' });
+        } catch (e) {
+            console.error("Failed to send message", e);
+        }
     };
 
     return (
@@ -115,112 +159,71 @@ export default function Chat() {
                 {/* Today Divider */}
                 <div className="chat-divider">—— TODAY ——</div>
 
-                {MESSAGES.map((msg, i) => {
-                    if (msg.type === 'system') {
+                {messages.map((msg, i) => {
+                    const isOwn = msg.sender_id === user?.id;
+                    const dateObj = new Date(msg.created_at);
+                    const time = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const senderName = msg.profiles?.username || 'Unknown';
+                    const avatar = msg.profiles?.avatar_url || 'https://via.placeholder.com/32';
+
+                    if (msg.msg_type === 'system') {
                         return (
-                            <div key={i} className="chat-system-msg">{msg.text}</div>
+                            <div key={msg.id || i} className="chat-system-msg">{msg.content}</div>
                         );
                     }
 
-                    if (msg.type === 'announcement') {
+                    if (msg.msg_type === 'announcement') {
                         return (
                             <motion.div
-                                key={i}
+                                key={msg.id || i}
                                 className="chat-announcement"
                                 initial={{ opacity: 0, y: 12 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.1 }}
                             >
                                 <div className="announce-header">
-                                    <span className="announce-badge">{msg.sender}</span>
-                                    <span className="announce-time">{msg.time}</span>
+                                    <span className="announce-badge">ORGANIZER</span>
+                                    <span className="announce-time">{time}</span>
                                 </div>
-                                <div className="announce-image-wrap">
-                                    <img src={msg.image} alt="" />
-                                </div>
-                                <h3 className="announce-title">{msg.title}</h3>
-                                <p className="announce-body">{msg.body}</p>
-                                <button className="announce-cta">{msg.cta}</button>
+                                <h3 className="announce-title">📢 ANNOUNCEMENT</h3>
+                                <p className="announce-body">{msg.content}</p>
                             </motion.div>
                         );
                     }
 
-                    if (msg.type === 'other') {
+                    if (isOwn) {
                         return (
                             <motion.div
-                                key={i}
-                                className="chat-other-msg"
-                                initial={{ opacity: 0, x: -12 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.2 }}
-                            >
-                                <div className="other-avatar" onClick={() => navigate('/profile/player456')} style={{ cursor: 'pointer' }}>
-                                    <img src={msg.avatar} alt={msg.sender} />
-                                </div>
-                                <div className="other-content">
-                                    <span className="other-sender" style={{ color: msg.senderColor }}>{msg.sender}</span>
-                                    <div className="other-bubble">{msg.text}</div>
-                                </div>
-                            </motion.div>
-                        );
-                    }
-
-                    if (msg.type === 'poll') {
-                        return (
-                            <motion.div
-                                key={i}
-                                className="chat-poll"
-                                initial={{ opacity: 0, y: 12 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.3 }}
-                            >
-                                <span className="poll-label">{msg.title}</span>
-                                <span className="poll-question">{msg.question}</span>
-                                <div className="poll-options">
-                                    {msg.options.map((opt, j) => (
-                                        <div key={j} className={`poll-option ${opt.voted ? 'voted' : ''}`}>
-                                            {opt.voted && <div className="poll-fill" style={{ width: `${opt.percent}%` }} />}
-                                            <div className="poll-option-content">
-                                                <span className={`poll-option-text ${opt.voted ? '' : 'muted'}`}>{opt.text}</span>
-                                                <span className={`poll-option-pct ${opt.voted ? '' : 'muted'}`}>{opt.percent}%</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </motion.div>
-                        );
-                    }
-
-                    if (msg.type === 'own') {
-                        return (
-                            <motion.div
-                                key={i}
+                                key={msg.id || i}
                                 className="chat-own-msg"
                                 initial={{ opacity: 0, x: 12 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.4 }}
                             >
-                                <div className="own-bubble">{msg.text}</div>
-                                <span className="own-time">{msg.time}</span>
+                                <div className="own-bubble">{msg.content}</div>
+                                <span className="own-time">{time}</span>
+                            </motion.div>
+                        );
+                    } else {
+                        return (
+                            <motion.div
+                                key={msg.id || i}
+                                className="chat-other-msg"
+                                initial={{ opacity: 0, x: -12 }}
+                                animate={{ opacity: 1, x: 0 }}
+                            >
+                                <div className="other-avatar" onClick={() => navigate(`/profile/${senderName}`)} style={{ cursor: 'pointer' }}>
+                                    <img src={avatar} alt={senderName} />
+                                </div>
+                                <div className="other-content">
+                                    <span className="other-sender" style={{ color: msg.profiles?.shape_color || '#ff7f7f' }}>{senderName}</span>
+                                    <div className="other-bubble">{msg.content}</div>
+                                </div>
                             </motion.div>
                         );
                     }
-
-                    return null;
                 })}
 
-                {/* Extra Messages */}
-                {extraMsgs.map((msg, i) => (
-                    <motion.div
-                        key={`extra-${i}`}
-                        className="chat-own-msg"
-                        initial={{ opacity: 0, x: 12 }}
-                        animate={{ opacity: 1, x: 0 }}
-                    >
-                        <div className="own-bubble">{msg.text}</div>
-                        <span className="own-time">{msg.time}</span>
-                    </motion.div>
-                ))}
+                <div ref={bottomRef} />
 
                 {/* Typing Indicator */}
                 <div className="chat-typing">
