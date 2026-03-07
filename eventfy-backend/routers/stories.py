@@ -36,10 +36,20 @@ async def get_story(story_id: str):
 
 
 @router.post("")
-async def create_story(body: dict, user=Depends(require_org)):
-    """Create a story."""
+async def create_story(body: dict, user=Depends(get_current_user)):
+    """Create a story payload (org or regular user)."""
+    # Check if they have an org
+    org_id = body.get("org_id")
+    # If they passed an org_id, verify they actually own it (security check)
+    if org_id:
+        member = supabase.table("org_members").select("*").eq("org_id", org_id).eq("user_id", user["id"]).execute()
+        if not member.data:
+            org_id = None # Unauthorized, default to user story
+
     story = supabase.table("stories").insert({
-        "org_id": body.get("org_id"), "event_id": body.get("event_id"),
+        "org_id": org_id,
+        "user_id": user["id"] if not org_id else None,
+        "event_id": body.get("event_id"),
         "audience": body.get("audience", "followers"),
         "pinned_to_event": body.get("pinned_to_event", False),
     }).execute()

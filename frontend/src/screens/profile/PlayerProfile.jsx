@@ -1,61 +1,68 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 import './PlayerProfile.css';
+
+const TABS = [
+    { key: 'events', icon: '□', label: 'EVENTS' },
+    { key: 'saved', icon: '◇', label: 'SAVED' },
+    { key: 'badges', icon: '○', label: 'BADGES' },
+];
 
 export default function PlayerProfile() {
     const navigate = useNavigate();
     const { username } = useParams();
     const { profile: myProfile } = useAuth();
+    const [activeTab, setActiveTab] = useState('events');
 
-    const [profileData, setProfileData] = useState(null);
-    const [passport, setPassport] = useState([]);
-    const [loading, setLoading] = useState(true);
+    // Detect @me or missing username as "own profile"
+    const isOwnProfile = !username || username === '@me' || username === myProfile?.username;
+    const targetUsername = isOwnProfile ? myProfile?.username : username;
 
-    // Determine which username to load
-    const targetUsername = username || myProfile?.username;
+    // Only fetch from API when viewing another user's profile
+    const { data: profileData, isLoading, isError, refetch } = useQuery({
+        queryKey: ['profile', targetUsername],
+        queryFn: () => api('GET', `/users/${targetUsername}`),
+        enabled: !!targetUsername && !isOwnProfile,
+        placeholderData: isOwnProfile ? myProfile : undefined,
+    });
 
-    useEffect(() => {
-        if (!targetUsername) return;
-        async function loadProfile() {
-            setLoading(true);
-            try {
-                // Fetch profile data
-                const data = await api('GET', `/users/profile/${targetUsername}`);
-                setProfileData(data);
+    // Fetch passport entries
+    const { data: passportData } = useQuery({
+        queryKey: ['passport', targetUsername],
+        queryFn: () => api('GET', `/users/${targetUsername}/passport`),
+        enabled: !!targetUsername && !isOwnProfile,
+    });
 
-                // Fetch passport entries
-                try {
-                    const passportData = await api('GET', `/users/passport/${targetUsername}`);
-                    setPassport(passportData?.entries || passportData || []);
-                } catch (e) {
-                    console.error('Failed to load passport:', e);
-                }
-            } catch (err) {
-                console.error('Failed to load profile:', err);
-                // Fallback to own profile from context
-                if (myProfile) {
-                    setProfileData(myProfile);
-                }
-            } finally {
-                setLoading(false);
-            }
-        }
-        loadProfile();
-    }, [targetUsername]);
+    // For own profile, always use AuthContext data
+    const effectiveProfile = isOwnProfile ? myProfile : profileData;
 
-    if (loading) {
+    if (isLoading && !effectiveProfile) {
         return (
             <div className="profile-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-                <div style={{ color: '#00ffc2', fontFamily: 'DM Mono, monospace', fontSize: '12px' }}>LOADING PROFILE...</div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', animation: 'pulse 1.5s infinite ease-in-out' }} />
+                    <div style={{ width: '120px', height: '12px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', animation: 'pulse 1.5s infinite ease-in-out' }} />
+                </div>
             </div>
         );
     }
 
-    // Use API data or fallback to AuthContext profile
-    const p = profileData || myProfile || {};
+    if (isError && !isOwnProfile && !effectiveProfile) {
+        return (
+            <div className="profile-root" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: '16px' }}>
+                <span style={{ fontSize: '48px', opacity: 0.3 }}>△</span>
+                <span style={{ color: '#ef4444', fontFamily: 'Space Grotesk', fontWeight: 'bold' }}>PROFILE NOT FOUND</span>
+                <span style={{ color: '#64748b', fontFamily: 'DM Mono, monospace', fontSize: '11px' }}>Player data could not be loaded.</span>
+                <button onClick={() => refetch()} style={{ marginTop: '8px', padding: '10px 24px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', fontFamily: 'Space Grotesk', fontWeight: 'bold', fontSize: '12px', borderRadius: '8px', cursor: 'pointer' }}>RETRY</button>
+            </div>
+        );
+    }
+
+    const p = effectiveProfile || myProfile || {};
     const displayName = (p.full_name || p.username || 'UNKNOWN').toUpperCase();
     const handle = `@${p.username || 'unknown'}`;
     const avatarUrl = p.avatar_url || `https://api.dicebear.com/7.x/shapes/svg?seed=${p.username || 'user'}`;
@@ -63,157 +70,235 @@ export default function PlayerProfile() {
     const level = p.level || 1;
     const eventCount = p.event_count || p.events_attended || 0;
     const badgeCount = p.badge_count || p.user_badges?.length || 0;
+    const followerCount = p.follower_count || 0;
+    const followingCount = p.following_count || 0;
+    const bio = p.bio || '';
     const location = p.wilaya ? `Wilaya ${p.wilaya}` : p.city || '';
-    const isStudent = p.is_student;
     const university = p.university || '';
     const levelTitle = getLevelTitle(level);
-    const xpToNext = getXpToNext(level);
+    const xpToNext = 1000;
     const xpProgress = xpToNext > 0 ? Math.min(100, Math.round((xp % 1000) / xpToNext * 100)) : 0;
 
-    const STATS = [
-        { label: 'EVENTS', value: String(eventCount).padStart(2, '0') },
-        { label: 'XP', value: xp.toLocaleString() },
-        { label: 'BADGES', value: String(badgeCount).padStart(2, '0') },
-    ];
+    const passport = passportData?.entries || (Array.isArray(passportData) ? passportData : []);
 
     return (
         <div className="profile-root">
             <div className="profile-noise" />
 
-            {/* Decorative corner shapes */}
-            <div className="profile-deco-tl">○</div>
-            <div className="profile-deco-tr">◇</div>
+            {/* ===== Instagram-Style Header ===== */}
+            <header style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h1 style={{ fontFamily: 'Bebas Neue', fontSize: '22px', color: 'white', letterSpacing: '1px' }}>{p.username || 'PLAYER'}</h1>
+                    {p.verified && (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#13ecc8"><path d="M12 2l2.4 7.6H22l-6.2 4.5 2.4 7.6-6.2-4.5-6.2 4.5 2.4-7.6-6.2-4.5h7.6z" /></svg>
+                    )}
+                </div>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    {isOwnProfile && (
+                        <button onClick={() => navigate('/profile/edit')} style={{ padding: '6px 16px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', color: '#f1f5f9', fontFamily: 'Space Grotesk', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer', letterSpacing: '0.5px' }}>
+                            EDIT PROFILE
+                        </button>
+                    )}
+                    <button onClick={() => navigate('/settings')} style={{ padding: '6px', background: 'none', border: 'none', cursor: 'pointer' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f1f5f9" strokeWidth="1.5" strokeLinecap="round"><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
+                    </button>
+                </div>
+            </header>
 
-            {/* Avatar */}
-            <section className="profile-hero">
+            {/* ===== Avatar + Stats Row (Instagram Layout) ===== */}
+            <section style={{ display: 'flex', alignItems: 'center', padding: '20px 16px', gap: '24px', position: 'relative', zIndex: 1 }}>
+                {/* Avatar */}
                 <motion.div
-                    className="profile-avatar-ring"
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    transition={{ duration: 0.5 }}
+                    style={{ position: 'relative', flexShrink: 0 }}
                 >
-                    <img src={avatarUrl} alt={displayName} />
-                </motion.div>
-                <div className="profile-badge">#{String(p.id || '').slice(-4) || '0000'}</div>
-            </section>
-
-            {/* Name & Info */}
-            <section className="profile-identity">
-                <h1 className="profile-name">{displayName}</h1>
-                <span className="profile-handle">{handle}</span>
-                <div className="profile-tags">
-                    {location && (
-                        <span className="profile-tag">
-                            <svg width="10" height="12" viewBox="0 0 10 12" fill="none"><path d="M5 0C3 0 0 1.5 0 4.5c0 3 5 7.5 5 7.5s5-4.5 5-7.5C10 1.5 7 0 5 0z" fill="#94a3b8" /></svg>
-                            {location}
-                        </span>
-                    )}
-                    {isStudent && university && (
-                        <span className="profile-tag">
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 1h8v10H2z" stroke="#94a3b8" strokeWidth="1" /><path d="M4 0v2M8 0v2M2 4h8" stroke="#94a3b8" strokeWidth="1" /></svg>
-                            {university}
-                        </span>
-                    )}
-                    {p.role && (
-                        <span className="profile-tag" style={{ textTransform: 'uppercase' }}>
-                            {p.role === 'organizer' ? '△ ORGANIZER' : '○ PARTICIPANT'}
-                        </span>
-                    )}
-                </div>
-                <div className="profile-mode" onClick={() => navigate('/profile/edit')} style={{ cursor: 'pointer' }}>
-                    {p.role === 'organizer' ? '△ ORGANIZER MODE △' : '○ PARTICIPANT MODE ○'}
-                </div>
-            </section>
-
-            {/* Stats */}
-            <section className="profile-stats">
-                {STATS.map((s, i) => (
-                    <motion.div
-                        key={i}
-                        className="profile-stat"
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.15 + i * 0.1 }}
-                    >
-                        <span className="stat-label">{s.label}</span>
-                        <span className="stat-value">{s.value}</span>
-                    </motion.div>
-                ))}
-            </section>
-
-            {/* Level */}
-            <section className="profile-level">
-                <div className="level-header">
-                    <div className="level-info">
-                        <span className="level-label">LEVEL {String(level).padStart(2, '0')}</span>
-                        <span className="level-title">{levelTitle}</span>
-                    </div>
-                    <span className="level-percent">{xpProgress}% TO L.{String(level + 1).padStart(2, '0')}</span>
-                </div>
-                <div className="level-bar">
-                    <div className="level-fill" style={{ width: `${xpProgress}%` }} />
-                </div>
-            </section>
-
-            {/* Identity Passport */}
-            <section className="profile-passport">
-                <h2 className="passport-heading">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <rect x="1" y="1" width="14" height="14" rx="2" stroke="#ff4d4d" strokeWidth="1.5" />
-                        <path d="M5 5h6M5 8h4" stroke="#ff4d4d" strokeWidth="1.2" strokeLinecap="round" />
-                    </svg>
-                    IDENTITY PASSPORT
-                </h2>
-
-                <div className="passport-entries">
-                    {passport.length === 0 && (
-                        <div style={{ textAlign: 'center', padding: '30px 16px', color: '#64748b', fontFamily: 'DM Mono, monospace', fontSize: '12px' }}>
-                            NO PASSPORT ENTRIES YET — ATTEND EVENTS TO BUILD YOUR PASSPORT
+                    <div style={{ width: '86px', height: '86px', borderRadius: '50%', padding: '3px', background: 'linear-gradient(45deg, #ff2d78, #f45c25, #13ecc8)' }}>
+                        <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', border: '3px solid black' }}>
+                            <img src={avatarUrl} alt={displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         </div>
-                    )}
-                    {passport.map((entry, i) => {
-                        const date = entry.date || new Date(entry.registered_at || entry.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase();
-                        const status = entry.status || entry.attendance_status || 'PARTICIPATED';
-                        const title = entry.title || entry.events?.title || 'Untitled Event';
-                        const description = entry.description || entry.events?.description || '';
-                        return (
-                            <motion.div
-                                key={entry.id || i}
-                                className="passport-entry"
-                                initial={{ opacity: 0, x: -16 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.3 + i * 0.12 }}
-                            >
-                                <span className="entry-deco right pos-0">△</span>
-                                <div className="entry-meta">
-                                    <span className="entry-date">{date}</span>
-                                    <span className="entry-dot">•</span>
-                                    <span className="entry-status">{status.toUpperCase()}</span>
-                                </div>
-                                <h3 className="entry-title">{title}</h3>
-                                {description && <p className="entry-desc">{description.substring(0, 120)}</p>}
-                                {entry.certificate_issued && (
-                                    <div className="entry-badge" style={{ color: '#13ecc8' }}>
-                                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#13ecc8" strokeWidth="1.5" /><path d="M4 6l2 2 3-3" stroke="#13ecc8" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                                        CERTIFICATE ISSUED
-                                    </div>
-                                )}
-                            </motion.div>
-                        );
-                    })}
+                    </div>
+                    <div style={{ position: 'absolute', bottom: '-4px', left: '50%', transform: 'translateX(-50%)', padding: '1px 8px', background: '#ff2d78', borderRadius: '4px', fontSize: '9px', fontFamily: 'Space Grotesk', fontWeight: 'bold', color: 'white', whiteSpace: 'nowrap' }}>
+                        LV.{String(level).padStart(2, '0')}
+                    </div>
+                </motion.div>
+
+                {/* Stats */}
+                <div style={{ display: 'flex', flex: 1, justifyContent: 'space-around' }}>
+                    {[
+                        { value: eventCount, label: 'Events' },
+                        { value: followerCount, label: 'Followers' },
+                        { value: followingCount, label: 'Following' },
+                    ].map((stat, i) => (
+                        <motion.div
+                            key={i}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.1 + i * 0.08 }}
+                            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}
+                        >
+                            <span style={{ fontFamily: 'Bebas Neue', fontSize: '22px', color: 'white', lineHeight: '22px' }}>{stat.value}</span>
+                            <span style={{ fontFamily: 'Space Grotesk', fontSize: '11px', color: '#64748b', fontWeight: 500 }}>{stat.label}</span>
+                        </motion.div>
+                    ))}
                 </div>
             </section>
 
-            {/* Download Button */}
-            <section className="profile-download">
-                <button className="download-btn">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M8 2v9M4 8l4 4 4-4" stroke="black" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M2 14h12" stroke="black" strokeWidth="1.5" strokeLinecap="round" />
-                    </svg>
-                    DOWNLOAD FULL PASSPORT PDF
-                </button>
+            {/* ===== Name + Bio ===== */}
+            <section style={{ padding: '0 16px 16px', position: 'relative', zIndex: 1 }}>
+                <div style={{ fontFamily: 'Space Grotesk', fontWeight: 'bold', fontSize: '14px', color: 'white', marginBottom: '2px' }}>
+                    {displayName}
+                </div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: '#13ecc8', marginBottom: '6px' }}>
+                    {handle} · {levelTitle}
+                </div>
+                {bio && (
+                    <div style={{ fontFamily: 'Space Grotesk', fontSize: '13px', color: '#94a3b8', lineHeight: '18px', marginBottom: '6px' }}>
+                        {bio}
+                    </div>
+                )}
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {location && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#64748b', fontFamily: 'DM Mono' }}>
+                            📍 {location}
+                        </span>
+                    )}
+                    {university && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#64748b', fontFamily: 'DM Mono' }}>
+                            🎓 {university}
+                        </span>
+                    )}
+                </div>
             </section>
+
+            {/* ===== XP Progress Bar ===== */}
+            <section style={{ padding: '0 16px 20px', position: 'relative', zIndex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <span style={{ fontFamily: 'Space Grotesk', fontWeight: 'bold', fontSize: '10px', color: '#64748b', letterSpacing: '1px' }}>XP {xp.toLocaleString()}</span>
+                    <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: '#64748b' }}>{xpProgress}% → LV.{String(level + 1).padStart(2, '0')}</span>
+                </div>
+                <div style={{ height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '9999px', overflow: 'hidden' }}>
+                    <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${xpProgress}%` }}
+                        transition={{ duration: 1, ease: 'easeOut' }}
+                        style={{ height: '100%', background: 'linear-gradient(90deg, #13ecc8, #00b4d8)', borderRadius: '9999px' }}
+                    />
+                </div>
+            </section>
+
+            {/* ===== Tab Bar ===== */}
+            <div style={{ display: 'flex', borderTop: '1px solid rgba(255,255,255,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)', position: 'relative', zIndex: 1 }}>
+                {TABS.map(tab => (
+                    <button
+                        key={tab.key}
+                        onClick={() => setActiveTab(tab.key)}
+                        style={{
+                            flex: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            padding: '14px 0',
+                            background: 'none',
+                            border: 'none',
+                            borderBottom: activeTab === tab.key ? '2px solid #f1f5f9' : '2px solid transparent',
+                            color: activeTab === tab.key ? '#f1f5f9' : '#64748b',
+                            fontFamily: 'Space Grotesk',
+                            fontWeight: 'bold',
+                            fontSize: '11px',
+                            letterSpacing: '1px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                        }}
+                    >
+                        <span style={{ fontSize: '14px' }}>{tab.icon}</span>
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* ===== Tab Content ===== */}
+            <AnimatePresence mode="wait">
+                {activeTab === 'events' && (
+                    <motion.div key="events" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                        {passport.length === 0 ? (
+                            <div style={{ padding: '60px 24px', textAlign: 'center' }}>
+                                <span style={{ display: 'block', fontSize: '40px', marginBottom: '16px', opacity: 0.2 }}>□</span>
+                                <span style={{ color: '#64748b', fontFamily: 'DM Mono, monospace', fontSize: '12px' }}>NO EVENTS YET — ATTEND YOUR FIRST EVENT</span>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2px', padding: '2px 0' }}>
+                                {passport.map((entry, i) => {
+                                    const coverUrl = entry.events?.cover_url || entry.cover_url || `https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=200&h=200&fit=crop`;
+                                    return (
+                                        <motion.div
+                                            key={entry.id || i}
+                                            initial={{ opacity: 0, scale: 0.95 }}
+                                            whileInView={{ opacity: 1, scale: 1 }}
+                                            viewport={{ once: true }}
+                                            onClick={() => entry.event_id && navigate(`/event/${entry.event_id}`)}
+                                            style={{ position: 'relative', paddingBottom: '100%', cursor: 'pointer', overflow: 'hidden', background: '#1a1d2e' }}
+                                        >
+                                            <img src={coverUrl} alt={entry.title || 'Event'} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 40%)' }} />
+                                            <div style={{ position: 'absolute', bottom: '6px', left: '6px', right: '6px' }}>
+                                                <div style={{ fontFamily: 'Space Grotesk', fontWeight: 'bold', fontSize: '9px', color: 'white', lineHeight: '11px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                                    {entry.title || entry.events?.title || 'Event'}
+                                                </div>
+                                            </div>
+                                            {entry.certificate_issued && (
+                                                <div style={{ position: 'absolute', top: '4px', right: '4px', width: '16px', height: '16px', borderRadius: '50%', background: 'rgba(19,236,200,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 6l2 2 4-4" stroke="black" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                                </div>
+                                            )}
+                                        </motion.div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </motion.div>
+                )}
+
+                {activeTab === 'saved' && (
+                    <motion.div key="saved" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                        <div style={{ padding: '60px 24px', textAlign: 'center' }}>
+                            <span style={{ display: 'block', fontSize: '40px', marginBottom: '16px', opacity: 0.2 }}>◇</span>
+                            <span style={{ color: '#64748b', fontFamily: 'DM Mono, monospace', fontSize: '12px' }}>SAVED EVENTS WILL APPEAR HERE</span>
+                        </div>
+                    </motion.div>
+                )}
+
+                {activeTab === 'badges' && (
+                    <motion.div key="badges" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                        {badgeCount === 0 ? (
+                            <div style={{ padding: '60px 24px', textAlign: 'center' }}>
+                                <span style={{ display: 'block', fontSize: '40px', marginBottom: '16px', opacity: 0.2 }}>○</span>
+                                <span style={{ color: '#64748b', fontFamily: 'DM Mono, monospace', fontSize: '12px' }}>NO BADGES EARNED YET — KEEP COMPETING</span>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', padding: '24px 16px' }}>
+                                {(p.user_badges || []).map((badge, i) => (
+                                    <motion.div
+                                        key={badge.id || i}
+                                        initial={{ opacity: 0, scale: 0.8 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ delay: i * 0.08 }}
+                                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px 8px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}
+                                    >
+                                        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(255,45,120,0.2), rgba(19,236,200,0.2))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
+                                            {badge.icon || '🏆'}
+                                        </div>
+                                        <span style={{ fontFamily: 'Space Grotesk', fontWeight: 'bold', fontSize: '10px', color: '#f1f5f9', textAlign: 'center', textTransform: 'uppercase' }}>
+                                            {badge.name || badge.badge_name || 'BADGE'}
+                                        </span>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
@@ -225,8 +310,4 @@ function getLevelTitle(level) {
         8: 'ELITE OPERATOR', 9: 'LEGENDARY', 10: 'SUPREME COMMANDER',
     };
     return titles[level] || 'UNKNOWN RANK';
-}
-
-function getXpToNext(level) {
-    return 1000; // Each level requires 1000 XP
 }

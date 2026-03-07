@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { api } from '../lib/api'
 
 const AuthContext = createContext(null)
 
@@ -34,14 +35,14 @@ export function AuthProvider({ children }) {
 
     async function fetchProfile(userId) {
         try {
-            const { data } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', userId)
-                .single()
+            // Fetch complete profile including managed_orgs, skills, badges from backend
+            const data = await api('GET', '/auth/me')
             setProfile(data)
         } catch (err) {
             console.error('Failed to fetch profile:', err)
+            // Fallback to basic profile if backend fails
+            const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
+            setProfile(data)
         } finally {
             setLoading(false)
         }

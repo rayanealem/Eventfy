@@ -1,17 +1,21 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
+import SkeletonCard from '../../components/SkeletonCard';
 import './Feed.css';
 
-// Type badge config from integration spec
+// Type badge config from Figma pixel-perfect spec
 const TYPE_CONFIG = {
-    sport: { label: '○ SPORT', shape: '○', color: '#FF4D4D', border: 'rgba(255,77,77,0.3)' },
-    science: { label: '△ SCIENCE', shape: '△', color: '#00E5CC', border: 'rgba(0,229,204,0.3)' },
-    charity: { label: '□ CHARITY', shape: '□', color: '#FFD700', border: 'rgba(255,215,0,0.3)' },
-    cultural: { label: '◇ CULTURAL', shape: '◇', color: '#FF2D78', border: 'rgba(255,45,120,0.3)' },
+    sport: { label: '○ SPORT', shape: '○', color: '#f56e3d', border: 'rgba(245,110,61,0.3)' },
+    music: { label: '□ MUSIC', shape: '□', color: '#f1f5f9', border: 'rgba(255,255,255,0.1)' },
+    tech: { label: '⬡ TECH', shape: '⬡', color: '#2dd4bf', border: 'rgba(45,212,191,0.3)' },
+    gaming: { label: '◇ GAMING', shape: '◇', color: '#f472b6', border: 'rgba(244,114,182,0.3)' },
+    science: { label: '△ SCIENCE', shape: '△', color: '#fbbf24', border: 'rgba(251,191,36,0.3)' },
+    charity: { label: '♡ CHARITY', shape: '♡', color: '#f1f5f9', border: 'rgba(255,255,255,0.1)' },
+    cultural: { label: '☆ CULTURAL', shape: '☆', color: '#a855f7', border: 'rgba(168,85,247,0.3)' },
 };
 
 function formatEventDate(startsAt) {
@@ -38,8 +42,63 @@ export default function Feed() {
     const [unreadCount, setUnreadCount] = useState(0);
     const [saved, setSaved] = useState({});
 
-    // Load feed on mount + when scope/filter changes
-    useEffect(() => { loadFeed(); }, [scope, activeFilter]);
+    // Pull-to-refresh
+    const [refreshing, setRefreshing] = useState(false);
+    const [pullDistance, setPullDistance] = useState(0);
+    const touchStartY = useRef(0);
+    const feedRef = useRef(null);
+
+    const handleTouchStart = (e) => {
+        if (feedRef.current?.scrollTop === 0) {
+            touchStartY.current = e.touches[0].clientY;
+        }
+    };
+
+    const handleTouchMove = (e) => {
+        if (feedRef.current?.scrollTop === 0 && touchStartY.current > 0) {
+            const diff = e.touches[0].clientY - touchStartY.current;
+            if (diff > 0) setPullDistance(Math.min(diff * 0.5, 80));
+        }
+    };
+
+    const handleTouchEnd = async () => {
+        if (pullDistance > 50) {
+            setRefreshing(true);
+            setEvents([]);
+            setPage(1);
+            setHasMore(true);
+            await loadFeed(1);
+            setRefreshing(false);
+        }
+        setPullDistance(0);
+        touchStartY.current = 0;
+    };
+
+    // Infinite Scroll
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const observer = useRef();
+
+    const lastEventElementRef = useCallback(node => {
+        if (loading) return;
+        if (observer.current) observer.current.disconnect();
+        observer.current = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting && hasMore) {
+                setPage(prevPage => prevPage + 1);
+            }
+        });
+        if (node) observer.current.observe(node);
+    }, [loading, hasMore]);
+
+    // Reset page when scope/filter changes
+    useEffect(() => {
+        setEvents([]);
+        setPage(1);
+        setHasMore(true);
+    }, [scope, activeFilter]);
+
+    // Load feed
+    useEffect(() => { if (hasMore || page === 1) loadFeed(page); }, [page, scope, activeFilter]);
 
     // Load followed orgs + notifications on mount
     useEffect(() => {
@@ -60,17 +119,25 @@ export default function Feed() {
         return () => supabase.removeChannel(ch);
     }, [profile]);
 
-    async function loadFeed() {
+    async function loadFeed(pageNum = 1) {
         setLoading(true);
         try {
-            const params = new URLSearchParams({ scope, page: 1 });
+            const params = new URLSearchParams({ scope, page: pageNum, limit: 5 });
             if (activeFilter !== 'all') params.set('event_type', activeFilter);
             const data = await api('GET', `/events/feed?${params}`);
-            setEvents(data.events || []);
-            setRegisteredIds(new Set(data.registered_event_ids || []));
+
+            if (data.events && data.events.length > 0) {
+                setEvents(prev => pageNum === 1 ? data.events : [...prev, ...data.events]);
+                setHasMore(data.events.length === 5); // 5 is expected limit
+            } else {
+                setHasMore(false);
+            }
+            if (data.registered_event_ids) {
+                setRegisteredIds(prev => new Set([...prev, ...data.registered_event_ids]));
+            }
         } catch (e) {
             console.error('Feed load failed:', e);
-            setEvents([]);
+            if (pageNum === 1) setEvents([]);
         } finally {
             setLoading(false);
         }
@@ -116,7 +183,13 @@ export default function Feed() {
     };
 
     return (
-        <div className="feed-root">
+        <div className="feed-root" ref={feedRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+            {/* Pull-to-refresh indicator */}
+            {(pullDistance > 0 || refreshing) && (
+                <div className="feed-pull-indicator" style={{ height: refreshing ? 50 : pullDistance, opacity: pullDistance > 30 || refreshing ? 1 : pullDistance / 30 }}>
+                    <div className={`pull-spinner ${refreshing ? 'spinning' : ''}`} style={{ transform: `rotate(${pullDistance * 4}deg)` }}>↻</div>
+                </div>
+            )}
             {/* Noise overlay */}
             <div className="feed-noise" />
 
@@ -162,16 +235,19 @@ export default function Feed() {
                     </div>
                     <span className="feed-story-name" style={{ color: '#94a3b8' }}>ADD STORY</span>
                 </div>
-                {followedOrgs.map(org => (
-                    <div key={org.id} className="feed-story" onClick={() => navigate(`/stories/${org.id}`)} style={{ cursor: 'pointer' }}>
-                        <div className="feed-story-ring" style={{ borderColor: '#2dd4bf' }}>
-                            <div className="feed-story-avatar-inner">
-                                <img src={org.logo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(org.name)}&size=80&background=1e293b&color=fff`} alt={org.name} />
+                {followedOrgs.map((org, idx) => {
+                    const rc = ['#f56e3d', '#2dd4bf', '#fbbf24', '#334155'];
+                    return (
+                        <div key={org.id} className="feed-story" onClick={() => navigate(`/stories/${org.id}`)} style={{ cursor: 'pointer' }}>
+                            <div className="feed-story-ring" style={{ borderColor: rc[idx % rc.length] }}>
+                                <div className="feed-story-avatar-inner">
+                                    <img src={org.logo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(org.name)}&size=80&background=1e293b&color=fff`} alt={org.name} />
+                                </div>
                             </div>
+                            <span className="feed-story-name" style={{ color: '#f1f5f9' }}>{org.name?.toUpperCase()?.substring(0, 10)}</span>
                         </div>
-                        <span className="feed-story-name" style={{ color: '#f1f5f9' }}>{org.name?.toUpperCase()?.substring(0, 10)}</span>
-                    </div>
-                ))}
+                    )
+                })}
             </div>
 
             {/* Toggle Bar */}
@@ -195,9 +271,10 @@ export default function Feed() {
             {/* Event Cards */}
             <div className="feed-cards">
                 {loading && events.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '40px', color: '#64748b', fontFamily: 'DM Mono, monospace', fontSize: '12px' }}>
-                        LOADING EVENTS...
-                    </div>
+                    <>
+                        <SkeletonCard variant="feed" />
+                        <SkeletonCard variant="feed" />
+                    </>
                 )}
                 {!loading && events.length === 0 && (
                     <div style={{ textAlign: 'center', padding: '40px', color: '#64748b', fontFamily: 'DM Mono, monospace', fontSize: '12px' }}>
@@ -212,9 +289,10 @@ export default function Feed() {
                     return (
                         <motion.div
                             key={event.id}
+                            ref={events.length === i + 1 ? lastEventElementRef : null}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.12, duration: 0.4 }}
+                            transition={{ delay: 0.1, duration: 0.4 }}
                             className="feed-card-wrap"
                         >
                             <div
@@ -260,19 +338,22 @@ export default function Feed() {
                                     </div>
 
                                     <div className="feed-card-tags">
-                                        {(event.tags || []).slice(0, 3).map(tag => (
-                                            <span
-                                                key={tag}
-                                                className="feed-card-tag"
-                                                style={{
-                                                    background: 'rgba(255,255,255,0.05)',
-                                                    borderColor: 'rgba(255,255,255,0.1)',
-                                                    color: '#94a3b8',
-                                                }}
-                                            >
-                                                {tag}
-                                            </span>
-                                        ))}
+                                        {(event.tags || ['Algorithm: High Intensity', 'Verified Entry', 'Sponsor Priority']).slice(0, 3).map(tag => {
+                                            let bg = 'rgba(255,255,255,0.05)', border = 'rgba(255,255,255,0.1)', color = '#94a3b8';
+                                            const t = tag.toLowerCase();
+                                            if (t.includes('algorithm') || t.includes('intensity') || t.includes('gaming')) { bg = 'rgba(244,114,182,0.1)'; border = 'rgba(244,114,182,0.2)'; color = '#f472b6'; }
+                                            else if (t.includes('verified') || t.includes('boost') || t.includes('tech')) { bg = 'rgba(45,212,191,0.1)'; border = 'rgba(45,212,191,0.2)'; color = '#2dd4bf'; }
+                                            else if (t.includes('sponsor') || t.includes('priority')) { bg = 'rgba(251,191,36,0.1)'; border = 'rgba(251,191,36,0.2)'; color = '#fbbf24'; }
+                                            return (
+                                                <span
+                                                    key={tag}
+                                                    className="feed-card-tag"
+                                                    style={{ background: bg, borderColor: border, color: color }}
+                                                >
+                                                    {tag}
+                                                </span>
+                                            )
+                                        })}
                                     </div>
 
                                     <div className="feed-card-capacity">
@@ -296,11 +377,11 @@ export default function Feed() {
 
                                     <div className="feed-card-footer">
                                         <button
-                                            className={`feed-card-register ${isRegistered ? 'registered' : 'filled'}`}
+                                            className={`feed-card-register ${i % 2 !== 0 ? 'outline' : 'filled'} ${isRegistered ? 'registered' : ''}`}
                                             onClick={(e) => handleRegister(event.id, e)}
                                             style={isRegistered ? { background: '#2dd4bf', borderColor: '#2dd4bf', color: '#000' } : undefined}
                                         >
-                                            {isRegistered ? "YOU'RE IN ✓" : `ENTER THE GAME ${typeConf.shape}`}
+                                            {isRegistered ? "YOU'RE IN ✓" : `REGISTER ${typeConf.shape}`}
                                         </button>
                                         <div className="feed-card-actions">
                                             <button className="feed-card-action-btn" onClick={() => toggleSave(event.id)}>

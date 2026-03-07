@@ -18,7 +18,7 @@ export default function TeamLobby() {
 
     const loadTeams = async () => {
         try {
-            const data = await api('GET', `/teams/${activeEventId}`);
+            const data = await api('GET', `/events/${activeEventId}/teams`);
             setTeams(data || []);
         } catch (e) {
             console.error("Failed to load teams", e);
@@ -30,8 +30,7 @@ export default function TeamLobby() {
     const handleCreateTeam = async () => {
         if (!teamName.trim()) return;
         try {
-            await api('POST', '/teams', {
-                event_id: activeEventId,
+            await api('POST', `/events/${activeEventId}/teams`, {
                 name: teamName.trim()
             });
             setTeamName('');
@@ -43,7 +42,7 @@ export default function TeamLobby() {
 
     const handleJoinTeam = async (teamId) => {
         try {
-            await api('POST', `/teams/${teamId}/join`);
+            await api('POST', `/events/${activeEventId}/teams/${teamId}/join`);
             loadTeams();
         } catch (e) {
             console.error("Error joining team:", e);
@@ -180,12 +179,12 @@ export default function TeamLobby() {
 
                         <div className="tl-yt-actions">
                             <button className="tl-leave-btn" onClick={async () => {
-                                await api('DELETE', `/teams/${myTeam.id}/members/${profile?.id}`);
+                                await api('DELETE', `/events/${activeEventId}/teams/${myTeam.id}/leave`);
                                 loadTeams();
                             }}>LEAVE △</button>
                             {profile?.id === myTeam.leader_id && (
                                 <button className="tl-ready-btn" onClick={async () => {
-                                    await api('PATCH', `/teams/${myTeam.id}/ready`);
+                                    await api('PATCH', `/events/${activeEventId}/teams/${myTeam.id}/ready`);
                                     loadTeams();
                                 }}>READY ○</button>
                             )}

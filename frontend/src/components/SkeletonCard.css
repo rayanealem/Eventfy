@@ -1,0 +1,110 @@
+/* ====================================================
+   SKELETON CARD — Shimmer Loading States
+   ==================================================== */
+
+.skeleton-card {
+    background: #1a1d2e;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.skeleton-image {
+    width: 100%;
+    height: 200px;
+    background: #1e293b;
+}
+
+.skeleton-body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.skeleton-line {
+    height: 12px;
+    border-radius: 6px;
+    background: #1e293b;
+}
+
+.skeleton-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.skeleton-circle {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #1e293b;
+    flex-shrink: 0;
+}
+
+.skeleton-tags {
+    display: flex;
+    gap: 8px;
+}
+
+.skeleton-tag {
+    width: 80px;
+    height: 22px;
+    border-radius: 11px;
+    background: #1e293b;
+}
+
+.skeleton-btn {
+    width: 140px;
+    height: 40px;
+    border-radius: 20px;
+    background: #1e293b;
+    margin-top: 8px;
+}
+
+/* Profile skeleton */
+.skeleton-profile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 32px;
+}
+
+.skeleton-profile-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: #1e293b;
+}
+
+/* Generic item skeleton */
+.skeleton-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 12px;
+}
+
+.skeleton-lines {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Shimmer animation */
+.shimmer {
+    background: linear-gradient(90deg, #1e293b 25%, #2a2f45 50%, #1e293b 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}

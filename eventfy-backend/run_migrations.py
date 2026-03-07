@@ -17,6 +17,8 @@ SQL_FILES = [
     "sql/01_schema.sql",
     "sql/02_rls_policies.sql",
     "sql/03_functions.sql",
+    "sql/04_saved_events.sql",
+    "sql/05_user_stories.sql",
 ]
 
 # Connect to the database

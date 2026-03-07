@@ -15,7 +15,7 @@ export default function VolunteerMode() {
 
     const loadAssignments = async () => {
         try {
-            const data = await api('GET', '/volunteer/applications/my');
+            const data = await api('GET', '/volunteers/me');
             setAssignments(data || []);
         } catch (e) {
             console.error("Error loading volunteer data", e);

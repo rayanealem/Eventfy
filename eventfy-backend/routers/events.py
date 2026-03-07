@@ -400,6 +400,27 @@ async def unregister_from_event(event_id: str, user=Depends(get_current_user)):
     return {"message": "Unregistered"}
 
 
+# ── Save / Bookmark ────────────────────────────────────
+
+@router.post("/{event_id}/save")
+async def save_event(event_id: str, user=Depends(get_current_user)):
+    """Save/bookmark an event."""
+    supabase.table("saved_events").upsert({
+        "user_id": user["id"],
+        "event_id": event_id,
+    }).execute()
+    return {"saved": True}
+
+
+@router.delete("/{event_id}/save")
+async def unsave_event(event_id: str, user=Depends(get_current_user)):
+    """Unsave/unbookmark an event."""
+    supabase.table("saved_events").delete().eq(
+        "user_id", user["id"]
+    ).eq("event_id", event_id).execute()
+    return {"saved": False}
+
+
 @router.get("/{event_id}/registrations")
 async def get_registrations(event_id: str, user=Depends(require_org)):
     """Get event registrations (org only)."""

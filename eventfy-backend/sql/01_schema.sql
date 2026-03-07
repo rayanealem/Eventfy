@@ -309,7 +309,8 @@ CREATE TABLE poll_votes (
 -- ── STORIES ───────────────────────────────────
 CREATE TABLE stories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   event_id UUID REFERENCES events(id),
   audience TEXT DEFAULT 'followers' CHECK (audience IN ('followers','event_registrants','staff')),
   pinned_to_event BOOLEAN DEFAULT FALSE,

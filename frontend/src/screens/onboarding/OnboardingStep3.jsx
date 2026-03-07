@@ -82,7 +82,7 @@ export default function OnboardingStep3() {
                 if (insertError) throw insertError;
             }
 
-            if (error) throw error;
+
             navigate('/onboarding/4');
         } catch (err) {
             console.error('Error saving skills:', err);

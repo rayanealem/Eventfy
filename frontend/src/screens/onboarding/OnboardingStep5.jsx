@@ -86,7 +86,7 @@ export default function OnboardingStep5() {
                 if (insertError) throw insertError;
             }
 
-            if (error) throw error;
+
             navigate('/onboarding/6');
         } catch (err) {
             console.error('Failed to save follows:', err);

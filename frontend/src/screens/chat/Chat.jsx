@@ -1,291 +1,299 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
 import './Chat.css';
 
-const MESSAGES = [
-    {
-        type: 'system',
-        text: '○ Ahmed joined the lobby.',
-    },
-    {
-        type: 'announcement',
-        sender: 'ORGANIZER',
-        senderColor: '#11d4c4',
-        time: '10:42 AM',
-        image: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=400&h=320&fit=crop',
-        title: 'TOURNAMENT UPDATE',
-        body: 'Welcome to the Squid Game tournament! Rules are simple: Survive each round to climb the leaderboard. Team play is encouraged but watch your back.',
-        cta: 'READ FULL RULES ⬡',
-    },
-    {
-        type: 'other',
-        sender: 'Player #456',
-        senderColor: '#ff7f7f',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=32&h=32&fit=crop&crop=face',
-        text: 'Is anyone else nervous? The arena looks massive from the lobby entrance. △',
-    },
-    {
-        type: 'poll',
-        title: 'COMMUNITY POLL △',
-        question: 'Favorite first game? ○',
-        options: [
-            { text: 'RED LIGHT GREEN LIGHT', percent: 68, voted: true },
-            { text: 'GLASS BRIDGE', percent: 32, voted: false },
-        ],
-    },
-    {
-        type: 'own',
-        text: "Just stay focused on the objective.\nWe've got this team! □",
-        time: '10:48 AM',
-    },
-];
+// Simple Markdown Renderer for Chat
+const renderContent = (content) => {
+    if (!content) return null;
+
+    // Code blocks: ```code```
+    const parts = content.split(/(```[\s\S]*?```)/g);
+
+    return parts.map((part, i) => {
+        if (part.startsWith('```') && part.endsWith('```')) {
+            const code = part.slice(3, -3).trim();
+            return (
+                <pre key={i} className="message-code-block">
+                    <code>{code}</code>
+                </pre>
+            );
+        }
+
+        // Bold and Italic
+        let text = part;
+        const segments = [];
+        let key = 0;
+
+        // This is a very basic way to handle it without external libs
+        // For a real Discord clone, we'd use react-markdown
+        return (
+            <span key={i} dangerouslySetInnerHTML={{
+                __html: text
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/__(.*?)__/g, '<u>$1</u>')
+                    .replace(/`(.*?)`/g, '<code class="inline-code">$1</code>')
+            }} />
+        );
+    });
+};
 
 export default function Chat() {
     const navigate = useNavigate();
     const { eventId } = useParams();
-    const { user } = useAuth();
+    const { user, profile } = useAuth();
+    const queryClient = useQueryClient();
+
+    // State for UI layout
+    const [leftPanelVisible, setLeftPanelVisible] = useState(true);
+    const [rightPanelVisible, setRightPanelVisible] = useState(true);
+    const [activeChannelId, setActiveChannelId] = useState(null);
     const [msgInput, setMsgInput] = useState('');
-    const [messages, setMessages] = useState([]);
-    const [channelId, setChannelId] = useState(null);
     const bottomRef = useRef(null);
 
-    // New state for missing features
-    const [showDMModal, setShowDMModal] = useState(false);
-    const [showBroadcast, setShowBroadcast] = useState(false);
-    const [showPollModal, setShowPollModal] = useState(false);
-    const fileRef = useRef(null);
-    const imgRef = useRef(null);
+    // Fetch channels and initial data
+    const { data: chatData, isLoading, isError } = useQuery({
+        queryKey: ['chat', eventId],
+        queryFn: async () => {
+            const data = await api('GET', `/chat/channels/${eventId}`);
+            // If no active channel selected yet, pick the first one (usually #lobby or #general)
+            if (!activeChannelId && data?.channels?.length > 0) {
+                setActiveChannelId(data.channels[0].id);
+            }
+            return data;
+        },
+        enabled: !!eventId,
+    });
 
-    useEffect(() => {
-        if (!eventId) return;
-        // 1. Load channel + message history
-        api('GET', `/chat/channels/${eventId}`).then(data => {
-            setChannelId(data.general_channel_id);
-            setMessages(data.messages);
-            setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-        }).catch(err => console.error("Failed to load chat", err));
-    }, [eventId]);
+    const channels = chatData?.channels || [];
+    const members = chatData?.members || [];
+    const activeChannel = channels.find(c => c.id === activeChannelId) || channels[0];
 
+    // Fetch messages for active channel
+    const { data: messages = [] } = useQuery({
+        queryKey: ['messages', activeChannelId],
+        queryFn: () => api('GET', `/chat/channels/${activeChannelId}/messages`),
+        enabled: !!activeChannelId,
+    });
+
+    // Real-time subscription for messages
     useEffect(() => {
-        if (!channelId) return;
-        // 2. Subscribe to realtime new messages
-        const channelConfig = supabase
-            .channel(`chat:${channelId}`)
+        if (!activeChannelId) return;
+
+        const channel = supabase
+            .channel(`chat:${activeChannelId}`)
             .on('postgres_changes', {
                 event: 'INSERT',
                 schema: 'public',
                 table: 'messages',
-                filter: `channel_id=eq.${channelId}`,
+                filter: `channel_id=eq.${activeChannelId}`,
             }, payload => {
-                // Fetch the sender profile manually or just append the minimal data
-                // In a true production app, we might want to attach profile data
-                // For simplicity, we just append it
-                setMessages(prev => [...prev, payload.new]);
+                queryClient.setQueryData(['messages', activeChannelId], (old = []) => {
+                    if (old.find(m => m.id === payload.new.id)) return old;
+                    return [...old, payload.new];
+                });
                 setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
             })
             .subscribe();
 
-        return () => supabase.removeChannel(channelConfig);
-    }, [channelId]);
+        return () => supabase.removeChannel(channel);
+    }, [activeChannelId, queryClient]);
 
-    const handleSend = async () => {
-        if (!msgInput.trim() || !channelId) return;
-        const text = msgInput.trim();
-        setMsgInput(''); // clear immediately
-        try {
-            await api('POST', `/chat/channels/${channelId}/messages`, { content: text, msg_type: 'text' });
-        } catch (e) {
-            console.error("Failed to send message", e);
-        }
+    // Send Message Mutation
+    const sendMessageMutation = useMutation({
+        mutationFn: (text) => api('POST', `/chat/channels/${activeChannelId}/messages`, { content: text, msg_type: 'text' }),
+        onMutate: async (newText) => {
+            await queryClient.cancelQueries({ queryKey: ['messages', activeChannelId] });
+            const previousMessages = queryClient.getQueryData(['messages', activeChannelId]);
+
+            const optimisticMsg = {
+                id: `temp-${Date.now()}`,
+                content: newText,
+                msg_type: 'text',
+                sender_id: user?.id,
+                created_at: new Date().toISOString(),
+                profiles: { username: profile?.username || "You", avatar_url: profile?.avatar_url }
+            };
+
+            queryClient.setQueryData(['messages', activeChannelId], (old = []) => [...old, optimisticMsg]);
+            setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+
+            return { previousMessages };
+        },
+        onError: (err, newText, context) => {
+            queryClient.setQueryData(['messages', activeChannelId], context.previousMessages);
+        },
+    });
+
+    const handleSend = () => {
+        if (!msgInput.trim() || !activeChannelId) return;
+        sendMessageMutation.mutate(msgInput.trim());
+        setMsgInput('');
     };
 
+    if (isLoading) {
+        return (
+            <div className="chat-loading">
+                <div className="spinner"></div>
+                <span>CONNECTING TO RTC...</span>
+            </div>
+        );
+    }
+
     return (
-        <div className="chat-root">
-            <div className="chat-noise" />
-
-            {/* Header */}
-            <header className="chat-header">
-                <div className="chat-header-left">
-                    <button className="chat-back" onClick={() => navigate(-1)}>
-                        <svg width="7" height="12" viewBox="0 0 7 12" fill="none">
-                            <path d="M6 1L1 6l5 5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
+        <div className="chat-layout">
+            {/* Left Sidebar: Channels */}
+            <aside className={`chat-sidebar-left ${leftPanelVisible ? 'visible' : ''}`}>
+                <div className="sidebar-header">
+                    <h2>EVENT CONTENT</h2>
+                    <button className="panel-toggle" onClick={() => setLeftPanelVisible(false)}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
                     </button>
-                    <div className="chat-header-info">
-                        <div className="chat-header-title-row">
-                            <h1 className="chat-header-title">EVENTFY #general ○</h1>
-                            <span className="chat-header-badge">○ SPORT</span>
-                        </div>
-                        <div className="chat-header-online">
-                            <div className="chat-online-dot" />
-                            <span>487 ONLINE</span>
+                </div>
+                <div className="channel-list">
+                    <div className="channel-category">TEXT CHANNELS</div>
+                    {channels.map(ch => (
+                        <button
+                            key={ch.id}
+                            className={`channel-item ${activeChannelId === ch.id ? 'active' : ''}`}
+                            onClick={() => setActiveChannelId(ch.id)}
+                        >
+                            <span className="hash">#</span>
+                            <span className="channel-name">{ch.name}</span>
+                        </button>
+                    ))}
+                </div>
+                <div className="user-settings">
+                    <div className="current-user">
+                        <img src={profile?.avatar_url || 'https://via.placeholder.com/32'} alt="avatar" />
+                        <div className="user-info">
+                            <span className="username">{profile?.username || 'Player'}</span>
+                            <span className="status">Online</span>
                         </div>
                     </div>
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    <button className="chat-members-btn" onClick={() => setShowDMModal(true)} style={{ background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px' }}>
-                        + NEW DM ○
-                    </button>
-                    <button className="chat-members-btn" onClick={() => setShowBroadcast(s => !s)} style={{ background: 'rgba(255,0,0,0.1)', color: '#ff4444', padding: '4px 8px', borderRadius: '4px' }}>
-                        ALERT 🔴
-                    </button>
-                    <button className="chat-members-btn">
-                        <svg width="22" height="16" viewBox="0 0 22 16" fill="none">
-                            <circle cx="8" cy="5" r="3" stroke="white" strokeWidth="1.2" />
-                            <path d="M1 14c0-3 3.5-5 7-5s7 2 7 5" stroke="white" strokeWidth="1.2" strokeLinecap="round" />
-                            <circle cx="17" cy="5" r="2" stroke="white" strokeWidth="1" />
-                            <path d="M16 14c0-2 1.5-3.5 3.5-3.5" stroke="white" strokeWidth="1" strokeLinecap="round" />
-                        </svg>
-                    </button>
-                </div>
-            </header>
+            </aside>
 
-            {/* Broadcast Area */}
-            <AnimatePresence>
-                {showBroadcast && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ padding: '16px', background: '#330000', borderBottom: '1px solid #ff4444' }}>
-                        <textarea style={{ width: '100%', background: 'black', color: 'white', padding: '8px', minHeight: '60px', border: '1px solid #ff4444' }} placeholder="Enter flash alert..." />
-                        <button onClick={() => setShowBroadcast(false)} style={{ background: '#ff4444', color: 'black', padding: '8px 16px', marginTop: '8px', fontWeight: 'bold' }}>BROADCAST △</button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            {/* Main Chat Area */}
+            <main className="chat-main">
+                <header className="chat-top-bar">
+                    <div className="top-bar-left">
+                        {!leftPanelVisible && (
+                            <button className="panel-toggle-in" onClick={() => setLeftPanelVisible(true)}>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
+                            </button>
+                        )}
+                        <span className="hash">#</span>
+                        <h1>{activeChannel?.name || 'lobby'}</h1>
+                    </div>
+                    <div className="top-bar-right">
+                        <button onClick={() => setRightPanelVisible(!rightPanelVisible)}>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                        </button>
+                    </div>
+                </header>
 
-            {/* Chat Area */}
-            <div className="chat-area">
-                {/* Today Divider */}
-                <div className="chat-divider">—— TODAY ——</div>
+                <div className="messages-container">
+                    {messages.map((msg, i) => {
+                        const prevMsg = messages[i - 1];
+                        const isContinuation = prevMsg && prevMsg.sender_id === msg.sender_id &&
+                            (new Date(msg.created_at) - new Date(prevMsg.created_at) < 300000); // 5 mins
 
-                {messages.map((msg, i) => {
-                    const isOwn = msg.sender_id === user?.id;
-                    const dateObj = new Date(msg.created_at);
-                    const time = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    const senderName = msg.profiles?.username || 'Unknown';
-                    const avatar = msg.profiles?.avatar_url || 'https://via.placeholder.com/32';
-
-                    if (msg.msg_type === 'system') {
                         return (
-                            <div key={msg.id || i} className="chat-system-msg">{msg.content}</div>
-                        );
-                    }
-
-                    if (msg.msg_type === 'announcement') {
-                        return (
-                            <motion.div
-                                key={msg.id || i}
-                                className="chat-announcement"
-                                initial={{ opacity: 0, y: 12 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.1 }}
-                            >
-                                <div className="announce-header">
-                                    <span className="announce-badge">ORGANIZER</span>
-                                    <span className="announce-time">{time}</span>
+                            <div key={msg.id} className={`message-item ${isContinuation ? 'continuation' : ''}`}>
+                                {!isContinuation && (
+                                    <img
+                                        src={msg.profiles?.avatar_url || 'https://via.placeholder.com/40'}
+                                        alt="avatar"
+                                        className="message-avatar"
+                                    />
+                                )}
+                                <div className="message-content">
+                                    {!isContinuation && (
+                                        <div className="message-header">
+                                            <span className="message-author">{msg.profiles?.username || 'Unknown'}</span>
+                                            <span className="message-timestamp">
+                                                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
+                                    )}
+                                    <div className="message-text">
+                                        {renderContent(msg.content)}
+                                    </div>
+                                    {msg.attachment_url && (
+                                        <div className="message-attachment">
+                                            {msg.attachment_url.match(/\.(jpeg|jpg|gif|png)$/) ? (
+                                                <img
+                                                    src={msg.attachment_url}
+                                                    alt="attachment"
+                                                    className="attachment-preview"
+                                                    onClick={() => window.open(msg.attachment_url, '_blank')}
+                                                />
+                                            ) : (
+                                                <a href={msg.attachment_url} target="_blank" rel="noreferrer" className="attachment-file">
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" /></svg>
+                                                    <span>{msg.attachment_url.split('/').pop()}</span>
+                                                </a>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
-                                <h3 className="announce-title">📢 ANNOUNCEMENT</h3>
-                                <p className="announce-body">{msg.content}</p>
-                            </motion.div>
+                            </div>
                         );
-                    }
-
-                    if (isOwn) {
-                        return (
-                            <motion.div
-                                key={msg.id || i}
-                                className="chat-own-msg"
-                                initial={{ opacity: 0, x: 12 }}
-                                animate={{ opacity: 1, x: 0 }}
-                            >
-                                <div className="own-bubble">{msg.content}</div>
-                                <span className="own-time">{time}</span>
-                            </motion.div>
-                        );
-                    } else {
-                        return (
-                            <motion.div
-                                key={msg.id || i}
-                                className="chat-other-msg"
-                                initial={{ opacity: 0, x: -12 }}
-                                animate={{ opacity: 1, x: 0 }}
-                            >
-                                <div className="other-avatar" onClick={() => navigate(`/profile/${senderName}`)} style={{ cursor: 'pointer' }}>
-                                    <img src={avatar} alt={senderName} />
-                                </div>
-                                <div className="other-content">
-                                    <span className="other-sender" style={{ color: msg.profiles?.shape_color || '#ff7f7f' }}>{senderName}</span>
-                                    <div className="other-bubble">{msg.content}</div>
-                                </div>
-                            </motion.div>
-                        );
-                    }
-                })}
-
-                <div ref={bottomRef} />
-
-                {/* Typing Indicator */}
-                <div className="chat-typing">
-                    <span className="typing-dots">○ ◇ □</span>
-                    <span className="typing-text">Several players are typing...</span>
+                    })}
+                    <div ref={bottomRef} />
                 </div>
-            </div>
 
-            {/* Input Bar */}
-            <div className="chat-input-bar">
-                <input type="file" ref={fileRef} style={{ display: 'none' }} />
-                <input type="file" ref={imgRef} accept="image/*" style={{ display: 'none' }} />
-                <div className="chat-input-actions">
-                    <div onClick={() => fileRef.current?.click()} style={{ cursor: 'pointer' }}>
-                        <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6.5" stroke="#64748b" strokeWidth="1" /><path d="M7.5 4.5v6M4.5 7.5h6" stroke="#64748b" strokeWidth="1" strokeLinecap="round" /></svg>
-                    </div>
-                    <div onClick={() => imgRef.current?.click()} style={{ cursor: 'pointer' }}>
-                        <svg width="17" height="17" viewBox="0 0 17 17" fill="none"><rect x="1" y="1" width="15" height="15" rx="2" stroke="#64748b" strokeWidth="1" /><circle cx="5.5" cy="5.5" r="1.5" fill="#64748b" /><path d="M1 12l4-4 3 3 2-2 6 6" stroke="#64748b" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                    </div>
-                    <div onClick={() => setShowPollModal(true)} style={{ cursor: 'pointer', fontSize: '12px', color: '#64748b' }}>
-                        △ POLL
-                    </div>
-                </div>
-                <div className="chat-input-field">
-                    <input
-                        type="text"
-                        placeholder="Message #general..."
-                        value={msgInput}
-                        onChange={e => setMsgInput(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && handleSend()}
-                        style={{ background: 'transparent', border: 'none', color: '#f1f5f9', fontFamily: "'DM Mono', monospace", fontSize: '11px', width: '100%', outline: 'none' }}
-                    />
-                </div>
-                <button className="chat-send-btn" onClick={handleSend}>
-                    SEND
-                    <span className="send-shape">□</span>
-                </button>
-            </div>
-
-            {/* Modals */}
-            <AnimatePresence>
-                {showDMModal && (
-                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowDMModal(false)}>
-                        <div style={{ background: '#111', padding: '24px', border: '1px solid #333', width: '300px' }} onClick={e => e.stopPropagation()}>
-                            <h3 style={{ color: 'white', marginBottom: '16px' }}>NEW DM ○</h3>
-                            <input type="text" placeholder="Search users..." style={{ width: '100%', padding: '8px', background: '#222', color: 'white', border: 'none', marginBottom: '16px' }} />
-                            <button onClick={() => setShowDMModal(false)} style={{ background: '#2dd4bf', color: 'black', padding: '8px 16px', width: '100%', fontWeight: 'bold' }}>START CHAT</button>
+                <div className="chat-input-wrapper">
+                    <div className="chat-input-container">
+                        <button className="attach-btn">+</button>
+                        <input
+                            type="text"
+                            placeholder={`Message #${activeChannel?.name || 'channel'}`}
+                            value={msgInput}
+                            onChange={e => setMsgInput(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleSend()}
+                        />
+                        <div className="input-actions">
+                            <button>🎁</button>
+                            <button>GIF</button>
+                            <button>😀</button>
                         </div>
                     </div>
-                )}
-                {showPollModal && (
-                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowPollModal(false)}>
-                        <div style={{ background: '#111', padding: '24px', border: '1px solid #333', width: '300px' }} onClick={e => e.stopPropagation()}>
-                            <h3 style={{ color: 'white', marginBottom: '16px' }}>CREATE POLL △</h3>
-                            <input type="text" placeholder="Question" style={{ width: '100%', padding: '8px', background: '#222', color: 'white', border: 'none', marginBottom: '8px' }} />
-                            <input type="text" placeholder="Option 1" style={{ width: '100%', padding: '8px', background: '#222', color: 'white', border: 'none', marginBottom: '8px' }} />
-                            <input type="text" placeholder="Option 2" style={{ width: '100%', padding: '8px', background: '#222', color: 'white', border: 'none', marginBottom: '16px' }} />
-                            <button onClick={() => setShowPollModal(false)} style={{ background: '#fbbf24', color: 'black', padding: '8px 16px', width: '100%', fontWeight: 'bold' }}>SEND POLL △</button>
+                </div>
+            </main>
+
+            {/* Right Sidebar: Members */}
+            <aside className={`chat-sidebar-right ${rightPanelVisible ? 'visible' : ''}`}>
+                <div className="member-list-container">
+                    <div className="member-group">ONLINE — {members.filter(m => m.status === 'online').length}</div>
+                    {members.filter(m => m.status === 'online').map(member => (
+                        <div key={member.id} className="member-item">
+                            <div className="member-avatar-wrap">
+                                <img src={member.avatar_url || 'https://via.placeholder.com/32'} alt={member.username} />
+                                <div className="status-indicator online"></div>
+                            </div>
+                            <span className="member-name">{member.username}</span>
                         </div>
-                    </div>
-                )}
-            </AnimatePresence>
+                    ))}
+
+                    <div className="member-group">OFFLINE — {members.filter(m => m.status !== 'online').length}</div>
+                    {members.filter(m => m.status !== 'online').map(member => (
+                        <div key={member.id} className="member-item offline">
+                            <div className="member-avatar-wrap">
+                                <img src={member.avatar_url || 'https://via.placeholder.com/32'} alt={member.username} />
+                                <div className="status-indicator offline"></div>
+                            </div>
+                            <span className="member-name">{member.username}</span>
+                        </div>
+                    ))}
+                </div>
+            </aside>
         </div>
     );
 }
