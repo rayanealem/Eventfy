@@ -116,15 +116,20 @@ export default function OnboardingStep3() {
                     <h2 className="obs-step-title">STEP 3: WHAT ARE YOU<br />MADE OF? △</h2>
 
                     {loadingData ? (
-                        <div style={{ padding: '2rem', textAlign: 'center', color: '#fff' }}>Loading skill matrix...</div>
+                        <div className="obs-skills-cloud">
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
+                                <div key={i} className="obs-pill obs-skeleton" style={{ width: `${80 + Math.random() * 60}px`, height: '40px', background: 'rgba(255,255,255,0.05)', borderRadius: '9999px', animation: 'pulse 1.5s infinite' }} />
+                            ))}
+                        </div>
                     ) : (
                         <div className="obs-skills-cloud">
-                            {skills.map((s) => {
+                            {skills.map((s, i) => {
                                 const isActive = selectedIds.has(s.id);
                                 return (
                                     <button
                                         key={s.id}
-                                        className={`obs-pill ${isActive ? 'active' : ''}`}
+                                        className={`obs-pill obs-staggered-entrance ${isActive ? 'active' : ''}`}
+                                        style={{ animationDelay: `${i * 0.05}s` }}
                                         onClick={() => toggleSkill(s.id)}
                                     >
                                         {s.name}

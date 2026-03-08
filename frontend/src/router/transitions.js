@@ -29,3 +29,9 @@ export const morphExpand = {
     animate: { scale: 1, opacity: 1, transition: { duration: 0.3, ease: 'easeOut' } },
     exit: { scale: 0.9, opacity: 0, transition: { duration: 0.2 } }
 };
+
+export const slideUpTransition = {
+    initial: { y: 24, opacity: 0 },
+    animate: { y: 0, opacity: 1, transition: { duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] } },
+    exit: { y: 24, opacity: 0, transition: { duration: 0.2 } }
+};

@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
+import { haptic } from '../../lib/haptic';
 import './Chat.css';
 
 // Simple Markdown Renderer for Chat
@@ -54,6 +55,7 @@ export default function Chat() {
     const [rightPanelVisible, setRightPanelVisible] = useState(true);
     const [activeChannelId, setActiveChannelId] = useState(null);
     const [msgInput, setMsgInput] = useState('');
+    const [reactions, setReactions] = useState({});
     const bottomRef = useRef(null);
 
     // Fetch channels and initial data
@@ -132,9 +134,22 @@ export default function Chat() {
 
     const handleSend = () => {
         if (!msgInput.trim() || !activeChannelId) return;
+        haptic();
         sendMessageMutation.mutate(msgInput.trim());
         setMsgInput('');
     };
+
+    const QUICK_REACTIONS = ['🔥', '👏', '😂', '❤️', '😮'];
+    const toggleReaction = (msgId, emoji) => {
+        haptic();
+        setReactions(prev => {
+            const key = `${msgId}-${emoji}`;
+            return { ...prev, [key]: prev[key] ? prev[key] + 1 : 1 };
+        });
+    };
+
+    const onlineCount = members.filter(m => m.status === 'online').length;
+    const totalCount = members.length;
 
     if (isLoading) {
         return (
@@ -192,6 +207,10 @@ export default function Chat() {
                         <h1>{activeChannel?.name || 'lobby'}</h1>
                     </div>
                     <div className="top-bar-right">
+                        <span className="chat-attendee-count">
+                            <span className="chat-online-dot" />
+                            {onlineCount}/{totalCount} ONLINE
+                        </span>
                         <button onClick={() => setRightPanelVisible(!rightPanelVisible)}>
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
                         </button>
@@ -202,7 +221,16 @@ export default function Chat() {
                     {messages.map((msg, i) => {
                         const prevMsg = messages[i - 1];
                         const isContinuation = prevMsg && prevMsg.sender_id === msg.sender_id &&
-                            (new Date(msg.created_at) - new Date(prevMsg.created_at) < 300000); // 5 mins
+                            (new Date(msg.created_at) - new Date(prevMsg.created_at) < 300000);
+                        const isSystemMsg = msg.msg_type === 'system' || msg.content?.startsWith('[SYSTEM]');
+
+                        if (isSystemMsg) {
+                            return (
+                                <div key={msg.id} className="chat-system-msg">
+                                    <span>{msg.content?.replace('[SYSTEM]', '').trim() || 'System event'}</span>
+                                </div>
+                            );
+                        }
 
                         return (
                             <div key={msg.id} className={`message-item ${isContinuation ? 'continuation' : ''}`}>
@@ -242,6 +270,22 @@ export default function Chat() {
                                             )}
                                         </div>
                                     )}
+                                    {/* Quick Reactions */}
+                                    <div className="chat-reactions-row">
+                                        {QUICK_REACTIONS.map(emoji => {
+                                            const count = reactions[`${msg.id}-${emoji}`] || 0;
+                                            return (
+                                                <motion.button
+                                                    key={emoji}
+                                                    className={`chat-reaction-btn ${count > 0 ? 'active' : ''}`}
+                                                    whileTap={{ scale: 1.3 }}
+                                                    onClick={() => toggleReaction(msg.id, emoji)}
+                                                >
+                                                    {emoji}{count > 0 && <span className="reaction-count">{count}</span>}
+                                                </motion.button>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             </div>
                         );

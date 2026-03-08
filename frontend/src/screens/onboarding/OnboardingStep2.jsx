@@ -13,6 +13,16 @@ export default function OnboardingStep2() {
     const [color, setColor] = useState(profile?.shape_color || '#13ecec');
     const [loading, setLoading] = useState(false);
 
+    const [labelIndex, setLabelIndex] = useState(0);
+    const labels = ['Upl0ad Identity', 'Init_Avatar.exe', 'Awaiting_Input...'];
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setLabelIndex((prev) => (prev + 1) % labels.length);
+        }, 2000);
+        return () => clearInterval(interval);
+    }, []);
+
     useEffect(() => {
         if (profile) {
             if (profile.username) setUsername(profile.username);
@@ -72,10 +82,10 @@ export default function OnboardingStep2() {
                     <h2 className="obs-step-title">STEP 2: WHO ARE YOU? ○</h2>
 
                     <div className="obs-avatar-zone">
-                        <div className="obs-hex-upload" style={{ background: color }}>
+                        <div className="obs-hex-upload obs-animated-border" style={{ background: color, border: `2px solid ${color}` }}>
                             <span className="obs-upload-icon">↑</span>
                         </div>
-                        <span className="obs-upload-label">Upl0ad Identity</span>
+                        <span className="obs-upload-label">{labels[labelIndex]}</span>
                     </div>
 
                     <div className="obs-symbol-section">

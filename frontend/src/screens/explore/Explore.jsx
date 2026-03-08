@@ -184,8 +184,11 @@ export default function Explore() {
                                     {searchResults.users.map((u, i) => (
                                         <div key={i} className="explore-search-result" onClick={() => navigate(`/profile/${u.username}`)}
                                             style={{ padding: '16px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
-                                                <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.username)}&background=1e293b&color=fff`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="User" />
+                                            <div style={{ position: 'relative' }}>
+                                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+                                                    <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.username)}&background=1e293b&color=fff`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="User" />
+                                                </div>
+                                                <span className="explore-player-shape" style={{ color: u.shape_color || '#f56e3d' }}>{u.shape || '○'}</span>
                                             </div>
                                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                                                 <span style={{ color: '#f1f5f9', fontFamily: 'Space Grotesk', fontWeight: 'bold' }}>@{u.username}</span>
@@ -210,19 +213,26 @@ export default function Explore() {
                     <section className="explore-section">
                         <div className="explore-section-header" style={{ marginBottom: '-8px' }}>
                             <h2 className="explore-section-title">TOP ORGS △</h2>
+                            <span className="explore-see-all" onClick={() => navigate('/explore/orgs')}>SEE ALL →</span>
                         </div>
                         <div style={{ display: 'flex', gap: '16px', padding: '0 16px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
                             {loadingOrgs ? (
                                 [1, 2, 3].map(i => <div key={i} style={{ minWidth: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', animation: 'pulse 1.5s infinite ease-in-out' }} />)
                             ) : orgs.map((org, i) => (
-                                <div key={org.id || i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', minWidth: '80px', cursor: 'pointer' }} onClick={() => navigate(`/org/${org.slug || org.id}`)}>
-                                    <div style={{ width: '70px', height: '70px', borderRadius: '50%', padding: '2px', background: 'linear-gradient(45deg, #13ecc8, #f45c25)' }}>
-                                        <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', border: '2px solid black' }}>
-                                            <img src={org.logo_url || `https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=100&h=100&fit=crop`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt={org.name} />
+                                <div key={org.id || i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', minWidth: '80px', cursor: 'pointer' }} onClick={() => navigate(`/org/${org.slug || org.id}`)}>
+                                    <div style={{ position: 'relative' }}>
+                                        <div style={{ width: '70px', height: '70px', borderRadius: '50%', padding: '2px', background: 'linear-gradient(45deg, #13ecc8, #f45c25)' }}>
+                                            <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', border: '2px solid black' }}>
+                                                <img src={org.logo_url || `https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=100&h=100&fit=crop`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt={org.name} />
+                                            </div>
                                         </div>
+                                        {org.verified && <span className="explore-org-verified">✓</span>}
                                     </div>
-                                    <span style={{ color: '#f1f5f9', fontSize: '10px', fontFamily: 'Space Grotesk', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '80px', textAlign: 'center' }}>
+                                    <span style={{ color: '#f1f5f9', fontSize: '10px', fontFamily: 'Space Grotesk', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '80px', textAlign: 'center', fontWeight: 'bold' }}>
                                         {org.name}
+                                    </span>
+                                    <span style={{ color: '#64748b', fontSize: '9px', fontFamily: 'DM Mono, monospace', marginTop: '-4px' }}>
+                                        {org.upcoming_events || org.event_count || 0} UPCOMING
                                     </span>
                                 </div>
                             ))}
@@ -233,12 +243,22 @@ export default function Explore() {
                     <section className="explore-section" style={{ marginTop: '16px' }}>
                         <div className="explore-section-header">
                             <h2 className="explore-section-title trending">DISCOVER □</h2>
+                            <span className="explore-see-all" onClick={() => navigate('/explore/events')}>SEE ALL →</span>
                         </div>
 
                         {loadingEvents ? (
                             <div style={{ padding: 24, textAlign: 'center', color: '#64748b', fontFamily: 'DM Mono, monospace', animation: 'pulse 1.5s infinite' }}>LOADING GRID...</div>
                         ) : filteredTrending.length === 0 ? (
-                            <div style={{ padding: 24, textAlign: 'center', color: '#64748b', fontFamily: 'DM Mono, monospace' }}>NO EVENTS FOUND</div>
+                            <div className="explore-empty-state">
+                                <div className="explore-empty-shapes">
+                                    <span style={{ color: '#f56e3d', fontSize: '40px' }}>○</span>
+                                    <span style={{ color: '#fbbf24', fontSize: '30px' }}>△</span>
+                                    <span style={{ color: '#2dd4bf', fontSize: '36px' }}>□</span>
+                                    <span style={{ color: '#a855f7', fontSize: '28px' }}>◇</span>
+                                </div>
+                                <span className="explore-empty-text">NO EVENTS MATCH YOUR FILTER</span>
+                                <span className="explore-empty-sub">TRY ADJUSTING YOUR SEARCH OR EXPLORE ALL</span>
+                            </div>
                         ) : (
                             <div className="explore-masonry-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '2px', padding: '0' }}>
                                 {/* Column 1 */}

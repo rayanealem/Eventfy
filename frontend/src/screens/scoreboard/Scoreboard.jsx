@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
+import { haptic } from '../../lib/haptic';
 import './Scoreboard.css';
 
 const LEVEL_THRESHOLDS = [0, 500, 1200, 2500, 4500, 7000, 10000, 14000, 19000, 25000];
@@ -63,6 +64,8 @@ export default function Scoreboard() {
         xp: p.xp || 0,
         medal: i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '',
         avatar: p.avatar_url || `https://i.pravatar.cc/48?u=${p.id}`,
+        shape: p.shape || ['○', '△', '□', '◇'][i % 4],
+        shape_color: p.shape_color || ['#f56e3d', '#fbbf24', '#2dd4bf', '#a855f7'][i % 4],
     }));
 
     const myRank = profile ? leaderboard.findIndex(p => p.id === profile.id) + 1 || 'UNRANKED' : '--';
@@ -128,10 +131,46 @@ export default function Scoreboard() {
             <AnimatePresence mode="wait">
                 {activeTab === 'leaderboard' && (
                     <motion.div key="lb" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="sb-leaderboard">
+                        {/* YOU ARE HERE card */}
+                        <motion.div className="sb-rank-card" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
+                            <div className="sb-rank-card-left">
+                                <span className="sb-rank-card-label">YOU ARE HERE</span>
+                                <span className="sb-rank-card-pos">#{myRank}</span>
+                            </div>
+                            <div className="sb-rank-card-right">
+                                <span className="sb-rank-card-gap">{typeof myRank === 'number' && myRank > 1 ? `${((leaderboard[myRank - 2]?.xp || 0) - (profile?.xp || 0)).toLocaleString()} XP TO NEXT RANK` : 'TOP RANK'}</span>
+                                <div className="sb-rank-card-bar">
+                                    <div className="sb-rank-card-fill" style={{ width: `${progress}%` }} />
+                                </div>
+                            </div>
+                        </motion.div>
+
                         <div className="sb-lb-header">
                             <span className="sb-lb-title">TOP PLAYERS</span>
                             <span className="sb-lb-filter">THIS WEEK</span>
                         </div>
+
+                        {/* Top 3 Podium */}
+                        {leaderboard.length >= 3 && (
+                            <div className="sb-podium">
+                                {[1, 0, 2].map(idx => {
+                                    const p = leaderboard[idx];
+                                    const colors = { 0: '#ffd700', 1: '#c0c0c0', 2: '#cd7f32' };
+                                    return (
+                                        <motion.div key={p.id || idx} className={`sb-podium-card ${idx === 0 ? 'first' : ''}`}
+                                            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}
+                                            onClick={() => navigate(`/profile/${p.name}`)} style={{ borderColor: colors[idx], cursor: 'pointer' }}
+                                        >
+                                            <img className="sb-podium-avatar" src={p.avatar} alt="" />
+                                            <span className="sb-podium-rank" style={{ color: colors[idx] }}>#{p.rank}</span>
+                                            <span className="sb-podium-name">{p.name?.substring(0, 8)}</span>
+                                            <span className="sb-podium-xp">{p.xp.toLocaleString()} XP</span>
+                                        </motion.div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
                         {isLoading ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px' }}>
                                 {[1, 2, 3, 4, 5].map(i => (
@@ -144,10 +183,10 @@ export default function Scoreboard() {
                             </div>
                         ) : (
                             <div className="sb-lb-list">
-                                {leaderboard.slice(0, 15).map((p, i) => (
+                                {leaderboard.slice(3, 15).map((p, i) => (
                                     <motion.div
                                         key={p.id || i}
-                                        className={`sb-lb-row ${p.rank <= 3 ? 'top-3' : ''} ${p.rank === 1 ? 'gold' : ''} ${p.id === profile?.id ? 'user-row' : ''}`}
+                                        className={`sb-lb-row ${p.id === profile?.id ? 'user-row' : ''}`}
                                         initial={{ opacity: 0, x: -8 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: i * 0.04 }}
@@ -155,14 +194,12 @@ export default function Scoreboard() {
                                         style={{ cursor: 'pointer' }}
                                     >
                                         <div className="sb-lb-rank">
-                                            {p.medal === 'gold' && <span className="sb-medal" style={{ color: '#ffd700' }}>🥇</span>}
-                                            {p.medal === 'silver' && <span className="sb-medal" style={{ color: '#c0c0c0' }}>🥈</span>}
-                                            {p.medal === 'bronze' && <span className="sb-medal" style={{ color: '#cd7f32' }}>🥉</span>}
-                                            {!p.medal && <span className="sb-rank-text" style={{ color: p.id === profile?.id ? '#13ecda' : '' }}>#{p.rank}</span>}
+                                            <span className="sb-rank-text" style={{ color: p.id === profile?.id ? '#13ecda' : '' }}>#{p.rank}</span>
                                         </div>
                                         <div className={`sb-lb-avatar ${p.id === profile?.id ? 'user-avatar' : ''}`}>
                                             <img src={p.avatar} alt="" />
                                         </div>
+                                        <span className="sb-lb-shape" style={{ color: p.shape_color }}>{p.shape}</span>
                                         <div className="sb-lb-info">
                                             <span className="sb-lb-name" style={{ color: p.id === profile?.id ? '#13ecda' : '' }}>
                                                 {p.name} {p.id === profile?.id ? '○' : ''}
@@ -179,21 +216,38 @@ export default function Scoreboard() {
                 {activeTab === 'badges' && (
                     <motion.div key="badges" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="sb-badges">
                         <span className="sb-badges-title">BADGES EARNED</span>
-                        <div className="sb-badges-grid">
-                            {(myBadges.length > 0 ? myBadges : [
-                                { icon: '◇', label: 'ELITE', color: '#ffd700' },
-                                { icon: '△', label: 'PIONEER', color: '#13ecda' },
-                                { icon: '□', label: 'SCHOLAR', color: '#a78bfa' },
-                                { icon: '○', label: 'WARRIOR', color: '#f44725' },
-                            ]).map((b, i) => (
-                                <motion.div key={i} className="sb-badge" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
-                                    <div className="sb-badge-hex" style={{ borderColor: `${b.color || '#13ecc8'}40`, background: `${b.color || '#13ecc8'}15` }}>
-                                        <span style={{ color: b.color || '#13ecc8' }}>{b.icon || b.icon_url || '🏅'}</span>
+                        {/* Group badges by shape */}
+                        {(() => {
+                            const badges = myBadges.length > 0 ? myBadges : [
+                                { icon: '◇', label: 'ELITE', color: '#ffd700', category: 'diamond' },
+                                { icon: '△', label: 'PIONEER', color: '#13ecda', category: 'triangle' },
+                                { icon: '□', label: 'SCHOLAR', color: '#a78bfa', category: 'square' },
+                                { icon: '○', label: 'WARRIOR', color: '#f44725', category: 'circle' },
+                            ];
+                            const groups = {};
+                            badges.forEach(b => {
+                                const cat = b.category || b.icon || '○';
+                                if (!groups[cat]) groups[cat] = [];
+                                groups[cat].push(b);
+                            });
+                            return Object.entries(groups).map(([cat, items]) => (
+                                <div key={cat} style={{ marginBottom: '16px' }}>
+                                    <div className="sb-badge-group-header">
+                                        <span>{cat.toUpperCase()} BADGES</span>
                                     </div>
-                                    <span className="sb-badge-label" style={{ color: b.color || '#13ecc8' }}>{b.label || b.name || 'BADGE'}</span>
-                                </motion.div>
-                            ))}
-                        </div>
+                                    <div className="sb-badges-grid">
+                                        {items.map((b, i) => (
+                                            <motion.div key={i} className="sb-badge" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
+                                                <div className="sb-badge-hex" style={{ borderColor: `${b.color || '#13ecc8'}40`, background: `${b.color || '#13ecc8'}15` }}>
+                                                    <span style={{ color: b.color || '#13ecc8' }}>{b.icon || '🏅'}</span>
+                                                </div>
+                                                <span className="sb-badge-label" style={{ color: b.color || '#13ecc8' }}>{b.label || b.name || 'BADGE'}</span>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ));
+                        })()}
                     </motion.div>
                 )}
 

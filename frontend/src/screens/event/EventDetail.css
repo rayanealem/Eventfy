@@ -664,3 +664,162 @@
     color: white;
     line-height: 28px;
 }
+
+/* ===== ATTENDEE PREVIEW ===== */
+.ed-attendee-preview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ed-attendee-avatars {
+    display: flex;
+    align-items: center;
+}
+
+.ed-attendee-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid #0a0a0f;
+    object-fit: cover;
+}
+
+.ed-attendee-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: #94a3b8;
+    letter-spacing: 0.3px;
+}
+
+/* ===== COMMUNITY COMPOSE ===== */
+.ed-community-compose {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    margin: 0 16px 16px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 9999px;
+}
+
+.ed-compose-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.ed-compose-placeholder {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    color: #475569;
+}
+
+/* ===== COMMUNITY SKELETON ===== */
+.ed-community-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0 16px;
+}
+
+.ed-community-skeleton {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.ed-skel-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    flex-shrink: 0;
+    animation: ed-pulse 1.5s ease-in-out infinite;
+}
+
+.ed-skel-lines {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 4px;
+}
+
+.ed-skel-line {
+    height: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
+    animation: ed-pulse 1.5s ease-in-out infinite;
+}
+
+.ed-skel-line.short {
+    height: 8px;
+}
+
+@keyframes ed-pulse {
+
+    0%,
+    100% {
+        opacity: 0.4;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+}
+
+/* ===== UNIFIED FOOTER ===== */
+.ed-footer-unified {
+    display: flex;
+    flex-direction: column;
+}
+
+.ed-footer-row {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+}
+
+.ed-cta-half {
+    flex: 1;
+    min-width: 0;
+}
+
+/* ===== XP SHIMMER ===== */
+.ed-xp-shimmer {
+    background: linear-gradient(90deg, white 0%, #f45c25 50%, white 100%);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: ed-shimmer 3s ease-in-out infinite;
+}
+
+@keyframes ed-shimmer {
+    0% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: -100% 50%;
+    }
+}
+
+/* ===== XP BADGE ICON SHAPE ===== */
+.xp-badge-icon-shape {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    flex-shrink: 0;
+}

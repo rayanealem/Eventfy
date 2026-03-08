@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
+import { haptic } from '../../lib/haptic';
+import { useToast } from '../../components/Toast';
 import SkeletonCard from '../../components/SkeletonCard';
 import './Feed.css';
 
@@ -18,6 +20,22 @@ const TYPE_CONFIG = {
     cultural: { label: '☆ CULTURAL', shape: '☆', color: '#a855f7', border: 'rgba(168,85,247,0.3)' },
 };
 
+const FILTER_PILLS = [
+    { key: 'all', label: 'ALL', shape: '○' },
+    { key: 'sport', label: 'SPORT', shape: '○' },
+    { key: 'science', label: 'SCIENCE', shape: '△' },
+    { key: 'charity', label: 'CHARITY', shape: '□' },
+    { key: 'cultural', label: 'CULTURAL', shape: '◇' },
+];
+
+function getGreeting() {
+    const h = new Date().getHours();
+    if (h < 12) return 'GOOD MORNING';
+    if (h < 17) return 'AFTERNOON MISSION';
+    if (h < 22) return 'EVENING OPERATIONS';
+    return 'LATE NIGHT GRIND';
+}
+
 function formatEventDate(startsAt) {
     const date = new Date(startsAt);
     const now = new Date();
@@ -28,9 +46,15 @@ function formatEventDate(startsAt) {
     return date.toLocaleDateString('en-DZ', { day: '2-digit', month: 'short' }).toUpperCase();
 }
 
+function formatEventTime(startsAt) {
+    const date = new Date(startsAt);
+    return date.toLocaleTimeString('en-DZ', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
 export default function Feed() {
     const navigate = useNavigate();
     const { profile } = useAuth();
+    const { showToast } = useToast();
 
     // State
     const [events, setEvents] = useState([]);
@@ -41,6 +65,7 @@ export default function Feed() {
     const [followedOrgs, setFollowedOrgs] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [saved, setSaved] = useState({});
+    const [seenStories, setSeenStories] = useState(new Set());
 
     // Pull-to-refresh
     const [refreshing, setRefreshing] = useState(false);
@@ -169,17 +194,22 @@ export default function Feed() {
     async function handleRegister(eventId, e) {
         e.stopPropagation();
         if (registeredIds.has(eventId)) return;
+        haptic();
         setRegisteredIds(prev => new Set([...prev, eventId]));  // optimistic
         try {
             await api('POST', `/events/${eventId}/register`);
+            showToast('REGISTERED ✓ CHECK YOUR NOTIFICATIONS', 'success');
         } catch (err) {
             setRegisteredIds(prev => { const s = new Set(prev); s.delete(eventId); return s; });
+            showToast(err.message || 'REGISTRATION FAILED', 'error');
             console.error('Register failed:', err);
         }
     }
 
     const toggleSave = (eventId) => {
+        haptic();
         setSaved(prev => ({ ...prev, [eventId]: !prev[eventId] }));
+        showToast(saved[eventId] ? 'REMOVED FROM SAVED' : 'EVENT SAVED ◇', 'success');
     };
 
     return (
@@ -197,7 +227,10 @@ export default function Feed() {
             <header className="feed-header">
                 <div className="feed-header-left">
                     <span className="feed-logo-shapes">○△□</span>
-                    <span className="feed-logo-text">EVENTFY</span>
+                    <div className="feed-header-brand">
+                        <span className="feed-logo-text">EVENTFY</span>
+                        <span className="feed-greeting">{getGreeting()}, #{profile?.player_number || '????'}</span>
+                    </div>
                 </div>
                 <div className="feed-search-bar" onClick={() => navigate('/explore')} style={{ cursor: 'pointer' }}>
                     <svg className="feed-search-icon" width="18.5" height="10.5" viewBox="0 0 19 11" fill="none">
@@ -226,6 +259,7 @@ export default function Feed() {
 
             {/* Story Row — followed orgs */}
             <div className="feed-stories">
+                {/* Everyone can add a story now */}
                 <div className="feed-story" onClick={() => navigate('/stories/create')} style={{ cursor: 'pointer' }}>
                     <div className="feed-story-ring dashed" style={{ borderColor: '#f472b6' }}>
                         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -233,18 +267,19 @@ export default function Feed() {
                             <line x1="1" y1="7" x2="13" y2="7" stroke="#f472b6" strokeWidth="2" strokeLinecap="round" />
                         </svg>
                     </div>
-                    <span className="feed-story-name" style={{ color: '#94a3b8' }}>ADD STORY</span>
+                    <span className="feed-story-name" style={{ color: '#f472b6' }}>ADD STORY</span>
                 </div>
+
                 {followedOrgs.map((org, idx) => {
-                    const rc = ['#f56e3d', '#2dd4bf', '#fbbf24', '#334155'];
+                    const isSeen = seenStories.has(org.id);
                     return (
-                        <div key={org.id} className="feed-story" onClick={() => navigate(`/stories/${org.id}`)} style={{ cursor: 'pointer' }}>
-                            <div className="feed-story-ring" style={{ borderColor: rc[idx % rc.length] }}>
+                        <div key={org.id} className="feed-story" onClick={() => { setSeenStories(prev => new Set([...prev, org.id])); navigate(`/stories/${org.id}`); }} style={{ cursor: 'pointer' }}>
+                            <div className={`feed-story-ring ${isSeen ? 'seen' : 'gradient'}`}>
                                 <div className="feed-story-avatar-inner">
                                     <img src={org.logo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(org.name)}&size=80&background=1e293b&color=fff`} alt={org.name} />
                                 </div>
                             </div>
-                            <span className="feed-story-name" style={{ color: '#f1f5f9' }}>{org.name?.toUpperCase()?.substring(0, 10)}</span>
+                            <span className="feed-story-name" style={{ color: isSeen ? '#64748b' : '#f1f5f9' }}>{org.name?.toUpperCase()?.substring(0, 8)}</span>
                         </div>
                     )
                 })}
@@ -268,6 +303,24 @@ export default function Feed() {
                 </div>
             </div>
 
+            {/* Filter Pills */}
+            <div className="feed-filter-pills">
+                {FILTER_PILLS.map(fp => {
+                    const isActive = activeFilter === fp.key;
+                    const typeColor = TYPE_CONFIG[fp.key]?.color || '#f56e3d';
+                    return (
+                        <button
+                            key={fp.key}
+                            className={`feed-filter-pill ${isActive ? 'active' : ''}`}
+                            onClick={() => setActiveFilter(fp.key)}
+                            style={isActive ? { background: typeColor, borderColor: typeColor, color: '#000' } : undefined}
+                        >
+                            {fp.label} {fp.shape}
+                        </button>
+                    );
+                })}
+            </div>
+
             {/* Event Cards */}
             <div className="feed-cards">
                 {loading && events.length === 0 && (
@@ -277,8 +330,12 @@ export default function Feed() {
                     </>
                 )}
                 {!loading && events.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '40px', color: '#64748b', fontFamily: 'DM Mono, monospace', fontSize: '12px' }}>
-                        NO EVENTS FOUND IN THIS SCOPE
+                    <div className="feed-empty-state">
+                        <span className="feed-empty-shape">○</span>
+                        <span className="feed-empty-shape-sm top-right">△</span>
+                        <span className="feed-empty-shape-xs bottom-left">□</span>
+                        <span className="feed-empty-text">NO EVENTS FOUND IN THIS SCOPE</span>
+                        <span className="feed-empty-sub">Try changing your filters or scope</span>
                     </div>
                 )}
                 {events.map((event, i) => {
@@ -313,6 +370,13 @@ export default function Feed() {
                                     <div className={`feed-card-countdown hot`}>
                                         {formatEventDate(event.starts_at)}
                                     </div>
+                                    {/* LIVE NOW indicator */}
+                                    {event.status === 'live' && (
+                                        <div className="feed-live-badge">
+                                            <span className="feed-live-dot" />
+                                            LIVE
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Body */}
@@ -356,6 +420,13 @@ export default function Feed() {
                                         })}
                                     </div>
 
+                                    {/* Event metadata strip */}
+                                    <div className="feed-card-meta-strip">
+                                        <span className="feed-meta-chip">■ {formatEventDate(event.starts_at)} at {formatEventTime(event.starts_at)}</span>
+                                        <span className="feed-meta-chip"><span style={{ color: typeConf.color }}>◉</span> {event.registration_count || 0} going</span>
+                                        <span className="feed-meta-chip"><span style={{ color: typeConf.color }}>{typeConf.shape}</span> {event.event_type?.toUpperCase()}</span>
+                                    </div>
+
                                     <div className="feed-card-capacity">
                                         <div className="feed-card-capacity-row">
                                             <span className="capacity-label">Capacity Status</span>
@@ -375,29 +446,39 @@ export default function Feed() {
                                         </div>
                                     </div>
 
+                                    {/* Footer — actions left, register right */}
                                     <div className="feed-card-footer">
-                                        <button
-                                            className={`feed-card-register ${i % 2 !== 0 ? 'outline' : 'filled'} ${isRegistered ? 'registered' : ''}`}
-                                            onClick={(e) => handleRegister(event.id, e)}
-                                            style={isRegistered ? { background: '#2dd4bf', borderColor: '#2dd4bf', color: '#000' } : undefined}
-                                        >
-                                            {isRegistered ? "YOU'RE IN ✓" : `REGISTER ${typeConf.shape}`}
-                                        </button>
                                         <div className="feed-card-actions">
-                                            <button className="feed-card-action-btn" onClick={() => toggleSave(event.id)}>
-                                                <svg width="14" height="18" viewBox="0 0 14 18" fill="none">
+                                            <button className="feed-card-action-btn" onClick={(e) => { e.stopPropagation(); toggleSave(event.id); }}>
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+                                                        stroke={saved[event.id] ? '#f43f5e' : 'rgba(255,255,255,0.5)'}
+                                                        fill={saved[event.id] ? '#f43f5e' : 'none'}
+                                                        strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            </button>
+                                            <button className="feed-card-action-btn" onClick={(e) => { e.stopPropagation(); if (navigator.share) navigator.share({ title: event.title, url: `/event/${event.id}` }); }}>
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                                    <line x1="22" y1="2" x2="11" y2="13" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                                    <polygon points="22 2 15 22 11 13 2 9 22 2" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" strokeLinejoin="round" fill="none" />
+                                                </svg>
+                                            </button>
+                                            <button className="feed-card-action-btn" onClick={(e) => { e.stopPropagation(); toggleSave(event.id); }}>
+                                                <svg width="18" height="20" viewBox="0 0 14 18" fill="none">
                                                     <path d="M1 2.5C1 1.67 1.67 1 2.5 1h9c.83 0 1.5.67 1.5 1.5V17l-6-3-6 3V2.5z"
-                                                        stroke={saved[event.id] ? '#fbbf24' : 'rgba(255,255,255,0.4)'}
+                                                        stroke={saved[event.id] ? '#fbbf24' : 'rgba(255,255,255,0.5)'}
                                                         fill={saved[event.id] ? '#fbbf24' : 'none'}
                                                         strokeWidth="1.2" />
                                                 </svg>
                                             </button>
-                                            <button className="feed-card-action-btn" onClick={() => { if (navigator.share) navigator.share({ title: event.title, url: `/event/${event.id}` }); }}>
-                                                <svg width="18" height="20" viewBox="0 0 18 20" fill="none">
-                                                    <path d="M2 10l7-8M9 2l7 8M9 2v14" stroke="rgba(255,255,255,0.4)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                                                </svg>
-                                            </button>
                                         </div>
+                                        <button
+                                            className={`feed-card-register-pill ${isRegistered ? 'registered' : ''}`}
+                                            onClick={(e) => handleRegister(event.id, e)}
+                                            style={isRegistered ? { background: '#2dd4bf', borderColor: '#2dd4bf', color: '#000' } : undefined}
+                                        >
+                                            {isRegistered ? 'IN ✓' : `REGISTER ${typeConf.shape}`}
+                                        </button>
                                     </div>
                                 </div>
                             </div>

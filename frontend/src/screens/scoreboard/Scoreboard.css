@@ -454,3 +454,137 @@
 .sb-ach-claim-btn:hover {
     background: rgba(255, 255, 255, .15);
 }
+
+/* ===== YOU ARE HERE RANK CARD ===== */
+.sb-rank-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 16px;
+    background: rgba(19, 236, 218, 0.06);
+    border: 1px solid rgba(19, 236, 218, 0.2);
+    border-radius: 4px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.sb-rank-card-left {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sb-rank-card-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: #13ecda;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+.sb-rank-card-pos {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    color: white;
+    line-height: 28px;
+}
+
+.sb-rank-card-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sb-rank-card-gap {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.4);
+    letter-spacing: 0.5px;
+}
+
+.sb-rank-card-bar {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.sb-rank-card-fill {
+    height: 100%;
+    background: #13ecda;
+    border-radius: 3px;
+    transition: width 0.5s ease-out;
+}
+
+/* ===== PODIUM ===== */
+.sb-podium {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    align-items: flex-end;
+    padding: 8px 0;
+}
+
+.sb-podium-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 16px 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid;
+    border-radius: 8px;
+}
+
+.sb-podium-card.first {
+    padding: 20px 8px;
+}
+
+.sb-podium-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.sb-podium-rank {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    line-height: 20px;
+}
+
+.sb-podium-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: #f1f5f9;
+    letter-spacing: -0.3px;
+}
+
+.sb-podium-xp {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+/* ===== SHAPE IN ROWS ===== */
+.sb-lb-shape {
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+/* ===== BADGE GROUP HEADER ===== */
+.sb-badge-group-header {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.3);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 12px;
+}

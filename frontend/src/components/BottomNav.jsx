@@ -12,8 +12,8 @@ const SVGIcon = ({ shape, size, strokeWidth, color, fill }) => {
             return <rect x="4" y="4" width="16" height="16" rx="2" stroke={color} strokeWidth={strokeWidth} strokeLinejoin="round" fill={fill} />;
         case 'diamond':
             return <polygon points="12,2 22,12 12,22 2,12" stroke={color} strokeWidth={strokeWidth} strokeLinejoin="round" fill={fill} />;
-        case 'hexagon':
-            return <polygon points="12,3 20,7.5 20,16.5 12,21 4,16.5 4,7.5" stroke={color} strokeWidth={strokeWidth} strokeLinejoin="round" fill={fill} />;
+        case 'chat':
+            return <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" fill={fill} />;
         default: return null;
     }
 };
@@ -31,93 +31,115 @@ export default function BottomNav() {
     // Simulate unread chat count
     const unreadMessagesCount = 1;
 
-    // Hide nav on auth/onboarding/splash screens and full-screen views
-    const hideOn = ['/splash', '/auth', '/onboarding', '/chat', '/stories', '/qr', '/volunteer', '/manage', '/admin', '/event/create', '/post/create'];
-    const isHidden = hideOn.some(p => location.pathname === p || location.pathname.startsWith(p + '/'));
+    // Strictly show ONLY on the requested core tabs
+    const coreRoutes = ['/feed', '/explore', '/scoreboard', '/profile', '/chat'];
+    const isCoreRoute = coreRoutes.some(p => location.pathname === p || location.pathname.startsWith(p + '/'));
 
-    if (isHidden) return null;
+    if (!isCoreRoute) return null;
 
     const navItems = [
         { path: '/feed', shape: 'circle', activeColor: '#f472b6' },
         { path: '/explore', shape: 'triangle', activeColor: '#fbbf24' },
         { path: '/scoreboard', shape: 'square', activeColor: '#2dd4bf' },
         { path: '/profile/me', shape: 'diamond', activeColor: '#3b82f6' },
-        { path: '/chat', shape: 'hexagon', activeColor: '#f56e3d', badge: unreadMessagesCount }
+        { path: '/chat', shape: 'chat', activeColor: '#f56e3d', badge: unreadMessagesCount }
     ];
 
     return (
-        <nav className="bottom-nav" style={{ position: 'fixed', bottom: 0, width: '100%', margin: '0 auto', zIndex: 50, display: 'flex', justifyContent: 'space-around', alignItems: 'center', height: '64px', background: 'rgba(26, 29, 46, 0.95)', backdropFilter: 'blur(10px)', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-            {navItems.map(({ path, shape, activeColor, badge }) => {
-                const isActive = location.pathname === path || (path === '/profile/me' && location.pathname.startsWith('/profile/'));
+        <>
+            <nav
+                className="bottom-nav custom-forced-nav"
+                style={{
+                    position: 'fixed',
+                    bottom: 0,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: '100%',
+                    maxWidth: '430px',
+                    height: '72px',
+                    background: 'rgba(10, 10, 15, 0.95)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-around',
+                    paddingBottom: 'env(safe-area-inset-bottom)',
+                    zIndex: 99999 // Absolute maximum z-index
+                }}
+            >
+                {navItems.map(({ path, shape, activeColor, badge }) => {
+                    const isActive = location.pathname === path || (path === '/profile/me' && location.pathname.startsWith('/profile/'));
 
-                return (
-                    <NavLink
-                        key={path}
-                        to={path}
-                        className="nav-item"
-                        style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', width: '64px' }}
-                        onClick={(e) => {
-                            if (isActive) {
-                                e.preventDefault();
-                                window.scrollTo({ top: 0, behavior: 'smooth' });
-                            }
-                        }}
-                    >
-                        <motion.div
-                            animate={{ scale: isActive ? [1, 1.2, 1] : 1 }}
-                            transition={{ duration: 0.2, type: 'spring', stiffness: 300, damping: 20 }}
-                            style={{ position: 'relative' }}
+                    return (
+                        <NavLink
+                            key={path}
+                            to={path}
+                            className="nav-item"
+                            style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', width: '64px' }}
+                            onClick={(e) => {
+                                if (isActive) {
+                                    e.preventDefault();
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                }
+                            }}
                         >
-                            <Icon
-                                shape={shape}
-                                size={24}
-                                strokeWidth={isActive ? 2.5 : 2}
-                                color={isActive ? activeColor : 'rgba(255, 255, 255, 0.5)'}
-                                fill={isActive ? activeColor : 'none'}
-                            />
-                            {badge > 0 && (
+                            <motion.div
+                                animate={{ scale: isActive ? [1, 1.2, 1] : 1 }}
+                                transition={{ duration: 0.2, type: 'spring', stiffness: 300, damping: 20 }}
+                                style={{ position: 'relative' }}
+                            >
+                                <Icon
+                                    shape={shape}
+                                    size={24}
+                                    strokeWidth={isActive ? 2.5 : 2}
+                                    color={isActive ? activeColor : 'rgba(255, 255, 255, 0.5)'}
+                                    fill={isActive ? activeColor : 'none'}
+                                />
+                                {badge > 0 && (
+                                    <motion.div
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{ type: 'spring', bounce: 0.5 }}
+                                        style={{
+                                            position: 'absolute',
+                                            top: '-4px',
+                                            right: '-8px',
+                                            background: '#f56e3d',
+                                            color: 'white',
+                                            fontSize: '10px',
+                                            fontWeight: 'bold',
+                                            borderRadius: '9999px',
+                                            width: '18px',
+                                            height: '18px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            border: '2px solid #1a1d2e'
+                                        }}
+                                    >
+                                        {badge}
+                                    </motion.div>
+                                )}
+                            </motion.div>
+
+                            {isActive && (
                                 <motion.div
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ type: 'spring', bounce: 0.5 }}
+                                    layoutId="nav-indicator"
                                     style={{
                                         position: 'absolute',
-                                        top: '-4px',
-                                        right: '-8px',
-                                        background: '#f56e3d',
-                                        color: 'white',
-                                        fontSize: '10px',
-                                        fontWeight: 'bold',
-                                        borderRadius: '9999px',
-                                        width: '18px',
-                                        height: '18px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        border: '2px solid #1a1d2e'
+                                        bottom: '0px',
+                                        width: '32px',
+                                        height: '3px',
+                                        background: activeColor,
+                                        borderRadius: '3px'
                                     }}
-                                >
-                                    {badge}
-                                </motion.div>
+                                />
                             )}
-                        </motion.div>
-
-                        {isActive && (
-                            <motion.div
-                                layoutId="nav-indicator"
-                                style={{
-                                    position: 'absolute',
-                                    bottom: '0px',
-                                    width: '32px',
-                                    height: '3px',
-                                    background: activeColor,
-                                    borderRadius: '3px'
-                                }}
-                            />
-                        )}
-                    </NavLink>
-                );
-            })}
-        </nav>
+                        </NavLink>
+                    );
+                })}
+            </nav>
+        </>
     );
 }

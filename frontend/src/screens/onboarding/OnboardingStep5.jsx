@@ -54,6 +54,14 @@ export default function OnboardingStep5() {
         });
     };
 
+    const handleFollowAll = () => {
+        setFollowedIds(new Set(orgs.map(o => o.id)));
+    };
+
+    const handleSkipAll = () => {
+        setFollowedIds(new Set());
+    };
+
     const handleNext = async () => {
         if (!user || followedIds.size === 0) {
             navigate('/onboarding/6');
@@ -148,7 +156,16 @@ export default function OnboardingStep5() {
                         </div>
                     )}
 
-                    <button className="obs-cta-btn cyan-outline round" onClick={handleNext} disabled={saving}>
+                    <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                        <button className="obs-cta-btn outline round" onClick={handleSkipAll} style={{ flex: 1, padding: '16px', fontSize: '16px' }}>
+                            SKIP ALL
+                        </button>
+                        <button className="obs-cta-btn outline round" onClick={handleFollowAll} style={{ flex: 1, padding: '16px', fontSize: '16px', borderColor: '#13ecec', color: '#13ecec' }}>
+                            FOLLOW ALL
+                        </button>
+                    </div>
+
+                    <button className="obs-cta-btn cyan-outline round" onClick={handleNext} disabled={saving} style={{ marginTop: '0px' }}>
                         {saving ? 'LINKING...' : (followedIds.size > 0 ? `FOLLOW ${followedIds.size} ALLIES △` : 'SKIP FOR NOW △')}
                     </button>
                 </section>

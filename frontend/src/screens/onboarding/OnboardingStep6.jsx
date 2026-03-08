@@ -2,33 +2,39 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { hapticSuccess, hapticHeavy } from '../../lib/haptic';
 import './OnboardingSteps.css';
 
 export default function OnboardingStep6() {
     const navigate = useNavigate();
     const { user, refreshProfile } = useAuth();
     const [loading, setLoading] = useState(false);
+    const [countdown, setCountdown] = useState(null);
 
     const handleFinish = async () => {
-        setLoading(true);
-        try {
-            // Mark onboarding as done directly in the database via Supabase client
-            // This avoids any backend JWT issues
-            if (user) {
-                const { error } = await supabase
-                    .from('profiles')
-                    .update({ onboarding_done: true })
-                    .eq('id', user.id);
-                if (error) console.error('Supabase update error:', error);
+        hapticHeavy();
+        setCountdown(3);
+        setTimeout(() => { setCountdown(2); }, 800);
+        setTimeout(() => { setCountdown(1); }, 1600);
+        setTimeout(async () => {
+            setCountdown('GO');
+            hapticSuccess();
+            setLoading(true);
+            try {
+                if (user) {
+                    const { error } = await supabase
+                        .from('profiles')
+                        .update({ onboarding_done: true })
+                        .eq('id', user.id);
+                    if (error) console.error('Supabase update error:', error);
+                }
+                await refreshProfile();
+                navigate('/feed');
+            } catch (err) {
+                console.error('Failed to complete onboarding:', err);
+                navigate('/feed');
             }
-            // Refresh the profile in AuthContext so AuthGuard sees onboarding_done=true
-            await refreshProfile();
-            navigate('/feed');
-        } catch (err) {
-            console.error('Failed to complete onboarding:', err);
-            // Navigate anyway — worst case AuthGuard redirects back
-            navigate('/feed');
-        }
+        }, 2400);
     };
 
     return (
@@ -73,8 +79,13 @@ export default function OnboardingStep6() {
 
                     {/* Final CTA */}
                     <div className="obs-final-cta">
-                        <button className="obs-enter-btn" onClick={handleFinish} disabled={loading}>
-                            {loading ? 'LOADING...' : 'ENTER THE ARENA'}<br />□
+                        {countdown !== null && (
+                            <div className="obs-countdown" key={countdown}>
+                                <span className="obs-countdown-num">{countdown}</span>
+                            </div>
+                        )}
+                        <button className="obs-enter-btn" onClick={handleFinish} disabled={loading || countdown !== null}>
+                            {loading ? 'LOADING...' : countdown !== null ? `${countdown}...` : 'ENTER THE ARENA'}<br />□
                         </button>
                         <span className="obs-final-status">Initiating sequence... 456 players connected</span>
                     </div>

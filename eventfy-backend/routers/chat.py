@@ -5,8 +5,33 @@ from datetime import datetime
 from config import supabase
 from middleware.auth import get_current_user
 from models.chat import MessageCreate, MessageUpdate, ReactionCreate
+from pydantic import BaseModel
+from typing import Optional
 
 router = APIRouter()
+
+@router.get("/my-chats")
+async def get_my_chats(user=Depends(get_current_user)):
+    """Fetch all events the user is registered for with basic chat info."""
+    regs = (supabase.table("event_registrations")
+        .select("events(id, title, cover_url, organizations(name, logo_url))")
+        .eq("user_id", user["id"]).execute())
+    
+    chats = []
+    for r in (regs.data or []):
+        ev = r.get("events")
+        if not ev: continue
+        org = ev.get("organizations") or {}
+        chats.append({
+            "event_id": ev["id"],
+            "event_title": ev["title"],
+            "cover_url": ev["cover_url"],
+            "org_name": org.get("name"),
+            "org_logo": org.get("logo_url"),
+            "last_message": "Tap to join the conversation",
+            "unread_count": 0
+        })
+    return {"chats": chats}
 
 
 @router.get("/channels/{event_id}")
@@ -17,8 +42,19 @@ async def get_event_channels(event_id: str, user=Depends(get_current_user)):
         raise HTTPException(403, "Not registered for this event")
 
     channels = supabase.table("chat_channels").select("*").eq("event_id", event_id).execute()
+    chan_data = channels.data or []
+    
+    # Auto-create default channels if none exist
+    if not chan_data:
+        chan_data = [
+            {"event_id": event_id, "name": "general", "channel_type": "event"},
+            {"event_id": event_id, "name": "announcements", "channel_type": "event", "is_locked": True}
+        ]
+        supabase.table("chat_channels").insert(chan_data).execute()
+        channels = supabase.table("chat_channels").select("*").eq("event_id", event_id).execute()
+        chan_data = channels.data or []
 
-    general = next((c for c in (channels.data or []) if c["name"] == "general"), None)
+    general = next((c for c in chan_data if c["name"] == "general"), chan_data[0] if chan_data else None)
     messages = []
     if general:
         msgs = (supabase.table("messages")
@@ -27,10 +63,19 @@ async def get_event_channels(event_id: str, user=Depends(get_current_user)):
             .order("created_at", desc=False).limit(50).execute())
         messages = msgs.data or []
 
+    members_req = supabase.table("event_registrations").select("profiles(*)").eq("event_id", event_id).execute()
+    members = []
+    for r in (members_req.data or []):
+        prof = r.get("profiles")
+        if prof:
+            prof["status"] = "online" # dummy status until presence is real
+            members.append(prof)
+
     return {
-        "channels": channels.data or [],
+        "channels": chan_data,
         "general_channel_id": general["id"] if general else None,
         "messages": messages,
+        "members": members
     }
 
 
@@ -42,7 +87,7 @@ async def get_messages(channel_id: str, page: int = 0, page_size: int = 50, user
         .eq("channel_id", channel_id).is_("deleted_at", "null")
         .order("created_at", desc=False)
         .range(page * page_size, (page + 1) * page_size - 1).execute())
-    return {"messages": msgs.data or []}
+    return msgs.data or []
 
 
 @router.post("/channels/{channel_id}/messages")

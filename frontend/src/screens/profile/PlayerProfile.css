@@ -389,3 +389,57 @@
     background: #00dbb0;
     box-shadow: 0 0 20px rgba(19, 236, 200, 0.3);
 }
+
+/* ===== LEVEL BADGE (LARGE) ===== */
+.pp-level-badge-large {
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid;
+    background: black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pp-level-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    color: white;
+    line-height: 1;
+}
+
+/* ===== PASSPORT BANNER ===== */
+.pp-passport-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 16px;
+    margin: 0 16px 12px;
+    background: rgba(19, 236, 200, 0.06);
+    border: 1px solid rgba(19, 236, 200, 0.15);
+    border-radius: 8px;
+    position: relative;
+    z-index: 1;
+}
+
+.pp-passport-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: #13ecc8;
+    letter-spacing: 1px;
+}
+
+/* ===== EVENT SHAPE OVERLAY ===== */
+.pp-event-shape-overlay {
+    position: absolute;
+    bottom: 24px;
+    left: 6px;
+    font-size: 14px;
+    opacity: 0.7;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}

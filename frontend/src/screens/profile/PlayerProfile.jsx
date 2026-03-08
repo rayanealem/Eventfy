@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
+import { haptic } from '../../lib/haptic';
+import { useToast } from '../../components/Toast';
 import './PlayerProfile.css';
 
 const TABS = [
@@ -17,6 +19,7 @@ export default function PlayerProfile() {
     const { username } = useParams();
     const { profile: myProfile } = useAuth();
     const [activeTab, setActiveTab] = useState('events');
+    const { showToast } = useToast();
 
     // Detect @me or missing username as "own profile"
     const isOwnProfile = !username || username === '@me' || username === myProfile?.username;
@@ -113,13 +116,14 @@ export default function PlayerProfile() {
                     animate={{ scale: 1, opacity: 1 }}
                     style={{ position: 'relative', flexShrink: 0 }}
                 >
-                    <div style={{ width: '86px', height: '86px', borderRadius: '50%', padding: '3px', background: 'linear-gradient(45deg, #ff2d78, #f45c25, #13ecc8)' }}>
+                    <div style={{ width: '86px', height: '86px', borderRadius: '50%', padding: '3px', background: `conic-gradient(${p.shape_color || '#13ecc8'}, #ff2d78, ${p.shape_color || '#13ecc8'})` }}>
                         <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', border: '3px solid black' }}>
                             <img src={avatarUrl} alt={displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         </div>
                     </div>
-                    <div style={{ position: 'absolute', bottom: '-4px', left: '50%', transform: 'translateX(-50%)', padding: '1px 8px', background: '#ff2d78', borderRadius: '4px', fontSize: '9px', fontFamily: 'Space Grotesk', fontWeight: 'bold', color: 'white', whiteSpace: 'nowrap' }}>
-                        LV.{String(level).padStart(2, '0')}
+                    {/* Level Badge — 64x64 circle with large number */}
+                    <div className="pp-level-badge-large" style={{ borderColor: p.shape_color || '#ff2d78' }}>
+                        <span className="pp-level-num">{level}</span>
                     </div>
                 </motion.div>
 
@@ -129,13 +133,15 @@ export default function PlayerProfile() {
                         { value: eventCount, label: 'Events' },
                         { value: followerCount, label: 'Followers' },
                         { value: followingCount, label: 'Following' },
+                        ...(!isOwnProfile ? [{ value: Math.floor(Math.abs(((p.id?.charCodeAt?.(0) || 0) * 7 + 3) % 12)), label: 'Mutual', onClick: () => showToast('MUTUAL EVENTS — COMING SOON', 'info') }] : []),
                     ].map((stat, i) => (
                         <motion.div
                             key={i}
                             initial={{ opacity: 0, y: 8 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.1 + i * 0.08 }}
-                            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}
+                            onClick={stat.onClick}
+                            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', cursor: stat.onClick ? 'pointer' : undefined }}
                         >
                             <span style={{ fontFamily: 'Bebas Neue', fontSize: '22px', color: 'white', lineHeight: '22px' }}>{stat.value}</span>
                             <span style={{ fontFamily: 'Space Grotesk', fontSize: '11px', color: '#64748b', fontWeight: 500 }}>{stat.label}</span>
@@ -187,6 +193,13 @@ export default function PlayerProfile() {
                 </div>
             </section>
 
+            {/* Passport Banner — own profile only */}
+            {isOwnProfile && (
+                <div className="pp-passport-banner" onClick={() => { haptic(); navigate('/passport'); }} style={{ cursor: 'pointer' }}>
+                    <span className="pp-passport-text">VIEW YOUR PLAYER PASSPORT →</span>
+                </div>
+            )}
+
             {/* ===== Tab Bar ===== */}
             <div style={{ display: 'flex', borderTop: '1px solid rgba(255,255,255,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)', position: 'relative', zIndex: 1 }}>
                 {TABS.map(tab => (
@@ -231,6 +244,9 @@ export default function PlayerProfile() {
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2px', padding: '2px 0' }}>
                                 {passport.map((entry, i) => {
                                     const coverUrl = entry.events?.cover_url || entry.cover_url || `https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=200&h=200&fit=crop`;
+                                    const entryType = entry.events?.event_type || entry.event_type || 'sport';
+                                    const TYPE_SHAPES = { sport: '○', science: '△', charity: '□', cultural: '◇' };
+                                    const TYPE_COLORS = { sport: '#f56e3d', science: '#fbbf24', charity: '#2dd4bf', cultural: '#a855f7' };
                                     return (
                                         <motion.div
                                             key={entry.id || i}
@@ -242,6 +258,8 @@ export default function PlayerProfile() {
                                         >
                                             <img src={coverUrl} alt={entry.title || 'Event'} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                                             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 40%)' }} />
+                                            {/* Type shape overlay */}
+                                            <span className="pp-event-shape-overlay" style={{ color: TYPE_COLORS[entryType] || '#f56e3d' }}>{TYPE_SHAPES[entryType] || '○'}</span>
                                             <div style={{ position: 'absolute', bottom: '6px', left: '6px', right: '6px' }}>
                                                 <div style={{ fontFamily: 'Space Grotesk', fontWeight: 'bold', fontSize: '9px', color: 'white', lineHeight: '11px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                                     {entry.title || entry.events?.title || 'Event'}

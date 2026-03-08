@@ -5,6 +5,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { useEventStore } from '../../context/EventStore';
 import { api } from '../../lib/api';
+import { haptic } from '../../lib/haptic';
+import { useToast } from '../../components/Toast';
 import './EventDetail.css';
 
 const ARTISTS = [
@@ -232,6 +234,7 @@ export default function EventDetail() {
     const { profile } = useAuth();
     const queryClient = useQueryClient();
     const { isRegistered: isRegInStore, dispatch } = useEventStore();
+    const { showToast } = useToast();
 
     const [activeTab, setActiveTab] = useState('INFO');
     const [selectedTier, setSelectedTier] = useState(null);
@@ -253,11 +256,15 @@ export default function EventDetail() {
     const registerMutation = useMutation({
         mutationFn: () => api('POST', `/events/${id}/register`),
         onMutate: () => {
-            if (navigator.vibrate) navigator.vibrate(50);
+            haptic();
             dispatch({ type: 'REGISTER_EVENT', id });
+        },
+        onSuccess: () => {
+            showToast('REGISTERED ✓ CHECK YOUR NOTIFICATIONS', 'success');
         },
         onError: () => {
             dispatch({ type: 'UNREGISTER_EVENT', id });
+            showToast('REGISTRATION FAILED', 'error');
         },
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['event', id] });
@@ -334,6 +341,16 @@ export default function EventDetail() {
                         </span>
                     </div>
                 </div>
+            </div>
+
+            {/* Attendee Preview Row */}
+            <div className="ed-attendee-preview" onClick={() => setActiveTab('COMMUNITY')} style={{ cursor: 'pointer' }}>
+                <div className="ed-attendee-avatars">
+                    {[1, 2, 3].map((_, i) => (
+                        <img key={i} className="ed-attendee-avatar" src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${id}-${i}`} alt="" style={{ marginLeft: i > 0 ? '-8px' : 0, zIndex: 3 - i }} />
+                    ))}
+                </div>
+                <span className="ed-attendee-text">+{event.registration_count || 0} players registered</span>
             </div>
 
             {/* Tabs */}
@@ -479,12 +496,12 @@ export default function EventDetail() {
                                     <div className="xp-icon">◇</div>
                                     <div className="xp-info">
                                         <span className="xp-label">MISSION REWARD</span>
-                                        <span className="xp-value">+{event.xp_completion || 200} PLAYER XP</span>
+                                        <span className="xp-value ed-xp-shimmer">+{event.xp_completion || 200} PLAYER XP</span>
                                     </div>
                                 </div>
                                 <div className="xp-badge-row">
-                                    <div className="xp-badge-icon">
-                                        <svg width="10" height="20" viewBox="0 0 10 20" fill="none"><path d="M5 0v20M0 5l5-5 5 5M0 15l5 5 5-5" stroke="#f45c25" strokeWidth="1.5" /></svg>
+                                    <div className="xp-badge-icon-shape" style={{ borderColor: TYPE_SHAPES[event.event_type] === '○' ? '#f56e3d' : TYPE_SHAPES[event.event_type] === '△' ? '#fbbf24' : TYPE_SHAPES[event.event_type] === '□' ? '#2dd4bf' : '#3b82f6' }}>
+                                        <span style={{ color: TYPE_SHAPES[event.event_type] === '○' ? '#f56e3d' : TYPE_SHAPES[event.event_type] === '△' ? '#fbbf24' : TYPE_SHAPES[event.event_type] === '□' ? '#2dd4bf' : '#3b82f6', fontSize: '16px' }}>{typeShape}</span>
                                     </div>
                                     <div className="xp-badge-info">
                                         <span className="xp-badge-title">{event.event_type?.toUpperCase()} ENTHUSIAST {typeShape}</span>
@@ -497,15 +514,33 @@ export default function EventDetail() {
                 )}
 
                 {activeTab === 'COMMUNITY' && (
-                    <div className="event-section" style={{ textAlign: 'center', padding: '40px 0' }}>
-                        <h3 style={{ color: 'white', fontFamily: 'var(--font-display)', letterSpacing: '2px', marginBottom: '16px' }}>COMMUNITY LOBBY</h3>
-                        <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', marginBottom: '32px' }}>Discuss strategies, find teammates, and connect.</p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '0 20px' }}>
+                    <div className="event-section" style={{ padding: '20px 0' }}>
+                        {/* Compose bar CTA */}
+                        <div className="ed-community-compose" onClick={() => navigate(`/chat/${event.id}`)} style={{ cursor: 'pointer' }}>
+                            <img className="ed-compose-avatar" src={profile?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=me'} alt="" />
+                            <span className="ed-compose-placeholder">Write something...</span>
+                        </div>
+
+                        {/* Skeleton message previews */}
+                        <div className="ed-community-messages">
+                            {[0, 1, 2].map(i => (
+                                <div key={i} className="ed-community-skeleton">
+                                    <div className="ed-skel-avatar" />
+                                    <div className="ed-skel-lines">
+                                        <div className="ed-skel-line" style={{ width: `${60 + i * 15}%` }} />
+                                        <div className="ed-skel-line short" style={{ width: `${40 + i * 10}%` }} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Open Lobby + See All */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '0 16px', marginTop: '16px' }}>
                             <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigate(`/chat/${event.id}`)} style={{ borderColor: '#2dd4bf', color: '#2dd4bf', padding: '14px 24px', borderRadius: '8px', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 'bold', background: 'rgba(45,212,191,0.1)', border: '1px solid rgba(45,212,191,0.3)', fontFamily: 'Space Grotesk', fontSize: '13px', cursor: 'pointer' }}>
-                                JOIN LOBBY CHAT ○
+                                OPEN LOBBY ○
                             </motion.button>
-                            <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigate(`/chat/${event.id}?channel=travel`)} style={{ borderColor: '#fbbf24', color: '#fbbf24', padding: '14px 24px', borderRadius: '8px', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 'bold', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', fontFamily: 'Space Grotesk', fontSize: '13px', cursor: 'pointer' }}>
-                                JOIN TRAVEL GROUP △
+                            <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigate(`/chat/${event.id}`)} style={{ background: 'transparent', border: 'none', color: '#64748b', fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '1px', cursor: 'pointer', textAlign: 'center' }}>
+                                SEE ALL ACTIVITY →
                             </motion.button>
                         </div>
                     </div>
@@ -538,27 +573,35 @@ export default function EventDetail() {
                 )}
             </div>
 
-            {/* Sticky Footer */}
-            <div className="event-footer">
-                {isOrgOwner && (
-                    <motion.button whileTap={{ scale: 0.95 }} className="event-cta" onClick={() => navigate(`/manage/${id}`)} style={{ background: 'transparent', border: '1px solid #fbbf24', color: '#fbbf24', marginBottom: '8px' }}>
-                        <span>MANAGE THIS EVENT □</span>
+            {/* Unified Sticky Footer */}
+            <div className="event-footer ed-footer-unified">
+                {isOrgOwner ? (
+                    <div className="ed-footer-row">
+                        <motion.button whileTap={{ scale: 0.95 }} className="event-cta ed-cta-half" onClick={() => navigate(`/manage/${id}`)} style={{ background: 'transparent', border: '1px solid #fbbf24', color: '#fbbf24' }}>
+                            <span>MANAGE □</span>
+                        </motion.button>
+                        <motion.button whileTap={{ scale: 0.95 }} className="event-cta ed-cta-half" onClick={() => { if (navigator.share) navigator.share({ title: event.title, url: `/event/${id}` }); }} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', color: 'white' }}>
+                            <span>SHARE ○</span>
+                        </motion.button>
+                    </div>
+                ) : !isRegisteredOpt ? (
+                    <motion.button whileTap={{ scale: 0.95 }} className="event-cta" onClick={handleRegister} disabled={registerMutation.isPending}>
+                        <span>{registerMutation.isPending ? 'REGISTERING...' : 'ENTER THE GAME'}</span>
+                        {!registerMutation.isPending && <div className="cta-circle">○</div>}
                     </motion.button>
-                )}
-                <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    className="event-cta"
-                    onClick={handleRegister}
-                    style={isRegisteredOpt ? { background: '#2dd4bf' } : undefined}
-                    disabled={registerMutation.isPending}
-                >
-                    <span>{registerMutation.isPending ? "REGISTERING..." : isRegisteredOpt ? "YOU'RE IN ✓" : 'ENTER THE GAME'}</span>
-                    {!isRegisteredOpt && !registerMutation.isPending && <div className="cta-circle">○</div>}
-                </motion.button>
-                {isRegisteredOpt && (
-                    <motion.button whileTap={{ scale: 0.95 }} className="event-cta" onClick={() => navigate(`/qr/${id}`)} style={{ background: 'transparent', border: '1px solid white', marginTop: '8px' }}>
-                        <span>SCAN IN ○</span>
+                ) : event.my_registration?.checked_in ? (
+                    <motion.button className="event-cta" style={{ background: '#2dd4bf', opacity: 0.7, cursor: 'default' }} disabled>
+                        <span>CHECKED IN ✓ +{event.xp_checkin || 50}XP</span>
                     </motion.button>
+                ) : (
+                    <div className="ed-footer-row">
+                        <motion.button className="event-cta ed-cta-half" style={{ background: '#2dd4bf', opacity: 0.8, cursor: 'default' }} disabled>
+                            <span>YOU'RE IN ✓</span>
+                        </motion.button>
+                        <motion.button whileTap={{ scale: 0.95 }} className="event-cta ed-cta-half" onClick={() => navigate(`/qr/${id}`)} style={{ background: 'transparent', border: '1px solid white' }}>
+                            <span>SCAN IN ○</span>
+                        </motion.button>
+                    </div>
                 )}
             </div>
         </div>

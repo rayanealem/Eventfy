@@ -2,11 +2,12 @@ import os
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
-load_dotenv()
+env_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(env_path)
 
-SUPABASE_URL: str = os.environ.get("SUPABASE_URL", "")
-SUPABASE_SERVICE_KEY: str = os.environ.get("SUPABASE_SERVICE_KEY", "")
-JWT_SECRET: str = os.environ.get("SUPABASE_JWT_SECRET", "")
+SUPABASE_URL: str = "https://cdfvglcuewuslpdtakyd.supabase.co"
+SUPABASE_SERVICE_KEY: str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkZnZnbGN1ZXd1c2xwZHRha3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2ODAzNTMsImV4cCI6MjA4ODI1NjM1M30.rzWltu_HUnJtzU0ZwHrGWmtwxenZ707MJ7feLPDK8mA"
+JWT_SECRET: str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkZnZnbGN1ZXd1c2xwZHRha3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2ODAzNTMsImV4cCI6MjA4ODI1NjM1M30.rzWltu_HUnJtzU0ZwHrGWmtwxenZ707MJ7feLPDK8mA"
 
 if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
     print("WARNING: SUPABASE_URL or SUPABASE_SERVICE_KEY not set. DB operations will fail.")

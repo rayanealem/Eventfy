@@ -72,7 +72,6 @@ body {
   background: var(--color-bg);
   color: var(--color-text-primary);
   min-height: 100vh;
-  overflow-x: hidden;
 }
 
 #root {
@@ -165,13 +164,21 @@ img {
 .app-shell {
   max-width: 430px;
   margin: 0 auto;
-  min-height: 100vh;
+  height: 100vh;
   position: relative;
+  overflow-y: auto;
   overflow-x: hidden;
   background: var(--color-bg);
   border-left: 1px solid var(--color-border-subtle);
   border-right: 1px solid var(--color-border-subtle);
   box-shadow: var(--shadow-card);
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.app-shell::-webkit-scrollbar {
+  display: none;
+  /* Chrome/Safari */
 }
 
 .page-content {
@@ -292,13 +299,16 @@ img {
   transform: translateX(-50%);
   width: 100%;
   max-width: 430px;
-  background: var(--color-bg);
-  border-top: 1px solid var(--color-border-subtle);
+  height: 72px;
+  background: rgba(10, 10, 15, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
   justify-content: space-around;
-  padding: 12px 0 24px;
-  z-index: 100;
+  padding: 0 0 env(safe-area-inset-bottom) 0;
+  z-index: 1000;
 }
 
 .nav-item {
