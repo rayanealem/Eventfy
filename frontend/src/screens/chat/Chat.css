@@ -637,3 +637,197 @@ aside {
     font-size: 10px;
     color: var(--discord-text-muted);
 }
+
+/* ===== REACTION PILLS (aggregated counts) ===== */
+.chat-reaction-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.chat-reaction-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    font-size: 13px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    color: var(--discord-text);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'DM Mono', monospace;
+}
+
+.chat-reaction-pill:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.chat-reaction-pill.own {
+    background: rgba(88, 101, 242, 0.15);
+    border-color: rgba(88, 101, 242, 0.3);
+}
+
+/* ===== EDITED LABEL ===== */
+.chat-edited-label {
+    font-size: 10px;
+    color: var(--discord-text-muted);
+    font-style: italic;
+}
+
+/* ===== EDIT MODE BANNER ===== */
+.chat-edit-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    background: rgba(251, 191, 36, 0.1);
+    border-left: 3px solid #fbbf24;
+    margin: 0 0 4px;
+    border-radius: 4px;
+}
+
+.chat-edit-banner span {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: #fbbf24;
+    letter-spacing: 0.5px;
+}
+
+.chat-edit-banner button {
+    background: none;
+    border: none;
+    color: #64748b;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* ===== REPLY QUOTE BAR ===== */
+.chat-reply-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    background: rgba(45, 212, 191, 0.06);
+    border-left: 3px solid #2dd4bf;
+    margin: 0 0 4px;
+    border-radius: 4px;
+}
+
+.chat-reply-bar span {
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px;
+    color: #94a3b8;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+
+.chat-reply-bar button {
+    background: none;
+    border: none;
+    color: #64748b;
+    font-size: 14px;
+    cursor: pointer;
+    margin-left: 8px;
+}
+
+/* ===== CONTEXT MENU BOTTOM SHEET ===== */
+.chat-context-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9998;
+}
+
+.chat-context-sheet {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-width: 500px;
+    margin: 0 auto;
+    background: #2b2d31;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    z-index: 9999;
+    padding-bottom: 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chat-context-handle {
+    width: 36px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+    margin: 10px auto 12px;
+}
+
+.chat-context-emoji-row {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 16px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.chat-context-emoji-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+
+.chat-context-emoji-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    transform: scale(1.1);
+}
+
+.chat-context-actions {
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-context-actions button {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    background: none;
+    border: none;
+    color: var(--discord-text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.chat-context-actions button:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.ctx-icon {
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+    color: var(--discord-text-muted);
+}
+
+.chat-context-danger {
+    color: #f43f5e !important;
+}
+
+.chat-context-danger .ctx-icon {
+    color: #f43f5e !important;
+}

@@ -55,8 +55,13 @@ export default function Chat() {
     const [rightPanelVisible, setRightPanelVisible] = useState(true);
     const [activeChannelId, setActiveChannelId] = useState(null);
     const [msgInput, setMsgInput] = useState('');
-    const [reactions, setReactions] = useState({});
     const bottomRef = useRef(null);
+
+    // Context menu, edit mode, reply mode
+    const [contextMsg, setContextMsg] = useState(null);
+    const [editingMsg, setEditingMsg] = useState(null);
+    const [replyingTo, setReplyingTo] = useState(null);
+    const longPressTimer = useRef(null);
 
     // Fetch channels and initial data
     const { data: chatData, isLoading, isError } = useQuery({
@@ -135,17 +140,101 @@ export default function Chat() {
     const handleSend = () => {
         if (!msgInput.trim() || !activeChannelId) return;
         haptic();
-        sendMessageMutation.mutate(msgInput.trim());
+        let content = msgInput.trim();
+        // If replying, prepend quote
+        if (replyingTo) {
+            const quoted = replyingTo.content.slice(0, 60);
+            content = `> ${quoted}\n${content}`;
+            setReplyingTo(null);
+        }
+        // If editing, call edit endpoint instead
+        if (editingMsg) {
+            api('PATCH', `/chat/messages/${editingMsg.id}`, { content }).catch(() => { });
+            queryClient.setQueryData(['messages', activeChannelId], (old = []) =>
+                old.map(m => m.id === editingMsg.id ? { ...m, content, edited_at: new Date().toISOString() } : m)
+            );
+            setEditingMsg(null);
+            setMsgInput('');
+            return;
+        }
+        sendMessageMutation.mutate(content);
         setMsgInput('');
     };
 
-    const QUICK_REACTIONS = ['🔥', '👏', '😂', '❤️', '😮'];
+    const QUICK_REACTIONS = ['❤', '😂', '👍', '🔥', '👀', '✅'];
+    const CONTEXT_QUICK_REACTIONS = ['❤', '😂', '👍', '🔥', '👀', '✅'];
+
+    // Wired reaction mutation — calls POST /chat/messages/{id}/react
+    const reactMutation = useMutation({
+        mutationFn: ({ msgId, emoji }) => api('POST', `/chat/messages/${msgId}/react`, { emoji }),
+        onMutate: async ({ msgId, emoji }) => {
+            await queryClient.cancelQueries({ queryKey: ['messages', activeChannelId] });
+            const prev = queryClient.getQueryData(['messages', activeChannelId]);
+            queryClient.setQueryData(['messages', activeChannelId], (old = []) =>
+                old.map(m => {
+                    if (m.id !== msgId) return m;
+                    const existing = (m.reactions || []).find(r => r.emoji === emoji && r.user_id === user?.id);
+                    if (existing) {
+                        return { ...m, reactions: (m.reactions || []).filter(r => !(r.emoji === emoji && r.user_id === user?.id)) };
+                    }
+                    return { ...m, reactions: [...(m.reactions || []), { emoji, user_id: user?.id }] };
+                })
+            );
+            return { prev };
+        },
+        onError: (err, vars, ctx) => {
+            if (ctx?.prev) queryClient.setQueryData(['messages', activeChannelId], ctx.prev);
+        },
+    });
+
     const toggleReaction = (msgId, emoji) => {
+        if (String(msgId).startsWith('temp-')) return;
         haptic();
-        setReactions(prev => {
-            const key = `${msgId}-${emoji}`;
-            return { ...prev, [key]: prev[key] ? prev[key] + 1 : 1 };
-        });
+        reactMutation.mutate({ msgId, emoji });
+    };
+
+    // Delete message
+    const handleDeleteMessage = (msgId) => {
+        if (String(msgId).startsWith('temp-')) return;
+        api('DELETE', `/chat/messages/${msgId}`).catch(() => { });
+        queryClient.setQueryData(['messages', activeChannelId], (old = []) =>
+            old.filter(m => m.id !== msgId)
+        );
+        setContextMsg(null);
+    };
+
+    // Enter edit mode
+    const handleEditMessage = (msg) => {
+        setEditingMsg(msg);
+        setMsgInput(msg.content);
+        setContextMsg(null);
+    };
+
+    // Enter reply mode
+    const handleReply = (msg) => {
+        setReplyingTo(msg);
+        setContextMsg(null);
+    };
+
+    // Copy text
+    const handleCopy = (text) => {
+        navigator.clipboard?.writeText(text);
+        haptic();
+        setContextMsg(null);
+    };
+
+    // Long press handlers
+    const onTouchStartMsg = (msg) => {
+        longPressTimer.current = setTimeout(() => {
+            haptic();
+            setContextMsg(msg);
+        }, 500);
+    };
+    const onTouchEndMsg = () => clearTimeout(longPressTimer.current);
+    const onContextMenuMsg = (e, msg) => {
+        e.preventDefault();
+        haptic();
+        setContextMsg(msg);
     };
 
     const onlineCount = members.filter(m => m.status === 'online').length;
@@ -232,8 +321,23 @@ export default function Chat() {
                             );
                         }
 
+                        // Aggregate reactions for display
+                        const reactionCounts = {};
+                        (msg.reactions || []).forEach(r => {
+                            if (!reactionCounts[r.emoji]) reactionCounts[r.emoji] = { count: 0, hasOwn: false };
+                            reactionCounts[r.emoji].count++;
+                            if (r.user_id === user?.id) reactionCounts[r.emoji].hasOwn = true;
+                        });
+
                         return (
-                            <div key={msg.id} className={`message-item ${isContinuation ? 'continuation' : ''}`}>
+                            <div
+                                key={msg.id}
+                                className={`message-item ${isContinuation ? 'continuation' : ''}`}
+                                onTouchStart={() => onTouchStartMsg(msg)}
+                                onTouchEnd={onTouchEndMsg}
+                                onTouchCancel={onTouchEndMsg}
+                                onContextMenu={(e) => onContextMenuMsg(e, msg)}
+                            >
                                 {!isContinuation && (
                                     <img
                                         src={msg.profiles?.avatar_url || 'https://via.placeholder.com/40'}
@@ -247,6 +351,7 @@ export default function Chat() {
                                             <span className="message-author">{msg.profiles?.username || 'Unknown'}</span>
                                             <span className="message-timestamp">
                                                 {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                {msg.edited_at && <span className="chat-edited-label"> (edited)</span>}
                                             </span>
                                         </div>
                                     )}
@@ -270,21 +375,32 @@ export default function Chat() {
                                             )}
                                         </div>
                                     )}
-                                    {/* Quick Reactions */}
-                                    <div className="chat-reactions-row">
-                                        {QUICK_REACTIONS.map(emoji => {
-                                            const count = reactions[`${msg.id}-${emoji}`] || 0;
-                                            return (
-                                                <motion.button
+                                    {/* Reaction count pills */}
+                                    {Object.keys(reactionCounts).length > 0 && (
+                                        <div className="chat-reaction-pills">
+                                            {Object.entries(reactionCounts).map(([emoji, { count, hasOwn }]) => (
+                                                <button
                                                     key={emoji}
-                                                    className={`chat-reaction-btn ${count > 0 ? 'active' : ''}`}
-                                                    whileTap={{ scale: 1.3 }}
+                                                    className={`chat-reaction-pill ${hasOwn ? 'own' : ''}`}
                                                     onClick={() => toggleReaction(msg.id, emoji)}
                                                 >
-                                                    {emoji}{count > 0 && <span className="reaction-count">{count}</span>}
-                                                </motion.button>
-                                            );
-                                        })}
+                                                    {emoji} {count}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {/* Hover quick reactions */}
+                                    <div className="chat-reactions-row">
+                                        {QUICK_REACTIONS.slice(0, 4).map(emoji => (
+                                            <motion.button
+                                                key={emoji}
+                                                className="chat-reaction-btn"
+                                                whileTap={{ scale: 1.3 }}
+                                                onClick={() => toggleReaction(msg.id, emoji)}
+                                            >
+                                                {emoji}
+                                            </motion.button>
+                                        ))}
                                     </div>
                                 </div>
                             </div>
@@ -294,11 +410,25 @@ export default function Chat() {
                 </div>
 
                 <div className="chat-input-wrapper">
+                    {/* Edit mode banner */}
+                    {editingMsg && (
+                        <div className="chat-edit-banner">
+                            <span>EDITING MESSAGE △</span>
+                            <button onClick={() => { setEditingMsg(null); setMsgInput(''); }}>✕</button>
+                        </div>
+                    )}
+                    {/* Reply quote bar */}
+                    {replyingTo && (
+                        <div className="chat-reply-bar">
+                            <span>{replyingTo.content.slice(0, 60)}{replyingTo.content.length > 60 ? '...' : ''}</span>
+                            <button onClick={() => setReplyingTo(null)}>✕</button>
+                        </div>
+                    )}
                     <div className="chat-input-container">
                         <button className="attach-btn">+</button>
                         <input
                             type="text"
-                            placeholder={`Message #${activeChannel?.name || 'channel'}`}
+                            placeholder={editingMsg ? 'Edit your message...' : `Message #${activeChannel?.name || 'channel'}`}
                             value={msgInput}
                             onChange={e => setMsgInput(e.target.value)}
                             onKeyDown={e => e.key === 'Enter' && handleSend()}
@@ -338,6 +468,61 @@ export default function Chat() {
                     ))}
                 </div>
             </aside>
+
+            {/* Context Menu Bottom Sheet */}
+            <AnimatePresence>
+                {contextMsg && (
+                    <>
+                        <motion.div
+                            className="chat-context-overlay"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setContextMsg(null)}
+                        />
+                        <motion.div
+                            className="chat-context-sheet"
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                        >
+                            <div className="chat-context-handle" />
+                            {/* Quick emoji row */}
+                            <div className="chat-context-emoji-row">
+                                {CONTEXT_QUICK_REACTIONS.map(emoji => (
+                                    <button
+                                        key={emoji}
+                                        className="chat-context-emoji-btn"
+                                        onClick={() => { toggleReaction(contextMsg.id, emoji); setContextMsg(null); }}
+                                    >
+                                        {emoji}
+                                    </button>
+                                ))}
+                            </div>
+                            {/* Actions */}
+                            <div className="chat-context-actions">
+                                <button onClick={() => handleReply(contextMsg)}>
+                                    <span className="ctx-icon">↩</span> REPLY
+                                </button>
+                                <button onClick={() => handleCopy(contextMsg.content)}>
+                                    <span className="ctx-icon">⊡</span> COPY TEXT
+                                </button>
+                                {contextMsg.sender_id === user?.id && !String(contextMsg.id).startsWith('temp-') && (
+                                    <>
+                                        <button onClick={() => handleEditMessage(contextMsg)}>
+                                            <span className="ctx-icon">✎</span> EDIT
+                                        </button>
+                                        <button className="chat-context-danger" onClick={() => handleDeleteMessage(contextMsg.id)}>
+                                            <span className="ctx-icon">✕</span> DELETE
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

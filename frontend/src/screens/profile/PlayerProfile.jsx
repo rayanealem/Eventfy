@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 import { haptic } from '../../lib/haptic';
@@ -18,8 +18,11 @@ export default function PlayerProfile() {
     const navigate = useNavigate();
     const { username } = useParams();
     const { profile: myProfile } = useAuth();
+    const queryClient = useQueryClient();
     const [activeTab, setActiveTab] = useState('events');
     const { showToast } = useToast();
+    const [connectionStatus, setConnectionStatus] = useState('none'); // 'none' | 'pending' | 'connected'
+    const [showConnectionsSheet, setShowConnectionsSheet] = useState(false);
 
     // Detect @me or missing username as "own profile"
     const isOwnProfile = !username || username === '@me' || username === myProfile?.username;
@@ -84,6 +87,29 @@ export default function PlayerProfile() {
 
     const passport = passportData?.entries || (Array.isArray(passportData) ? passportData : []);
 
+    // Connection mutation
+    const connectMutation = useMutation({
+        mutationFn: () => api('POST', `/users/me/connections/${p.id}`),
+        onMutate: () => {
+            setConnectionStatus('pending');
+        },
+        onSuccess: () => {
+            showToast('CONNECTION REQUEST SENT ○', 'success');
+            haptic();
+        },
+        onError: (err) => {
+            setConnectionStatus('none');
+            showToast(err?.message || 'CONNECTION FAILED', 'error');
+        },
+    });
+
+    // Fetch own connections (for the bottom sheet)
+    const { data: connectionsData } = useQuery({
+        queryKey: ['connections'],
+        queryFn: () => api('GET', '/users/me/connections'),
+        enabled: showConnectionsSheet && isOwnProfile,
+    });
+
     return (
         <div className="profile-root">
             <div className="profile-noise" />
@@ -131,8 +157,8 @@ export default function PlayerProfile() {
                 <div style={{ display: 'flex', flex: 1, justifyContent: 'space-around' }}>
                     {[
                         { value: eventCount, label: 'Events' },
-                        { value: followerCount, label: 'Followers' },
-                        { value: followingCount, label: 'Following' },
+                        { value: followerCount, label: 'Followers', onClick: () => { haptic(); setShowConnectionsSheet(true); } },
+                        { value: followingCount, label: 'Following', onClick: () => { haptic(); setShowConnectionsSheet(true); } },
                         ...(!isOwnProfile ? [{ value: Math.floor(Math.abs(((p.id?.charCodeAt?.(0) || 0) * 7 + 3) % 12)), label: 'Mutual', onClick: () => showToast('MUTUAL EVENTS — COMING SOON', 'info') }] : []),
                     ].map((stat, i) => (
                         <motion.div
@@ -197,6 +223,31 @@ export default function PlayerProfile() {
             {isOwnProfile && (
                 <div className="pp-passport-banner" onClick={() => { haptic(); navigate('/passport'); }} style={{ cursor: 'pointer' }}>
                     <span className="pp-passport-text">VIEW YOUR PLAYER PASSPORT →</span>
+                </div>
+            )}
+
+            {/* Connect / DM Buttons — other profiles only */}
+            {!isOwnProfile && (
+                <div className="profile-action-row">
+                    <button
+                        className={`profile-connect-btn ${connectionStatus === 'connected' ? 'connected' :
+                            connectionStatus === 'pending' ? 'pending' : ''
+                            }`}
+                        onClick={() => {
+                            if (connectionStatus === 'none') connectMutation.mutate();
+                        }}
+                        disabled={connectionStatus !== 'none'}
+                    >
+                        {connectionStatus === 'connected' ? 'CONNECTED ✓' :
+                            connectionStatus === 'pending' ? 'REQUEST SENT ○' :
+                                'CONNECT ○'}
+                    </button>
+                    <button
+                        className="profile-dm-btn"
+                        onClick={() => { haptic(); navigate(`/chat?dm=${p.id}`); }}
+                    >
+                        DM ◇
+                    </button>
                 </div>
             )}
 
@@ -315,6 +366,53 @@ export default function PlayerProfile() {
                             </div>
                         )}
                     </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Connections Bottom Sheet */}
+            <AnimatePresence>
+                {showConnectionsSheet && (
+                    <>
+                        <motion.div
+                            className="profile-sheet-overlay"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowConnectionsSheet(false)}
+                        />
+                        <motion.div
+                            className="profile-connections-sheet"
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                        >
+                            <div className="profile-sheet-handle" />
+                            <div className="profile-sheet-header">
+                                <h3>CONNECTIONS ○</h3>
+                                <button onClick={() => setShowConnectionsSheet(false)}>✕</button>
+                            </div>
+                            <div className="profile-sheet-body">
+                                {isOwnProfile ? (
+                                    connectionsData && (Array.isArray(connectionsData) ? connectionsData : connectionsData?.connections || []).length > 0 ? (
+                                        (Array.isArray(connectionsData) ? connectionsData : connectionsData?.connections || []).map((conn, i) => (
+                                            <div key={i} className="profile-connection-item" onClick={() => { setShowConnectionsSheet(false); navigate(`/profile/${conn.username}`); }}>
+                                                <img src={conn.avatar_url || `https://api.dicebear.com/7.x/shapes/svg?seed=${conn.username}`} alt="" />
+                                                <div>
+                                                    <span className="profile-conn-name">@{conn.username}</span>
+                                                    <span className="profile-conn-status">{conn.status || 'CONNECTED'}</span>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="profile-sheet-empty">No connections yet — start connecting with other players!</p>
+                                    )
+                                ) : (
+                                    <p className="profile-sheet-empty">FEATURE COMING SOON △</p>
+                                )}
+                            </div>
+                        </motion.div>
+                    </>
                 )}
             </AnimatePresence>
         </div>

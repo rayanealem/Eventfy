@@ -445,3 +445,133 @@
     color: rgba(255, 255, 255, 0.3);
     letter-spacing: 0.5px;
 }
+
+/* ===== SEARCH CANCEL BUTTON ===== */
+.explore-search-cancel {
+    background: none;
+    border: none;
+    color: #f56e3d;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    white-space: nowrap;
+    padding: 4px 8px;
+    transition: opacity 0.2s;
+}
+
+.explore-search-cancel:hover {
+    opacity: 0.7;
+}
+
+/* ===== SCOPE TABS ===== */
+.explore-scope-tabs {
+    display: flex;
+    gap: 0;
+    padding: 0 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    margin-bottom: 8px;
+}
+
+.explore-scope-tab {
+    flex: 1;
+    padding: 12px 8px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: #64748b;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.explore-scope-tab.active {
+    color: #f1f5f9;
+    border-bottom-color: #f56e3d;
+}
+
+.explore-scope-tab:hover {
+    color: #94a3b8;
+}
+
+/* ===== RECENT SEARCHES ===== */
+.explore-recent-searches {
+    padding: 20px 16px;
+}
+
+.explore-recent-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.explore-recent-header span {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px;
+    color: white;
+    letter-spacing: 1px;
+}
+
+.explore-recent-header button {
+    background: none;
+    border: none;
+    color: #f43f5e;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+}
+
+.explore-recent-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.explore-recent-chip {
+    padding: 6px 14px;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.explore-recent-chip:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #f1f5f9;
+}
+
+/* ===== SEARCH RESULT ENHANCEMENTS ===== */
+.explore-type-chip {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.3px;
+    padding: 3px 8px;
+    border: 1px solid;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+.explore-shape-badge {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    color: white;
+    border: 2px solid black;
+}

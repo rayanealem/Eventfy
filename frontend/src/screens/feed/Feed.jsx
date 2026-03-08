@@ -66,6 +66,8 @@ export default function Feed() {
     const [unreadCount, setUnreadCount] = useState(0);
     const [saved, setSaved] = useState({});
     const [seenStories, setSeenStories] = useState(new Set());
+    const [commentSheetEventId, setCommentSheetEventId] = useState(null);
+    const [commentText, setCommentText] = useState('');
 
     // Pull-to-refresh
     const [refreshing, setRefreshing] = useState(false);
@@ -210,6 +212,19 @@ export default function Feed() {
         haptic();
         setSaved(prev => ({ ...prev, [eventId]: !prev[eventId] }));
         showToast(saved[eventId] ? 'REMOVED FROM SAVED' : 'EVENT SAVED ◇', 'success');
+    };
+
+    const handleComment = async () => {
+        if (!commentText.trim() || !commentSheetEventId) return;
+        haptic();
+        try {
+            await api('POST', `/posts/${commentSheetEventId}/comment`, { content: commentText.trim() });
+            showToast('COMMENT SENT ✓', 'success');
+            setCommentText('');
+            setCommentSheetEventId(null);
+        } catch (err) {
+            showToast('COMMENT FAILED', 'error');
+        }
     };
 
     return (
@@ -463,12 +478,10 @@ export default function Feed() {
                                                     <polygon points="22 2 15 22 11 13 2 9 22 2" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" strokeLinejoin="round" fill="none" />
                                                 </svg>
                                             </button>
-                                            <button className="feed-card-action-btn" onClick={(e) => { e.stopPropagation(); toggleSave(event.id); }}>
-                                                <svg width="18" height="20" viewBox="0 0 14 18" fill="none">
-                                                    <path d="M1 2.5C1 1.67 1.67 1 2.5 1h9c.83 0 1.5.67 1.5 1.5V17l-6-3-6 3V2.5z"
-                                                        stroke={saved[event.id] ? '#fbbf24' : 'rgba(255,255,255,0.5)'}
-                                                        fill={saved[event.id] ? '#fbbf24' : 'none'}
-                                                        strokeWidth="1.2" />
+                                            <button className="feed-card-action-btn" onClick={(e) => { e.stopPropagation(); setCommentSheetEventId(event.id); }}>
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
+                                                        stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
                                                 </svg>
                                             </button>
                                         </div>
@@ -499,6 +512,58 @@ export default function Feed() {
                     <line x1="2" y1="10" x2="18" y2="10" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
                 </svg>
             </Link>
+            {/* Comment Bottom Sheet */}
+            <AnimatePresence>
+                {commentSheetEventId && (
+                    <>
+                        <motion.div
+                            className="comment-sheet-overlay"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setCommentSheetEventId(null)}
+                        />
+                        <motion.div
+                            className="comment-sheet"
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                        >
+                            <div className="comment-sheet-handle" />
+                            <div className="comment-sheet-header">
+                                <h3>COMMENTS ○</h3>
+                                <button onClick={() => setCommentSheetEventId(null)}>✕</button>
+                            </div>
+                            <div className="comment-sheet-body">
+                                <p className="comment-sheet-empty">Be the first to comment on this event</p>
+                            </div>
+                            <button
+                                className="comment-sheet-see-all"
+                                onClick={() => { setCommentSheetEventId(null); navigate(`/event/${commentSheetEventId}`); }}
+                            >
+                                SEE ALL COMMENTS →
+                            </button>
+                            <div className="comment-sheet-compose">
+                                <input
+                                    type="text"
+                                    placeholder="Add a comment..."
+                                    value={commentText}
+                                    onChange={e => setCommentText(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleComment()}
+                                />
+                                <button
+                                    className="comment-sheet-send"
+                                    onClick={handleComment}
+                                    disabled={!commentText.trim()}
+                                >
+                                    ▷
+                                </button>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

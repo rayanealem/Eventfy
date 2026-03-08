@@ -35,9 +35,24 @@ export default function Explore() {
     const [activeFilter, setActiveFilter] = useState('ALL');
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedQuery, setDebouncedQuery] = useState('');
+    const [isSearchActive, setIsSearchActive] = useState(false);
+    const [searchScope, setSearchScope] = useState('ALL');
+    const [recentSearches, setRecentSearches] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('eventfy_recent_searches') || '[]'); } catch { return []; }
+    });
 
     useEffect(() => {
-        const timer = setTimeout(() => setDebouncedQuery(searchQuery), 400);
+        const timer = setTimeout(() => {
+            setDebouncedQuery(searchQuery);
+            // Save to recent searches when user commits a query
+            if (searchQuery.trim().length > 1) {
+                setRecentSearches(prev => {
+                    const updated = [searchQuery.trim(), ...prev.filter(s => s !== searchQuery.trim())].slice(0, 5);
+                    localStorage.setItem('eventfy_recent_searches', JSON.stringify(updated));
+                    return updated;
+                });
+            }
+        }, 400);
         return () => clearTimeout(timer);
     }, [searchQuery]);
 
@@ -119,33 +134,78 @@ export default function Explore() {
                         placeholder="SEARCH THE ARENA..."
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
+                        onFocus={() => setIsSearchActive(true)}
                         style={{
                             background: 'transparent', border: 'none', outline: 'none',
                             color: '#f1f5f9', fontFamily: 'inherit', fontSize: 'inherit',
                             letterSpacing: 'inherit', width: '100%',
                         }}
                     />
+                    {isSearchActive && (
+                        <button
+                            className="explore-search-cancel"
+                            onClick={() => { setIsSearchActive(false); setSearchQuery(''); setDebouncedQuery(''); }}
+                        >
+                            CANCEL
+                        </button>
+                    )}
                 </div>
 
-                {/* Filter Pills */}
-                <div className="explore-filters">
-                    {FILTERS.map((f, i) => (
-                        <button key={i} className={`explore-pill ${activeFilter === f.label ? 'active' : ''}`} onClick={() => setActiveFilter(f.label)}>
-                            <span className="pill-shape">{f.shape}</span>
-                            <span className="pill-label">{f.label}</span>
-                        </button>
-                    ))}
-                </div>
+                {/* Filter Pills — hidden when search is active */}
+                {!isSearchActive && (
+                    <div className="explore-filters">
+                        {FILTERS.map((f, i) => (
+                            <button key={i} className={`explore-pill ${activeFilter === f.label ? 'active' : ''}`} onClick={() => setActiveFilter(f.label)}>
+                                <span className="pill-shape">{f.shape}</span>
+                                <span className="pill-label">{f.label}</span>
+                            </button>
+                        ))}
+                    </div>
+                )}
             </header>
 
-            {/* Search Results Overlay */}
-            {debouncedQuery.length > 1 && (
+            {/* Recent Searches — when search active but no query */}
+            {isSearchActive && debouncedQuery.length <= 1 && (
                 <div className="explore-content" style={{ paddingTop: 0 }}>
+                    {recentSearches.length > 0 && (
+                        <div className="explore-recent-searches">
+                            <div className="explore-recent-header">
+                                <span>RECENT</span>
+                                <button onClick={() => { setRecentSearches([]); localStorage.removeItem('eventfy_recent_searches'); }}>CLEAR</button>
+                            </div>
+                            <div className="explore-recent-chips">
+                                {recentSearches.map((q, i) => (
+                                    <button key={i} className="explore-recent-chip" onClick={() => { setSearchQuery(q); setDebouncedQuery(q); }}>
+                                        {q}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Search Results */}
+            {isSearchActive && debouncedQuery.length > 1 && (
+                <div className="explore-content" style={{ paddingTop: 0 }}>
+                    {/* Scope tabs */}
+                    <div className="explore-scope-tabs">
+                        {['ALL', 'EVENTS', 'ORGS', 'PLAYERS'].map(scope => (
+                            <button
+                                key={scope}
+                                className={`explore-scope-tab ${searchScope === scope ? 'active' : ''}`}
+                                onClick={() => setSearchScope(scope)}
+                            >
+                                {scope}
+                            </button>
+                        ))}
+                    </div>
+
                     {searching ? (
                         <div style={{ padding: 40, textAlign: 'center', color: '#64748b', fontFamily: 'DM Mono, monospace' }}>SCANNING...</div>
                     ) : searchResults ? (
                         <>
-                            {searchResults.events?.length > 0 && (
+                            {(searchScope === 'ALL' || searchScope === 'EVENTS') && searchResults.events?.length > 0 && (
                                 <section className="explore-section">
                                     <h2 className="explore-section-title" style={{ padding: '0 16px' }}>EVENTS</h2>
                                     {searchResults.events.map((event, i) => (
@@ -154,17 +214,21 @@ export default function Explore() {
                                             <div style={{ width: '40px', height: '40px', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
                                                 <img src={event.cover_url || FALLBACK_IMAGES[i % 4]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Event" />
                                             </div>
-                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                                                 <span style={{ color: '#f1f5f9', fontFamily: 'Space Grotesk', fontWeight: 'bold' }}>{event.title}</span>
                                                 <span style={{ color: TYPE_CONFIG[event.event_type]?.color || '#64748b', fontSize: '0.75rem', fontFamily: 'DM Mono' }}>
                                                     {TYPE_CONFIG[event.event_type]?.label || event.event_type}
                                                 </span>
                                             </div>
+                                            {/* Type color chip */}
+                                            <span className="explore-type-chip" style={{ color: TYPE_CONFIG[event.event_type]?.color || '#94a3b8', borderColor: (TYPE_CONFIG[event.event_type]?.color || '#94a3b8') + '30' }}>
+                                                {TYPE_CONFIG[event.event_type]?.shape || '○'} {event.event_type?.toUpperCase()}
+                                            </span>
                                         </div>
                                     ))}
                                 </section>
                             )}
-                            {searchResults.orgs?.length > 0 && (
+                            {(searchScope === 'ALL' || searchScope === 'ORGS') && searchResults.orgs?.length > 0 && (
                                 <section className="explore-section">
                                     <h2 className="explore-section-title" style={{ padding: '0 16px', marginTop: '16px' }}>ORGANIZATIONS</h2>
                                     {searchResults.orgs.map((org, i) => (
@@ -173,12 +237,20 @@ export default function Explore() {
                                             <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
                                                 <img src={org.logo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(org.name)}&background=1e293b&color=fff`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Org" />
                                             </div>
-                                            <span style={{ color: '#f1f5f9', fontFamily: 'Space Grotesk', fontWeight: 'bold' }}>{org.name}</span>
+                                            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                                                <span style={{ color: '#f1f5f9', fontFamily: 'Space Grotesk', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    {org.name}
+                                                    {org.verified && <span style={{ color: '#2dd4bf', fontSize: '12px' }}>✓</span>}
+                                                </span>
+                                                <span style={{ color: '#64748b', fontSize: '0.7rem', fontFamily: 'DM Mono' }}>
+                                                    {org.follower_count || 0} followers
+                                                </span>
+                                            </div>
                                         </div>
                                     ))}
                                 </section>
                             )}
-                            {searchResults.users?.length > 0 && (
+                            {(searchScope === 'ALL' || searchScope === 'PLAYERS') && searchResults.users?.length > 0 && (
                                 <section className="explore-section">
                                     <h2 className="explore-section-title" style={{ padding: '0 16px', marginTop: '16px' }}>PLAYERS</h2>
                                     {searchResults.users.map((u, i) => (
@@ -188,7 +260,10 @@ export default function Explore() {
                                                 <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
                                                     <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.username)}&background=1e293b&color=fff`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="User" />
                                                 </div>
-                                                <span className="explore-player-shape" style={{ color: u.shape_color || '#f56e3d' }}>{u.shape || '○'}</span>
+                                                {/* Shape identity badge */}
+                                                <span className="explore-shape-badge" style={{ background: u.shape_color || '#f56e3d' }}>
+                                                    {u.shape || '○'}
+                                                </span>
                                             </div>
                                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                                                 <span style={{ color: '#f1f5f9', fontFamily: 'Space Grotesk', fontWeight: 'bold' }}>@{u.username}</span>
@@ -206,8 +281,8 @@ export default function Explore() {
                 </div>
             )}
 
-            {/* Main Content — Grid View */}
-            {debouncedQuery.length <= 1 && (
+            {/* Main Content — Grid View (hidden when search is active) */}
+            {!isSearchActive && debouncedQuery.length <= 1 && (
                 <div className="explore-content">
                     {/* Top Organizations (Horizontal Scroll) */}
                     <section className="explore-section">
