@@ -27,7 +27,6 @@ async def get_my_saved_events(page: int = 1, limit: int = 20, user=Depends(get_c
         supabase.table("saved_events")
         .select("event_id, events(*, organizations(name, logo_url, slug, verified))")
         .eq("user_id", user["id"])
-        .order("created_at", desc=True)
         .range(offset, offset + limit - 1)
         .execute()
     )
@@ -112,6 +111,7 @@ async def event_feed(
         query = query.eq("is_international", True)
 
     events = query.execute()
+    print("Events fetched:", len(events.data or []))
 
     # Get which events this user is registered for, liked, and saved
     registered_ids = []
@@ -141,6 +141,8 @@ async def event_feed(
             .execute()
         )
         saved_ids = [r["event_id"] for r in (saves.data or [])]
+    
+    print(f"Returning {len(events.data or [])} events for user {user['id'] if user else 'None'}")
 
     return {
         "events": events.data or [],

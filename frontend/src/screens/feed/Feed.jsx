@@ -195,6 +195,7 @@ export default function Feed() {
         } catch (e) {
             console.error('Feed load failed:', e);
             if (pageNum === 1) setEvents([]);
+            showToast(`FEED ERROR: ${e.message}`, 'error');
         } finally {
             setLoading(false);
         }

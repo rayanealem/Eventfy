@@ -1,23 +1,27 @@
 import os
-import sys
+from dotenv import load_dotenv
+from supabase import create_client
 
-# Add backend dir to python path
-sys.path.insert(0, os.path.abspath(r"d:\Eventfy-fig\eventfy-backend"))
-from config import supabase
+load_dotenv()
+url = os.getenv("SUPABASE_URL")
+key = os.getenv("SUPABASE_SERVICE_KEY")
+supabase = create_client(url, key)
 
-print("Testing Supabase connection...")
 try:
-    res = supabase.table("events").select("id, like_count, comment_count").limit(1).execute()
-    print("Found event:", res.data)
-    if res.data:
-        event_id = res.data[0]["id"]
-        print(f"Testing fake update on {event_id}...")
-        
-        # Test the update query exact logic
-        update_res = supabase.table("events").update({
-            "like_count": 999
-        }).eq("id", event_id).execute()
-        
-        print("Update response:", update_res.data)
+    res = supabase.table("events").select("id, like_count").limit(1).execute()
+    print("SUCCESS")
+    print(res.data)
 except Exception as e:
-    print("Error:", e)
+    print("ERROR:", str(e))
+
+try:
+    res2 = supabase.table("event_likes").select("*").limit(1).execute()
+    print("EVENT_LIKES TABLE OK")
+except Exception as e:
+    print("EVENT_LIKES ERROR:", str(e))
+
+try:
+    res3 = supabase.table("event_comments").select("*").limit(1).execute()
+    print("EVENT_COMMENTS TABLE OK")
+except Exception as e:
+    print("EVENT_COMMENTS ERROR:", str(e))

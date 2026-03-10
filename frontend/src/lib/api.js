@@ -1,6 +1,11 @@
 import { supabase } from './supabase'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8005/v1'
+// Dynamically determine the backend URL based on how the frontend is accessed
+const hostname = window.location.hostname;
+// If accessed via localhost, use 127.0.0.1 to avoid Windows IPv6 DNS resolution bugs
+// If accessed via a local network IP (e.g. 192.168.x.x), use that same IP for the backend
+const defaultApiUrl = hostname === 'localhost' ? 'http://127.0.0.1:8005/v1' : `http://${hostname}:8005/v1`;
+const API_URL = import.meta.env.VITE_API_URL || defaultApiUrl;
 
 /**
  * API call helper — attaches JWT from current Supabase session.

@@ -21,8 +21,7 @@ export default function PlayerProfile() {
     const queryClient = useQueryClient();
     const [activeTab, setActiveTab] = useState('events');
     const { showToast } = useToast();
-    const [connectionStatus, setConnectionStatus] = useState('none');
-    const [showConnectionsSheet, setShowConnectionsSheet] = useState(false);
+    const [sheetType, setSheetType] = useState(null); // 'followers', 'following', 'connections', or null
     const [isFollowing, setIsFollowing] = useState(false);
     const [localFollowerDelta, setLocalFollowerDelta] = useState(0);
 
@@ -47,6 +46,39 @@ export default function PlayerProfile() {
 
     // For own profile, always use AuthContext data
     const effectiveProfile = isOwnProfile ? myProfile : profileData;
+    const p = effectiveProfile || myProfile || {};
+
+    // Followers list
+    const { data: followersData } = useQuery({
+        queryKey: ['followers', targetUsername || myProfile?.username],
+        queryFn: () => api('GET', `/users/followers/${p.id}`),
+        enabled: sheetType === 'followers' && !!p.id,
+    });
+
+    // Following list
+    const { data: followingData } = useQuery({
+        queryKey: ['following', targetUsername || myProfile?.username],
+        queryFn: () => api('GET', `/users/following/${p.id}`),
+        enabled: sheetType === 'following' && !!p.id,
+    });
+
+    // Fetch own connections (for the bottom sheet)
+    const { data: connectionsData } = useQuery({
+        queryKey: ['connections'],
+        queryFn: () => api('GET', '/users/me/connections'),
+        enabled: sheetType === 'connections' && isOwnProfile,
+    });
+
+    // Refresh data on visibility change
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && !isOwnProfile) {
+                refetch();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, [isOwnProfile, refetch]);
 
     if (isLoading && !effectiveProfile) {
         return (
@@ -70,7 +102,6 @@ export default function PlayerProfile() {
         );
     }
 
-    const p = effectiveProfile || myProfile || {};
     const displayName = (p.full_name || p.username || 'UNKNOWN').toUpperCase();
     const handle = `@${p.username || 'unknown'}`;
     const avatarUrl = p.avatar_url || `https://api.dicebear.com/7.x/shapes/svg?seed=${p.username || 'user'}`;
@@ -87,7 +118,11 @@ export default function PlayerProfile() {
     const xpToNext = 1000;
     const xpProgress = xpToNext > 0 ? Math.min(100, Math.round((xp % 1000) / xpToNext * 100)) : 0;
 
-    const passport = passportData?.entries || (Array.isArray(passportData) ? passportData : []);
+    // Fix passport parsing: use actual events_attended and badges arrays
+    const passportObj = passportData || {};
+    const passportLists = isOwnProfile ? myProfile : passportObj;
+    const passportEvents = passportLists?.events_attended || [];
+    const passportBadges = passportLists?.badges || p.user_badges || [];
 
     // Sync isFollowing from profile data
     useEffect(() => {
@@ -126,13 +161,6 @@ export default function PlayerProfile() {
             setConnectionStatus('none');
             showToast(err?.message || 'CONNECTION FAILED', 'error');
         },
-    });
-
-    // Fetch own connections (for the bottom sheet)
-    const { data: connectionsData } = useQuery({
-        queryKey: ['connections'],
-        queryFn: () => api('GET', '/users/me/connections'),
-        enabled: showConnectionsSheet && isOwnProfile,
     });
 
     return (
@@ -182,8 +210,8 @@ export default function PlayerProfile() {
                 <div style={{ display: 'flex', flex: 1, justifyContent: 'space-around' }}>
                     {[
                         { value: eventCount, label: 'Events' },
-                        { value: followerCount, label: 'Followers', onClick: () => { haptic(); setShowConnectionsSheet(true); } },
-                        { value: followingCount, label: 'Following', onClick: () => { haptic(); setShowConnectionsSheet(true); } },
+                        { value: followerCount, label: 'Followers', onClick: () => { haptic(); setSheetType('followers'); } },
+                        { value: followingCount, label: 'Following', onClick: () => { haptic(); setSheetType('following'); } },
                         ...(!isOwnProfile ? [{ value: Math.floor(Math.abs(((p.id?.charCodeAt?.(0) || 0) * 7 + 3) % 12)), label: 'Mutual', onClick: () => showToast('MUTUAL EVENTS — COMING SOON', 'info') }] : []),
                     ].map((stat, i) => (
                         <motion.div
@@ -317,14 +345,14 @@ export default function PlayerProfile() {
             <AnimatePresence mode="wait">
                 {activeTab === 'events' && (
                     <motion.div key="events" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                        {passport.length === 0 ? (
+                        {passportEvents.length === 0 ? (
                             <div style={{ padding: '60px 24px', textAlign: 'center' }}>
                                 <span style={{ display: 'block', fontSize: '40px', marginBottom: '16px', opacity: 0.2 }}>□</span>
                                 <span style={{ color: '#64748b', fontFamily: 'DM Mono, monospace', fontSize: '12px' }}>NO EVENTS YET — ATTEND YOUR FIRST EVENT</span>
                             </div>
                         ) : (
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2px', padding: '2px 0' }}>
-                                {passport.map((entry, i) => {
+                                {passportEvents.map((entry, i) => {
                                     const coverUrl = entry.events?.cover_url || entry.cover_url || `https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=200&h=200&fit=crop`;
                                     const entryType = entry.events?.event_type || entry.event_type || 'sport';
                                     const TYPE_SHAPES = { sport: '○', science: '△', charity: '□', cultural: '◇' };
@@ -368,14 +396,14 @@ export default function PlayerProfile() {
 
                 {activeTab === 'badges' && (
                     <motion.div key="badges" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                        {badgeCount === 0 ? (
+                        {passportBadges.length === 0 ? (
                             <div style={{ padding: '60px 24px', textAlign: 'center' }}>
                                 <span style={{ display: 'block', fontSize: '40px', marginBottom: '16px', opacity: 0.2 }}>○</span>
                                 <span style={{ color: '#64748b', fontFamily: 'DM Mono, monospace', fontSize: '12px' }}>NO BADGES EARNED YET — KEEP COMPETING</span>
                             </div>
                         ) : (
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', padding: '24px 16px' }}>
-                                {(p.user_badges || []).map((badge, i) => (
+                                {passportBadges.map((badge, i) => (
                                     <motion.div
                                         key={badge.id || i}
                                         initial={{ opacity: 0, scale: 0.8 }}
@@ -384,10 +412,10 @@ export default function PlayerProfile() {
                                         style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px 8px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}
                                     >
                                         <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(255,45,120,0.2), rgba(19,236,200,0.2))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
-                                            {badge.icon || '🏆'}
+                                            {badge.icon || badge.badges?.icon || '🏆'}
                                         </div>
                                         <span style={{ fontFamily: 'Space Grotesk', fontWeight: 'bold', fontSize: '10px', color: '#f1f5f9', textAlign: 'center', textTransform: 'uppercase' }}>
-                                            {badge.name || badge.badge_name || 'BADGE'}
+                                            {badge.name || badge.badge_name || badge.badges?.name || 'BADGE'}
                                         </span>
                                     </motion.div>
                                 ))}
@@ -397,16 +425,16 @@ export default function PlayerProfile() {
                 )}
             </AnimatePresence>
 
-            {/* Connections Bottom Sheet */}
+            {/* List Bottom Sheet (Followers / Following / Connections) */}
             <AnimatePresence>
-                {showConnectionsSheet && (
+                {sheetType && (
                     <>
                         <motion.div
                             className="profile-sheet-overlay"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            onClick={() => setShowConnectionsSheet(false)}
+                            onClick={() => setSheetType(null)}
                         />
                         <motion.div
                             className="profile-connections-sheet"
@@ -417,26 +445,64 @@ export default function PlayerProfile() {
                         >
                             <div className="profile-sheet-handle" />
                             <div className="profile-sheet-header">
-                                <h3>CONNECTIONS ○</h3>
-                                <button onClick={() => setShowConnectionsSheet(false)}>✕</button>
+                                <h3>{sheetType.toUpperCase()} {sheetType === 'connections' ? '○' : '◇'}</h3>
+                                <button onClick={() => setSheetType(null)}>✕</button>
                             </div>
                             <div className="profile-sheet-body">
-                                {isOwnProfile ? (
-                                    connectionsData && (Array.isArray(connectionsData) ? connectionsData : connectionsData?.connections || []).length > 0 ? (
-                                        (Array.isArray(connectionsData) ? connectionsData : connectionsData?.connections || []).map((conn, i) => (
-                                            <div key={i} className="profile-connection-item" onClick={() => { setShowConnectionsSheet(false); navigate(`/profile/${conn.username}`); }}>
-                                                <img src={conn.avatar_url || `https://api.dicebear.com/7.x/shapes/svg?seed=${conn.username}`} alt="" />
+                                {sheetType === 'followers' && (
+                                    followersData?.followers?.length > 0 ? (
+                                        followersData.followers.map((u, i) => (
+                                            <div key={i} className="profile-connection-item" onClick={() => { setSheetType(null); navigate(`/profile/${u.username}`); }}>
+                                                <img src={u.avatar_url || `https://api.dicebear.com/7.x/shapes/svg?seed=${u.username}`} alt="" />
                                                 <div>
-                                                    <span className="profile-conn-name">@{conn.username}</span>
-                                                    <span className="profile-conn-status">{conn.status || 'CONNECTED'}</span>
+                                                    <span className="profile-conn-name">@{u.username}</span>
+                                                    <span className="profile-conn-status">{u.full_name}</span>
                                                 </div>
                                             </div>
                                         ))
                                     ) : (
-                                        <p className="profile-sheet-empty">No connections yet — start connecting with other players!</p>
+                                        <div className="profile-sheet-empty">
+                                            {isOwnProfile ? 'You don\'t have any followers yet.' : `@${p.username} doesn't have any followers yet.`}
+                                        </div>
                                     )
-                                ) : (
-                                    <p className="profile-sheet-empty">FEATURE COMING SOON △</p>
+                                )}
+
+                                {sheetType === 'following' && (
+                                    followingData?.following?.length > 0 ? (
+                                        followingData.following.map((u, i) => (
+                                            <div key={i} className="profile-connection-item" onClick={() => { setSheetType(null); navigate(`/profile/${u.username}`); }}>
+                                                <img src={u.avatar_url || `https://api.dicebear.com/7.x/shapes/svg?seed=${u.username}`} alt="" />
+                                                <div>
+                                                    <span className="profile-conn-name">@{u.username}</span>
+                                                    <span className="profile-conn-status">{u.full_name}</span>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="profile-sheet-empty">
+                                            {isOwnProfile ? 'You aren\'t following anyone.' : `@${p.username} isn't following anyone.`}
+                                        </div>
+                                    )
+                                )}
+
+                                {sheetType === 'connections' && (
+                                    isOwnProfile ? (
+                                        connectionsData && (Array.isArray(connectionsData) ? connectionsData : connectionsData?.connections || []).length > 0 ? (
+                                            (Array.isArray(connectionsData) ? connectionsData : connectionsData?.connections || []).map((conn, i) => (
+                                                <div key={i} className="profile-connection-item" onClick={() => { setSheetType(null); navigate(`/profile/${conn.username}`); }}>
+                                                    <img src={conn.avatar_url || `https://api.dicebear.com/7.x/shapes/svg?seed=${conn.username}`} alt="" />
+                                                    <div>
+                                                        <span className="profile-conn-name">@{conn.username}</span>
+                                                        <span className="profile-conn-status">{conn.status || 'CONNECTED'}</span>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <p className="profile-sheet-empty">No connections yet — start connecting with other players!</p>
+                                        )
+                                    ) : (
+                                        <p className="profile-sheet-empty">FEATURE COMING SOON △</p>
+                                    )
                                 )}
                             </div>
                         </motion.div>
@@ -451,18 +517,28 @@ function SavedEventsTab({ isOwnProfile, navigate }) {
     const [savedEvents, setSavedEvents] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    const fetchSaved = async () => {
+        try {
+            // Append timestamp to bust browser cache
+            const data = await api('GET', `/events/me/saved?_t=${Date.now()}`);
+            setSavedEvents(data.events || []);
+        } catch (e) {
+            console.error('Failed to load saved events:', e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
         if (!isOwnProfile) { setLoading(false); return; }
-        (async () => {
-            try {
-                const data = await api('GET', '/events/me/saved');
-                setSavedEvents(data.events || []);
-            } catch (e) {
-                console.error('Failed to load saved events:', e);
-            } finally {
-                setLoading(false);
-            }
-        })();
+        fetchSaved();
+
+        // Also refresh when tab becomes visible again
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') fetchSaved();
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
     }, [isOwnProfile]);
 
     if (!isOwnProfile) {
