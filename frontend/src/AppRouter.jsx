@@ -18,6 +18,7 @@ import Chat from './screens/chat/Chat';
 import ChatHub from './screens/chat/ChatHub';
 import Notifications from './screens/notifications/Notifications';
 import Settings from './screens/settings/Settings';
+import OrgDashboard from './screens/org/OrgDashboard';
 import OrgProfile from './screens/org/OrgProfile';
 import TeamLobby from './screens/lobby/TeamLobby';
 import Scoreboard from './screens/scoreboard/Scoreboard';
@@ -80,6 +81,7 @@ const router = createBrowserRouter([
             { path: 'profile/me', element: <AuthGuard><PlayerProfile /></AuthGuard> },
             { path: 'profile/edit', element: <AuthGuard><EditProfile /></AuthGuard> },
             { path: 'profile/:username', element: <AuthGuard><PlayerProfile /></AuthGuard> },
+            { path: 'org/dashboard', element: <OrgGuard><OrgDashboard /></OrgGuard> },
             { path: 'org/:orgId', element: <AuthGuard><OrgProfile /></AuthGuard> },
             { path: 'org/setup', element: <AuthGuard><OrgSetup /></AuthGuard> },
             { path: 'passport/:username', element: <AuthGuard><PlayerPassport /></AuthGuard> },

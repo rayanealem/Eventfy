@@ -23,7 +23,7 @@ const CATEGORIES = [
 
 export default function OrgSetup() {
     const navigate = useNavigate();
-    const { user, mutateProfile } = useAuth();
+    const { user, refreshProfile } = useAuth();
     const [step, setStep] = useState(1);
     const [org, setOrg] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -347,12 +347,12 @@ export default function OrgSetup() {
                                 try {
                                     if (user) {
                                         await supabase.from('profiles').update({ onboarding_done: true }).eq('id', user.id);
-                                        if (mutateProfile) await mutateProfile();
+                                        if (refreshProfile) await refreshProfile();
                                     }
                                 } catch (e) {
                                     console.error('Error completing org onboarding', e);
                                 }
-                                navigate(`/org/${org?.slug}`);
+                                navigate(`/org/dashboard`);
                             }}>GO TO ORG DASHBOARD □</button>
                         </div>
                     </section>

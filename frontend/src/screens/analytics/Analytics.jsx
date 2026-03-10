@@ -15,8 +15,8 @@ export default function Analytics() {
     useEffect(() => {
         const loadEventStats = async () => {
             try {
-                const res = await api.get(`/events/${eventId}`);
-                setEvent(res.data);
+                const res = await api('GET', `/events/${eventId}`);
+                setEvent(res);
             } catch (error) {
                 console.error("Failed to load analytics:", error);
             } finally {

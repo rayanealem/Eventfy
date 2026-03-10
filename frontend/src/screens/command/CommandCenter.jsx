@@ -39,8 +39,8 @@ export default function CommandCenter() {
 
     const loadEvent = async () => {
         try {
-            const res = await api.get(`/events/${eventId}`);
-            setEvent(res.data);
+            const res = await api('GET', `/events/${eventId}`);
+            setEvent(res);
         } catch (error) {
             console.error("Failed to load event:", error);
             addLog("Failed to sync event data.", "#f44725");
@@ -61,7 +61,7 @@ export default function CommandCenter() {
 
         try {
             setUpdating(true);
-            await api.patch(`/events/${eventId}`, { status: newStatus });
+            await api('PATCH', `/events/${eventId}`, { status: newStatus });
             setEvent(prev => ({ ...prev, status: newStatus }));
             addLog(`Event status changed to: ${newStatus.toUpperCase()}`, '#fbbf24');
         } catch (error) {

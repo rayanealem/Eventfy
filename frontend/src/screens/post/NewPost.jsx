@@ -30,7 +30,7 @@ export default function NewPost() {
 
     const loadOrg = async () => {
         try {
-            const { data } = await api.get('/auth/me');
+            const data = await api('GET', '/auth/me');
             if (data?.managed_orgs?.length > 0) {
                 setOrg(data.managed_orgs[0]);
             } else {
@@ -47,7 +47,7 @@ export default function NewPost() {
         if (!org || !content.trim()) return;
         setPublishing(true);
         try {
-            await api.post('/posts', {
+            await api('POST', '/posts', {
                 org_id: org.id,
                 post_type: activeType.toLowerCase(),
                 content: content,

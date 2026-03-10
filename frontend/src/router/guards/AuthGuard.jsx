@@ -27,7 +27,7 @@ export function AuthGuard({ children }) {
     if (!user) return <Navigate to="/splash" replace />
 
     if (user && profile && !profile.onboarding_done) {
-        if (profile.role === 'organizer') {
+        if (['organizer', 'local_admin', 'global_admin'].includes(profile.role)) {
             if (!location.pathname.startsWith('/org/setup')) {
                 return <Navigate to="/org/setup" replace />
             }
@@ -60,11 +60,15 @@ export function GuestGuard({ children }) {
     }
 
     if (user) {
+        const isOrg = profile && ['organizer', 'local_admin', 'global_admin'].includes(profile.role);
         if (profile && !profile.onboarding_done) {
-            if (profile.role === 'organizer') {
+            if (isOrg) {
                 return <Navigate to="/org/setup" replace />
             }
             return <Navigate to="/onboarding/1" replace />
+        }
+        if (isOrg) {
+            return <Navigate to="/org/dashboard" replace />
         }
         return <Navigate to="/feed" replace />
     }
@@ -90,7 +94,7 @@ export function OrgGuard({ children }) {
         )
     }
 
-    if (!profile || profile.role !== 'organizer') {
+    if (!profile || !['organizer', 'local_admin', 'global_admin'].includes(profile.role)) {
         return <Navigate to="/feed" replace />
     }
 

@@ -10,6 +10,8 @@ const SVGIcon = ({ shape, size, strokeWidth, color, fill }) => {
             return <polygon points="12,3 21,19 3,19" stroke={color} strokeWidth={strokeWidth} strokeLinejoin="round" fill={fill} />;
         case 'square':
             return <rect x="4" y="4" width="16" height="16" rx="2" stroke={color} strokeWidth={strokeWidth} strokeLinejoin="round" fill={fill} />;
+        case 'hexagon':
+            return <path d="M12 2 L21.39 7 L21.39 17 L12 22 L2.61 17 L2.61 7 Z" stroke={color} strokeWidth={strokeWidth} strokeLinejoin="round" fill={fill} />;
         case 'diamond':
             return <polygon points="12,2 22,12 12,22 2,12" stroke={color} strokeWidth={strokeWidth} strokeLinejoin="round" fill={fill} />;
         case 'chat':
@@ -26,13 +28,16 @@ const Icon = ({ shape, size = 24, strokeWidth = 2, color = 'white', fill = 'none
 
 export default function BottomNav() {
     const location = useLocation();
-    const { user } = useAuth();
+    const { profile } = useAuth();
 
     // Simulate unread chat count
     const unreadMessagesCount = 1;
 
+    // Is the user an organizer/admin?
+    const isOrg = profile?.role === 'organizer' || profile?.role === 'local_admin' || profile?.role === 'global_admin';
+
     // Strictly show ONLY on the requested core tabs
-    const coreRoutes = ['/feed', '/explore', '/scoreboard', '/profile', '/chat'];
+    const coreRoutes = ['/feed', '/explore', '/scoreboard', '/profile', '/chat', '/org', '/manage'];
     const isCoreRoute = coreRoutes.some(p => location.pathname === p || location.pathname.startsWith(p + '/'));
 
     if (!isCoreRoute) return null;
@@ -40,7 +45,9 @@ export default function BottomNav() {
     const navItems = [
         { path: '/feed', shape: 'circle', activeColor: '#f472b6' },
         { path: '/explore', shape: 'triangle', activeColor: '#fbbf24' },
-        { path: '/scoreboard', shape: 'square', activeColor: '#2dd4bf' },
+        isOrg
+            ? { path: '/org/dashboard', shape: 'hexagon', activeColor: '#fbbf24' }
+            : { path: '/scoreboard', shape: 'square', activeColor: '#2dd4bf' },
         { path: '/profile/me', shape: 'diamond', activeColor: '#3b82f6' },
         { path: '/chat', shape: 'chat', activeColor: '#f56e3d', badge: unreadMessagesCount }
     ];
@@ -69,7 +76,9 @@ export default function BottomNav() {
                 }}
             >
                 {navItems.map(({ path, shape, activeColor, badge }) => {
-                    const isActive = location.pathname === path || (path === '/profile/me' && location.pathname.startsWith('/profile/'));
+                    const isActive = location.pathname === path ||
+                        (path === '/profile/me' && location.pathname.startsWith('/profile/')) ||
+                        (path === '/org/dashboard' && (location.pathname.startsWith('/manage/') || location.pathname.startsWith('/org/')));
 
                     return (
                         <NavLink
