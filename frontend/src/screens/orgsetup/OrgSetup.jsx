@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../../lib/api';
+import { api, apiUpload } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import './OrgSetup.css';
@@ -47,7 +47,7 @@ export default function OrgSetup() {
 
     const loadOrg = async () => {
         try {
-            const { data } = await api.get('/auth/me');
+            const data = await api('GET', '/auth/me');
             if (data?.managed_orgs?.length > 0) {
                 const myOrg = data.managed_orgs[0];
                 setOrg(myOrg);
@@ -72,11 +72,9 @@ export default function OrgSetup() {
         formData.append('file', file);
 
         try {
-            const res = await api.post(`/orgs/${org.id}/${type}`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-            if (type === 'logo') setLogoUrl(res.data.logo_url);
-            if (type === 'cover') setCoverUrl(res.data.cover_url);
+            const res = await apiUpload(`/orgs/${org.id}/${type}`, file, 'file');
+            if (type === 'logo') setLogoUrl(res.logo_url);
+            if (type === 'cover') setCoverUrl(res.cover_url);
         } catch (error) {
             console.error(`Upload ${type} failed:`, error);
         }
@@ -86,7 +84,7 @@ export default function OrgSetup() {
         if (!org) return;
         setSaving(true);
         try {
-            await api.patch(`/orgs/${org.id}`, {
+            await api('PATCH', `/orgs/${org.id}`, {
                 description: tagline,
                 website: website
             });
@@ -103,8 +101,8 @@ export default function OrgSetup() {
         const delaySearch = setTimeout(async () => {
             if (inviteQuery.length > 2) {
                 try {
-                    const res = await api.get(`/search?q=${inviteQuery}&type=users`);
-                    setSearchResults(res.data.users || []);
+                    const res = await api('GET', `/search?q=${inviteQuery}&type=users`);
+                    setSearchResults(res.users || []);
                 } catch (error) {
                     console.error("Search error:", error);
                 }
@@ -118,7 +116,7 @@ export default function OrgSetup() {
     const inviteMember = async (user) => {
         if (!org) return;
         try {
-            await api.post(`/orgs/${org.id}/members`, {
+            await api('POST', `/orgs/${org.id}/members`, {
                 user_id: user.id,
                 role: selectedRole
             });
