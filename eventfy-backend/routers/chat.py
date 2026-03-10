@@ -10,6 +10,21 @@ from typing import Optional
 
 router = APIRouter()
 
+
+@router.get("/messages/{message_id}")
+async def get_single_message(message_id: str, user=Depends(get_current_user)):
+    """Get a single message with sender profile data."""
+    msg = (
+        supabase.table("messages")
+        .select("*, profiles!sender_id(username, full_name, avatar_url, shape, shape_color, player_number)")
+        .eq("id", message_id)
+        .single()
+        .execute()
+    )
+    if not msg.data:
+        raise HTTPException(404, "Message not found")
+    return msg.data
+
 @router.get("/my-chats")
 async def get_my_chats(user=Depends(get_current_user)):
     """Fetch all events the user is registered for with basic chat info."""

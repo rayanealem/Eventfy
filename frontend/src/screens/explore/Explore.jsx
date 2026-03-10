@@ -188,95 +188,68 @@ export default function Explore() {
             {/* Search Results */}
             {isSearchActive && debouncedQuery.length > 1 && (
                 <div className="explore-content" style={{ paddingTop: 0 }}>
-                    {/* Scope tabs */}
-                    <div className="explore-scope-tabs">
-                        {['ALL', 'EVENTS', 'ORGS', 'PLAYERS'].map(scope => (
-                            <button
-                                key={scope}
-                                className={`explore-scope-tab ${searchScope === scope ? 'active' : ''}`}
-                                onClick={() => setSearchScope(scope)}
-                            >
-                                {scope}
-                            </button>
-                        ))}
-                    </div>
-
                     {searching ? (
                         <div style={{ padding: 40, textAlign: 'center', color: '#64748b', fontFamily: 'DM Mono, monospace' }}>SCANNING...</div>
                     ) : searchResults ? (
-                        <>
-                            {(searchScope === 'ALL' || searchScope === 'EVENTS') && searchResults.events?.length > 0 && (
-                                <section className="explore-section">
-                                    <h2 className="explore-section-title" style={{ padding: '0 16px' }}>EVENTS</h2>
-                                    {searchResults.events.map((event, i) => (
-                                        <div key={i} className="explore-search-result" onClick={() => navigate(`/event/${event.id}`)}
-                                            style={{ padding: '16px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                            <div style={{ width: '40px', height: '40px', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
-                                                <img src={event.cover_url || FALLBACK_IMAGES[i % 4]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Event" />
-                                            </div>
-                                            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                                                <span style={{ color: '#f1f5f9', fontFamily: 'Space Grotesk', fontWeight: 'bold' }}>{event.title}</span>
-                                                <span style={{ color: TYPE_CONFIG[event.event_type]?.color || '#64748b', fontSize: '0.75rem', fontFamily: 'DM Mono' }}>
-                                                    {TYPE_CONFIG[event.event_type]?.label || event.event_type}
-                                                </span>
-                                            </div>
-                                            {/* Type color chip */}
-                                            <span className="explore-type-chip" style={{ color: TYPE_CONFIG[event.event_type]?.color || '#94a3b8', borderColor: (TYPE_CONFIG[event.event_type]?.color || '#94a3b8') + '30' }}>
-                                                {TYPE_CONFIG[event.event_type]?.shape || '○'} {event.event_type?.toUpperCase()}
-                                            </span>
+                        <div className="explore-search-dropdown" style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                            {/* EVENTS */}
+                            {searchResults.events?.length > 0 && searchResults.events.map((event, i) => (
+                                <div key={`evt-${i}`} className="explore-search-result" onClick={() => navigate(`/event/${event.id}`)}
+                                    style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <div style={{ width: '40px', height: '40px', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', overflow: 'hidden', flexShrink: 0 }}>
+                                        <img src={event.cover_url || FALLBACK_IMAGES[i % 4]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Event" />
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                                        <span style={{ color: '#f1f5f9', fontFamily: 'Space Grotesk', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.title}</span>
+                                        <span style={{ color: TYPE_CONFIG[event.event_type]?.color || '#64748b', fontSize: '0.75rem', fontFamily: 'DM Mono' }}>
+                                            {TYPE_CONFIG[event.event_type]?.shape || '○'} {event.event_type?.toUpperCase()} EVENT
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {/* ORGANIZATIONS */}
+                            {searchResults.orgs?.length > 0 && searchResults.orgs.map((org, i) => (
+                                <div key={`org-${i}`} className="explore-search-result" onClick={() => navigate(`/org/${org.slug || org.id}`)}
+                                    style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', overflow: 'hidden', flexShrink: 0 }}>
+                                        <img src={org.logo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(org.name)}&background=1e293b&color=fff`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Org" />
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                                        <span style={{ color: '#f1f5f9', fontFamily: 'Space Grotesk', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            {org.name}
+                                            {org.verified && <span style={{ color: '#2dd4bf', fontSize: '12px' }}>✓</span>}
+                                        </span>
+                                        <span style={{ color: '#64748b', fontSize: '0.75rem', fontFamily: 'DM Mono' }}>
+                                            ORGANIZATION • {org.follower_count || 0} followers
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {/* PLAYERS */}
+                            {searchResults.users?.length > 0 && searchResults.users.map((u, i) => (
+                                <div key={`usr-${i}`} className="explore-search-result" onClick={() => navigate(`/profile/${u.username}`)}
+                                    style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+                                            <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.username)}&background=1e293b&color=fff`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="User" />
                                         </div>
-                                    ))}
-                                </section>
-                            )}
-                            {(searchScope === 'ALL' || searchScope === 'ORGS') && searchResults.orgs?.length > 0 && (
-                                <section className="explore-section">
-                                    <h2 className="explore-section-title" style={{ padding: '0 16px', marginTop: '16px' }}>ORGANIZATIONS</h2>
-                                    {searchResults.orgs.map((org, i) => (
-                                        <div key={i} className="explore-search-result" onClick={() => navigate(`/org/${org.slug || org.id}`)}
-                                            style={{ padding: '16px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
-                                                <img src={org.logo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(org.name)}&background=1e293b&color=fff`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Org" />
-                                            </div>
-                                            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                                                <span style={{ color: '#f1f5f9', fontFamily: 'Space Grotesk', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                    {org.name}
-                                                    {org.verified && <span style={{ color: '#2dd4bf', fontSize: '12px' }}>✓</span>}
-                                                </span>
-                                                <span style={{ color: '#64748b', fontSize: '0.7rem', fontFamily: 'DM Mono' }}>
-                                                    {org.follower_count || 0} followers
-                                                </span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </section>
-                            )}
-                            {(searchScope === 'ALL' || searchScope === 'PLAYERS') && searchResults.users?.length > 0 && (
-                                <section className="explore-section">
-                                    <h2 className="explore-section-title" style={{ padding: '0 16px', marginTop: '16px' }}>PLAYERS</h2>
-                                    {searchResults.users.map((u, i) => (
-                                        <div key={i} className="explore-search-result" onClick={() => navigate(`/profile/${u.username}`)}
-                                            style={{ padding: '16px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                            <div style={{ position: 'relative' }}>
-                                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
-                                                    <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.username)}&background=1e293b&color=fff`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="User" />
-                                                </div>
-                                                {/* Shape identity badge */}
-                                                <span className="explore-shape-badge" style={{ background: u.shape_color || '#f56e3d' }}>
-                                                    {u.shape || '○'}
-                                                </span>
-                                            </div>
-                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                <span style={{ color: '#f1f5f9', fontFamily: 'Space Grotesk', fontWeight: 'bold' }}>@{u.username}</span>
-                                                <span style={{ color: '#64748b', fontSize: '0.75rem', fontFamily: 'DM Mono' }}>{u.full_name}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </section>
-                            )}
+                                        <span className="explore-shape-badge" style={{ background: u.shape_color || '#f56e3d', width: '14px', height: '14px', fontSize: '8px', position: 'absolute', bottom: '-2px', right: '-2px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #000' }}>
+                                            {u.shape || '○'}
+                                        </span>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                                        <span style={{ color: '#f1f5f9', fontFamily: 'Space Grotesk', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.username}</span>
+                                        <span style={{ color: '#64748b', fontSize: '0.75rem', fontFamily: 'DM Mono', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.full_name}</span>
+                                    </div>
+                                </div>
+                            ))}
+
                             {(!searchResults.events?.length && !searchResults.orgs?.length && !searchResults.users?.length) && (
                                 <div style={{ padding: 40, textAlign: 'center', color: '#64748b', fontFamily: 'DM Mono, monospace' }}>NO TARGETS ACQUIRED</div>
                             )}
-                        </>
+                        </div>
                     ) : null}
                 </div>
             )}

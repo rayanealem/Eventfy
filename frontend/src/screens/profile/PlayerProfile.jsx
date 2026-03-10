@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -21,8 +21,10 @@ export default function PlayerProfile() {
     const queryClient = useQueryClient();
     const [activeTab, setActiveTab] = useState('events');
     const { showToast } = useToast();
-    const [connectionStatus, setConnectionStatus] = useState('none'); // 'none' | 'pending' | 'connected'
+    const [connectionStatus, setConnectionStatus] = useState('none');
     const [showConnectionsSheet, setShowConnectionsSheet] = useState(false);
+    const [isFollowing, setIsFollowing] = useState(false);
+    const [localFollowerDelta, setLocalFollowerDelta] = useState(0);
 
     // Detect @me or missing username as "own profile"
     const isOwnProfile = !username || username === '@me' || username === myProfile?.username;
@@ -76,7 +78,7 @@ export default function PlayerProfile() {
     const level = p.level || 1;
     const eventCount = p.event_count || p.events_attended || 0;
     const badgeCount = p.badge_count || p.user_badges?.length || 0;
-    const followerCount = p.follower_count || 0;
+    const followerCount = (p.follower_count || 0) + localFollowerDelta;
     const followingCount = p.following_count || 0;
     const bio = p.bio || '';
     const location = p.wilaya ? `Wilaya ${p.wilaya}` : p.city || '';
@@ -86,6 +88,29 @@ export default function PlayerProfile() {
     const xpProgress = xpToNext > 0 ? Math.min(100, Math.round((xp % 1000) / xpToNext * 100)) : 0;
 
     const passport = passportData?.entries || (Array.isArray(passportData) ? passportData : []);
+
+    // Sync isFollowing from profile data
+    useEffect(() => {
+        if (effectiveProfile?.is_following !== undefined) {
+            setIsFollowing(effectiveProfile.is_following);
+        }
+    }, [effectiveProfile?.is_following]);
+
+    // Follow/unfollow mutation
+    const toggleFollow = async () => {
+        haptic();
+        const wasFollowing = isFollowing;
+        setIsFollowing(!wasFollowing);
+        setLocalFollowerDelta(prev => wasFollowing ? prev - 1 : prev + 1);
+        try {
+            await api(wasFollowing ? 'DELETE' : 'POST', `/users/follow/${p.id}`);
+            showToast(wasFollowing ? 'UNFOLLOWED' : 'FOLLOWING ✓', 'success');
+        } catch (err) {
+            setIsFollowing(wasFollowing);
+            setLocalFollowerDelta(prev => wasFollowing ? prev + 1 : prev - 1);
+            showToast(err?.message || 'FOLLOW FAILED', 'error');
+        }
+    };
 
     // Connection mutation
     const connectMutation = useMutation({
@@ -230,6 +255,12 @@ export default function PlayerProfile() {
             {!isOwnProfile && (
                 <div className="profile-action-row">
                     <button
+                        className={`profile-connect-btn ${isFollowing ? 'connected' : ''}`}
+                        onClick={toggleFollow}
+                    >
+                        {isFollowing ? 'FOLLOWING ✓' : 'FOLLOW ○'}
+                    </button>
+                    <button
                         className={`profile-connect-btn ${connectionStatus === 'connected' ? 'connected' :
                             connectionStatus === 'pending' ? 'pending' : ''
                             }`}
@@ -331,10 +362,7 @@ export default function PlayerProfile() {
 
                 {activeTab === 'saved' && (
                     <motion.div key="saved" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                        <div style={{ padding: '60px 24px', textAlign: 'center' }}>
-                            <span style={{ display: 'block', fontSize: '40px', marginBottom: '16px', opacity: 0.2 }}>◇</span>
-                            <span style={{ color: '#64748b', fontFamily: 'DM Mono, monospace', fontSize: '12px' }}>SAVED EVENTS WILL APPEAR HERE</span>
-                        </div>
+                        <SavedEventsTab isOwnProfile={isOwnProfile} navigate={navigate} />
                     </motion.div>
                 )}
 
@@ -415,6 +443,86 @@ export default function PlayerProfile() {
                     </>
                 )}
             </AnimatePresence>
+        </div>
+    );
+}
+
+function SavedEventsTab({ isOwnProfile, navigate }) {
+    const [savedEvents, setSavedEvents] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!isOwnProfile) { setLoading(false); return; }
+        (async () => {
+            try {
+                const data = await api('GET', '/events/me/saved');
+                setSavedEvents(data.events || []);
+            } catch (e) {
+                console.error('Failed to load saved events:', e);
+            } finally {
+                setLoading(false);
+            }
+        })();
+    }, [isOwnProfile]);
+
+    if (!isOwnProfile) {
+        return (
+            <div style={{ padding: '60px 24px', textAlign: 'center' }}>
+                <span style={{ display: 'block', fontSize: '40px', marginBottom: '16px', opacity: 0.2 }}>◇</span>
+                <span style={{ color: '#64748b', fontFamily: 'DM Mono, monospace', fontSize: '12px' }}>SAVED EVENTS ARE PRIVATE</span>
+            </div>
+        );
+    }
+
+    if (loading) {
+        return (
+            <div style={{ padding: '40px', textAlign: 'center' }}>
+                <div style={{ width: '24px', height: '24px', border: '2px solid rgba(45,212,191,0.15)', borderTopColor: '#2dd4bf', borderRadius: '50%', margin: '0 auto', animation: 'spin 0.7s linear infinite' }} />
+            </div>
+        );
+    }
+
+    if (savedEvents.length === 0) {
+        return (
+            <div style={{ padding: '60px 24px', textAlign: 'center' }}>
+                <span style={{ display: 'block', fontSize: '40px', marginBottom: '16px', opacity: 0.2 }}>◇</span>
+                <span style={{ color: '#64748b', fontFamily: 'DM Mono, monospace', fontSize: '12px' }}>NO SAVED EVENTS YET — TAP THE BOOKMARK ICON ON ANY EVENT</span>
+            </div>
+        );
+    }
+
+    const TYPE_SHAPES = { sport: '○', science: '△', charity: '□', cultural: '◇' };
+    const TYPE_COLORS = { sport: '#f56e3d', science: '#fbbf24', charity: '#2dd4bf', cultural: '#a855f7' };
+
+    return (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2px', padding: '2px 0' }}>
+            {savedEvents.map((event, i) => {
+                const coverUrl = event.cover_url || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=200&h=200&fit=crop';
+                const entryType = event.event_type || 'sport';
+                return (
+                    <motion.div
+                        key={event.id || i}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        viewport={{ once: true }}
+                        onClick={() => navigate(`/event/${event.id}`)}
+                        style={{ position: 'relative', paddingBottom: '100%', cursor: 'pointer', overflow: 'hidden', background: '#1a1d2e' }}
+                    >
+                        <img src={coverUrl} alt={event.title || 'Event'} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 40%)' }} />
+                        <span className="pp-event-shape-overlay" style={{ color: TYPE_COLORS[entryType] || '#f56e3d' }}>{TYPE_SHAPES[entryType] || '○'}</span>
+                        {/* Bookmark indicator */}
+                        <div style={{ position: 'absolute', top: '4px', right: '4px', width: '16px', height: '16px', borderRadius: '50%', background: 'rgba(217,70,239,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <svg width="8" height="10" viewBox="0 0 24 24" fill="white"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" /></svg>
+                        </div>
+                        <div style={{ position: 'absolute', bottom: '6px', left: '6px', right: '6px' }}>
+                            <div style={{ fontFamily: 'Space Grotesk', fontWeight: 'bold', fontSize: '9px', color: 'white', lineHeight: '11px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                {event.title?.toUpperCase() || 'EVENT'}
+                            </div>
+                        </div>
+                    </motion.div>
+                );
+            })}
         </div>
     );
 }

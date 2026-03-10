@@ -9,11 +9,30 @@ from models.event import (
     VolunteerReview, TeamCreate, TeamMemberRole, BroadcastMessage,
     VolunteerRoleCreate, TicketTierCreate, SpeakerCreate, PerformerCreate,
     SportDetails, ScienceDetails, CharityDetails, CulturalDetails,
+    CommentCreate,
 )
 from utils.xp_engine import award_xp
 import re
 
 router = APIRouter()
+
+
+# ── Saved Events ──────────────────────────────────────
+
+@router.get("/me/saved")
+async def get_my_saved_events(page: int = 1, limit: int = 20, user=Depends(get_current_user)):
+    """Get events saved/bookmarked by the current user."""
+    offset = (page - 1) * limit
+    saved = (
+        supabase.table("saved_events")
+        .select("event_id, events(*, organizations(name, logo_url, slug, verified))")
+        .eq("user_id", user["id"])
+        .order("created_at", desc=True)
+        .range(offset, offset + limit - 1)
+        .execute()
+    )
+    events = [s["events"] for s in (saved.data or []) if s.get("events")]
+    return {"events": events, "has_more": len(events) == limit}
 
 
 def _slugify(text: str) -> str:
@@ -71,6 +90,7 @@ async def event_feed(
             starts_at, ends_at, venue_name, city, wilaya,
             cover_url, tags, capacity, registration_count,
             checkin_count, view_count, is_paid, is_international,
+            like_count, comment_count, is_live,
             fundraising_goal, fundraising_current,
             organizations!org_id (
                 id, name, slug, logo_url, verified
@@ -93,8 +113,10 @@ async def event_feed(
 
     events = query.execute()
 
-    # Get which events this user is registered for
+    # Get which events this user is registered for, liked, and saved
     registered_ids = []
+    liked_ids = []
+    saved_ids = []
     if user:
         registrations = (
             supabase.table("event_registrations")
@@ -104,9 +126,27 @@ async def event_feed(
         )
         registered_ids = [r["event_id"] for r in (registrations.data or [])]
 
+        likes = (
+            supabase.table("event_likes")
+            .select("event_id")
+            .eq("user_id", user["id"])
+            .execute()
+        )
+        liked_ids = [r["event_id"] for r in (likes.data or [])]
+
+        saves = (
+            supabase.table("saved_events")
+            .select("event_id")
+            .eq("user_id", user["id"])
+            .execute()
+        )
+        saved_ids = [r["event_id"] for r in (saves.data or [])]
+
     return {
         "events": events.data or [],
         "registered_event_ids": registered_ids,
+        "liked_event_ids": liked_ids,
+        "saved_event_ids": saved_ids,
         "page": page,
         "has_more": len(events.data or []) == limit,
     }
@@ -419,6 +459,93 @@ async def unsave_event(event_id: str, user=Depends(get_current_user)):
         "user_id", user["id"]
     ).eq("event_id", event_id).execute()
     return {"saved": False}
+
+
+# ── Like / Comment ────────────────────────────────────
+
+@router.post("/{event_id}/like")
+async def like_event(event_id: str, user=Depends(get_current_user)):
+    """Like an event."""
+    event = supabase.table("events").select("id, like_count").eq("id", event_id).single().execute()
+    if not event.data:
+        raise HTTPException(404, "Event not found")
+
+    # Upsert into event_likes (idempotent)
+    supabase.table("event_likes").upsert({
+        "event_id": event_id,
+        "user_id": user["id"],
+    }).execute()
+
+    # Increment like_count on the event
+    supabase.table("events").update({
+        "like_count": (event.data.get("like_count") or 0) + 1,
+    }).eq("id", event_id).execute()
+
+    return {"liked": True}
+
+
+@router.delete("/{event_id}/like")
+async def unlike_event(event_id: str, user=Depends(get_current_user)):
+    """Remove like from an event."""
+    event = supabase.table("events").select("id, like_count").eq("id", event_id).single().execute()
+    if not event.data:
+        raise HTTPException(404, "Event not found")
+
+    # Delete the like row
+    supabase.table("event_likes").delete().eq(
+        "event_id", event_id
+    ).eq("user_id", user["id"]).execute()
+
+    # Decrement like_count, clamped to 0
+    supabase.table("events").update({
+        "like_count": max(0, (event.data.get("like_count") or 0) - 1),
+    }).eq("id", event_id).execute()
+
+    return {"liked": False}
+
+
+@router.post("/{event_id}/comment")
+async def comment_on_event(event_id: str, body: CommentCreate, user=Depends(get_current_user)):
+    """Add a comment on an event."""
+    event = supabase.table("events").select("id, comment_count").eq("id", event_id).single().execute()
+    if not event.data:
+        raise HTTPException(404, "Event not found")
+
+    # Insert the comment
+    comment = supabase.table("event_comments").insert({
+        "event_id": event_id,
+        "user_id": user["id"],
+        "content": body.content,
+    }).execute()
+
+    # Increment comment_count on the event
+    supabase.table("events").update({
+        "comment_count": (event.data.get("comment_count") or 0) + 1,
+    }).eq("id", event_id).execute()
+
+    return comment.data[0] if comment.data else {"commented": True}
+
+
+@router.get("/{event_id}/comments")
+async def get_event_comments(
+    event_id: str,
+    page: int = 1,
+    limit: int = 20,
+):
+    """Get comments for an event, with author profiles."""
+    comments = (
+        supabase.table("event_comments")
+        .select("*, profiles!user_id(username, full_name, avatar_url, shape, shape_color, player_number)")
+        .eq("event_id", event_id)
+        .order("created_at", desc=False)
+        .range((page - 1) * limit, page * limit - 1)
+        .execute()
+    )
+
+    return {
+        "comments": comments.data or [],
+        "has_more": len(comments.data or []) == limit,
+    }
 
 
 @router.get("/{event_id}/registrations")

@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/v1'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8005/v1'
 
 /**
  * API call helper — attaches JWT from current Supabase session.

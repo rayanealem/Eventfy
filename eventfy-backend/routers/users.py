@@ -9,8 +9,92 @@ from models.user import SkillCreate, ConnectionRequest
 router = APIRouter()
 
 
+# ── User-to-User Following ──────────────────────────
+
+@router.post("/follow/{target_user_id}")
+async def follow_user(target_user_id: str, user=Depends(get_current_user)):
+    """Follow another user (Instagram-style, one-way)."""
+    if target_user_id == user["id"]:
+        raise HTTPException(400, "Cannot follow yourself")
+    supabase.table("user_follows").upsert({
+        "follower_id": user["id"],
+        "following_id": target_user_id,
+    }).execute()
+    # Increment counts
+    supabase.table("profiles").update({
+        "following_count": (user.get("following_count") or 0) + 1,
+    }).eq("id", user["id"]).execute()
+    target = supabase.table("profiles").select("follower_count").eq("id", target_user_id).single().execute()
+    if target.data:
+        supabase.table("profiles").update({
+            "follower_count": (target.data.get("follower_count") or 0) + 1,
+        }).eq("id", target_user_id).execute()
+    # Notification
+    try:
+        supabase.table("notifications").insert({
+            "user_id": target_user_id,
+            "type": "new_follower",
+            "title": "New Follower",
+            "body": f"{user['full_name']} started following you",
+            "data": {"follower_id": user["id"]},
+        }).execute()
+    except Exception:
+        pass
+    return {"following": True}
+
+
+@router.delete("/follow/{target_user_id}")
+async def unfollow_user(target_user_id: str, user=Depends(get_current_user)):
+    """Unfollow a user."""
+    supabase.table("user_follows").delete().eq(
+        "follower_id", user["id"]
+    ).eq("following_id", target_user_id).execute()
+    # Decrement counts
+    supabase.table("profiles").update({
+        "following_count": max(0, (user.get("following_count") or 0) - 1),
+    }).eq("id", user["id"]).execute()
+    target = supabase.table("profiles").select("follower_count").eq("id", target_user_id).single().execute()
+    if target.data:
+        supabase.table("profiles").update({
+            "follower_count": max(0, (target.data.get("follower_count") or 0) - 1),
+        }).eq("id", target_user_id).execute()
+    return {"following": False}
+
+
+@router.get("/followers/{user_id}")
+async def get_followers(user_id: str, page: int = 1, limit: int = 20):
+    """List users who follow this user."""
+    offset = (page - 1) * limit
+    data = (
+        supabase.table("user_follows")
+        .select("follower_id, profiles!user_follows_follower_id_fkey(id, username, full_name, avatar_url, shape, shape_color)")
+        .eq("following_id", user_id)
+        .order("created_at", desc=True)
+        .range(offset, offset + limit - 1)
+        .execute()
+    )
+    followers = [r["profiles"] for r in (data.data or []) if r.get("profiles")]
+    return {"followers": followers, "has_more": len(followers) == limit}
+
+
+@router.get("/following/{user_id}")
+async def get_following(user_id: str, page: int = 1, limit: int = 20):
+    """List users this user follows."""
+    offset = (page - 1) * limit
+    data = (
+        supabase.table("user_follows")
+        .select("following_id, profiles!user_follows_following_id_fkey(id, username, full_name, avatar_url, shape, shape_color)")
+        .eq("follower_id", user_id)
+        .order("created_at", desc=True)
+        .range(offset, offset + limit - 1)
+        .execute()
+    )
+    following = [r["profiles"] for r in (data.data or []) if r.get("profiles")]
+    return {"following": following, "has_more": len(following) == limit}
+
+
 @router.get("/{username}")
-async def get_user_profile(username: str):
+async def get_user_profile(username: str, user=Depends(get_optional_user)):
     """Get public profile by username."""
     profile = (
         supabase.table("profiles")
@@ -22,11 +106,25 @@ async def get_user_profile(username: str):
     if not profile.data:
         raise HTTPException(404, "User not found")
 
-    # Don't expose private profiles (unless it's the user themselves)
+    # Don't expose private profiles
     if profile.data.get("visibility") == "private":
         return {"id": profile.data["id"], "username": username, "visibility": "private"}
 
-    return profile.data
+    result = profile.data
+
+    # Check if the current user follows this profile
+    result["is_following"] = False
+    if user and user["id"] != result["id"]:
+        follow_check = (
+            supabase.table("user_follows")
+            .select("follower_id")
+            .eq("follower_id", user["id"])
+            .eq("following_id", result["id"])
+            .execute()
+        )
+        result["is_following"] = bool(follow_check.data)
+
+    return result
 
 
 @router.get("/{username}/passport")

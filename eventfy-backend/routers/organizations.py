@@ -41,8 +41,69 @@ async def list_orgs(
     return {"organizations": result.data or []}
 
 
+# ── Org Dashboard ──────────────────────────────────────
+
+@router.get("/me/dashboard")
+async def org_dashboard(user=Depends(require_org)):
+    """Get org dashboard data for the authenticated organizer."""
+    # Find the org this user owns or manages
+    membership = (
+        supabase.table("org_members")
+        .select("org_id, role, organizations(*)")
+        .eq("user_id", user["id"])
+        .execute()
+    )
+    if not membership.data:
+        raise HTTPException(404, "No organization found for this user")
+
+    # Use the first org membership found
+    org_data = membership.data[0].get("organizations")
+    if not org_data:
+        raise HTTPException(404, "Organization not found")
+
+    org_id = org_data["id"]
+
+    # Fetch all events for this org
+    events = (
+        supabase.table("events")
+        .select("id, title, cover_url, starts_at, status, registration_count, capacity, is_live")
+        .eq("org_id", org_id)
+        .order("starts_at", desc=True)
+        .execute()
+    )
+    event_list = events.data or []
+    event_ids = [e["id"] for e in event_list]
+
+    # Count pending volunteer applications for these events
+    pending_volunteers = []
+    if event_ids:
+        vol_apps = (
+            supabase.table("volunteer_applications")
+            .select("*, volunteer_roles(name)")
+            .in_("event_id", event_ids)
+            .eq("status", "pending")
+            .execute()
+        )
+        pending_volunteers = vol_apps.data or []
+
+    # Calculate stats
+    total_registrations = sum(e.get("registration_count", 0) for e in event_list)
+
+    return {
+        "org": org_data,
+        "events": event_list,
+        "stats": {
+            "total_events": len(event_list),
+            "total_registrations": total_registrations,
+            "follower_count": org_data.get("follower_count", 0),
+            "pending_volunteers": len(pending_volunteers),
+        },
+        "pending_volunteers": pending_volunteers,
+    }
+
+
 @router.get("/{slug}")
-async def get_org_profile(slug: str):
+async def get_org_profile(slug: str, user=Depends(get_optional_user)):
     """Get org profile by slug."""
     org = (
         supabase.table("organizations")
@@ -53,7 +114,22 @@ async def get_org_profile(slug: str):
     )
     if not org.data:
         raise HTTPException(404, "Organization not found")
-    return org.data
+
+    result = org.data
+
+    # Check if the current user follows this org
+    result["is_following"] = False
+    if user:
+        follow_check = (
+            supabase.table("org_followers")
+            .select("id")
+            .eq("org_id", result["id"])
+            .eq("user_id", user["id"])
+            .execute()
+        )
+        result["is_following"] = bool(follow_check.data)
+
+    return result
 
 
 @router.post("")

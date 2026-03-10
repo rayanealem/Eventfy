@@ -25,6 +25,7 @@ class EventCreate(BaseModel):
     longitude: Optional[float] = None
     is_online: bool = False
     online_url: Optional[str] = None
+    is_live: bool = False
     is_international: bool = False
 
     # Capacity
@@ -66,6 +67,7 @@ class EventUpdate(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     is_online: Optional[bool] = None
+    is_live: Optional[bool] = None
     online_url: Optional[str] = None
     capacity: Optional[int] = None
     waitlist_enabled: Optional[bool] = None
@@ -166,3 +168,7 @@ class VolunteerRoleCreate(BaseModel):
     shift_start: Optional[str] = None
     shift_end: Optional[str] = None
     sort_order: int = 0
+
+
+class CommentCreate(BaseModel):
+    content: str

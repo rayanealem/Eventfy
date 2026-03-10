@@ -411,7 +411,15 @@
 .feed-card-org {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 8px;
+}
+
+.feed-card-org-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
 }
 
 .feed-card-org-icon {
@@ -438,10 +446,42 @@
     letter-spacing: 1.1px;
     text-transform: uppercase;
     line-height: 16.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .feed-card-verified {
     flex-shrink: 0;
+}
+
+/* Follow Button */
+.feed-follow-btn {
+    flex-shrink: 0;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    font-size: 9px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.6);
+    white-space: nowrap;
+}
+
+.feed-follow-btn:hover {
+    border-color: rgba(255, 255, 255, 0.4);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.feed-follow-btn.following {
+    background: rgba(45, 212, 191, 0.12);
+    border-color: rgba(45, 212, 191, 0.3);
+    color: #2dd4bf;
 }
 
 /* Tags */
@@ -961,4 +1001,89 @@
 .comment-sheet-send:disabled {
     opacity: 0.3;
     cursor: not-allowed;
+}
+
+/* Comment Rows — Instagram-style */
+.comment-row {
+    display: flex;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.comment-row:last-child {
+    border-bottom: none;
+}
+
+.comment-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: #1e293b;
+}
+
+.comment-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.comment-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+
+.comment-username {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: #2dd4bf;
+    letter-spacing: 0.3px;
+}
+
+.comment-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: #475569;
+    letter-spacing: 0.3px;
+}
+
+.comment-text {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    color: #cbd5e1;
+    line-height: 1.4;
+    margin: 0;
+    word-break: break-word;
+}
+
+/* Comment Loading */
+.comment-sheet-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 40px 0;
+    color: #475569;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.3px;
+}
+
+.comment-loading-spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid rgba(45, 212, 191, 0.15);
+    border-top-color: #2dd4bf;
+    border-radius: 50%;
+    animation: commentSpin 0.7s linear infinite;
+}
+
+@keyframes commentSpin {
+    to {
+        transform: rotate(360deg);
+    }
 }

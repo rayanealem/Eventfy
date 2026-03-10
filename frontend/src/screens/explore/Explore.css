@@ -141,6 +141,12 @@
     color: #ff4d4d;
 }
 
+.explore-search-dropdown {
+    background: #0d0f1a;
+    width: 100%;
+    z-index: 50;
+}
+
 /* ===== TRENDING ===== */
 .explore-trending-scroll {
     display: flex;

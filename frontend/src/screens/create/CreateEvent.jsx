@@ -141,6 +141,7 @@ export default function CreateEvent() {
                 waitlist_enabled: waitlist,
                 team_mode: teamMode,
                 is_paid: pricing === 'PAID',
+                is_live: isLive,
                 xp_checkin: xpCheckin,
                 xp_completion: xpCompletion,
                 xp_winner: 0,
@@ -333,6 +334,13 @@ export default function CreateEvent() {
                                     <span className="ce-toggle-label">TEAM MODE □</span>
                                     <div className={`ce-toggle ${teamMode ? 'active' : ''}`} onClick={() => setTeamMode(t => !t)} style={{ cursor: 'pointer' }}>
                                         <div className="ce-toggle-dot" />
+                                    </div>
+                                </div>
+
+                                <div className="ce-toggle-row">
+                                    <span className="ce-toggle-label" style={{ color: '#ef4444' }}>IS LIVE NOW? ○</span>
+                                    <div className={`ce-toggle ${isLive ? 'active' : ''}`} onClick={() => setIsLive(l => !l)} style={{ cursor: 'pointer', borderColor: isLive ? '#ef4444' : '' }}>
+                                        <div className="ce-toggle-dot" style={{ background: isLive ? '#ef4444' : '' }} />
                                     </div>
                                 </div>
 

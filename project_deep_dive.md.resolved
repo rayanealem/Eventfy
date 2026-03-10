@@ -1,0 +1,142 @@
+# Eventfy — Project Deep Dive Summary
+
+## Architecture Overview
+
+```mermaid
+graph TD
+    A["React 19 + Vite Frontend"] -->|"api(method, path, body)"| B["FastAPI Backend /v1/*"]
+    A -->|"Direct Auth/Realtime"| C["Supabase"]
+    B -->|"supabase-py"| C
+    C -->|"PostgreSQL 15 + PostGIS"| D["Database"]
+    C -->|"Realtime"| E["WebSocket Channels"]
+    C -->|"Storage"| F["Buckets: avatars, events, orgs, certs, stories, posts"]
+```
+
+---
+
+## Frontend (`frontend/src/`)
+
+### Core Stack
+| Package | Version | Purpose |
+|---------|---------|---------|
+| React | 19.2 | UI framework |
+| Vite | 7.3 | Build tool |
+| react-router-dom | 7.13 | Routing (createBrowserRouter) |
+| framer-motion | 12.34 | Animations & page transitions |
+| @tanstack/react-query | 5.90 | Server state (5min stale) |
+| @supabase/supabase-js | 2.98 | Auth, realtime, storage |
+| lucide-react | 0.577 | Icons |
+
+### Entry Point Chain
+`main.jsx` → `StrictMode` → `QueryClientProvider` → `AuthProvider` → `EventStoreProvider` → `App.jsx` → `AppRouter.jsx`
+
+### API Helper (`lib/api.js`)
+```javascript
+// ✅ Correct usage:
+api('GET', '/events/feed')
+api('POST', '/events/123/register', { ticket_tier_id: '...' })
+
+// ❌ WRONG (will crash):
+api.get('/events/feed')     // TypeError
+api('/events/feed')          // Missing method
+res.data                     // No .data wrapper — returns parsed JSON directly
+```
+
+Also exports `apiUpload(path, file, fieldName)` for file uploads.
+
+### Route Guards ([AuthGuard.jsx](file:///d:/Eventfy-fig/frontend/src/router/guards/AuthGuard.jsx))
+| Guard | Behavior |
+|-------|----------|
+| `AuthGuard` | Requires user + profile. Redirects to `/splash` if no user, `/onboarding/1` (or `/org/setup` for orgs) if `!onboarding_done` |
+| `GuestGuard` | Only unauthenticated. Redirects authenticated to `/feed` or onboarding |
+| `OrgGuard` | Requires `role === 'organizer'`. Redirects non-orgs to `/feed` |
+| `AdminGuard` | Requires `role` in `['local_admin', 'global_admin']` |
+
+### Context Providers
+- **AuthContext**: `user`, `profile`, `loading`, `supabase`, `signOut()`, `refreshProfile()`
+- **EventStore**: Reducer-based store for `registeredEvents`, `savedEvents`, `followedOrgs`, `feedScrollY` with optimistic operations
+
+### Design System ([index.css](file:///d:/Eventfy-fig/frontend/src/index.css))
+| Token | Value |
+|-------|-------|
+| `--color-bg` | `#0A0A0F` |
+| `--color-coral` | `#fb5151` |
+| `--color-teal` | `#00ffc2` |
+| `--color-gold` | `#ffd700` |
+| `--color-pink` | `#ff2d78` |
+| `--color-blue` | `#3b82f6` |
+| `--font-display` | Bebas Neue |
+| `--font-body` | Space Grotesk |
+| App max-width | 430px (mobile) |
+| Nav height | 72px |
+
+### Shape ↔ Category Mapping
+| Shape | Category | Color |
+|-------|----------|-------|
+| ○ circle | Sport | pink `#ff2d78` |
+| △ triangle | Science | gold `#ffd700` |
+| □ square | Charity | teal `#00ffc2` |
+| ◇ diamond | Cultural | blue `#3b82f6` |
+
+### Screens (25 folders, 35+ routes)
+All screens in `screens/` — each folder has `.jsx` + `.css`. Key screens: Feed, Explore, EventDetail (polymorphic by type), Chat/ChatHub, PlayerProfile, OrgProfile, CreateEvent, CommandCenter, AdminPanel, 6 onboarding steps, 4 auth screens.
+
+---
+
+## Backend (`eventfy-backend/`)
+
+### Stack
+FastAPI + supabase-py + python-jose (JWT) + Pillow
+
+### Router Prefixes
+| Router | Prefix | Key Endpoints |
+|--------|--------|--------------|
+| auth | `/v1/auth` | `/me`, login, register |
+| users | `/v1/users` | profile CRUD |
+| events | `/v1/events` | `/feed`, `/{id}`, `/create`, `/{id}/register` |
+| organizations | `/v1/orgs` | org CRUD, followers |
+| registrations | `/v1/registrations` | event registration |
+| volunteers | `/v1/volunteers` | apply, approve |
+| teams | `/v1/teams` | team CRUD |
+| qr | `/v1/qr` | generate/validate tokens |
+| chat | `/v1/chat` | channels, messages |
+| stories | `/v1/stories` | story CRUD |
+| notifications | `/v1/notifications` | CRUD, mark read |
+| gamification | `/v1/gamification` | XP, badges, scoreboard |
+| posts | `/v1/posts` | org announcements |
+| admin | `/v1/admin` | org approval, user mgmt |
+| search | `/v1/search` | unified search |
+| sponsorships | `/v1/sponsorships` | sponsor management |
+
+### Critical First-3 Endpoints
+1. `GET /v1/events/feed` — paginated feed with scope filter + registered IDs
+2. `GET /v1/events/{id}` — full event detail + polymorphic type data
+3. `GET /v1/auth/me` — user profile + badges + skills + managed orgs
+
+---
+
+## Database Schema (23+ tables)
+
+Core: `profiles`, `organizations`, `org_members`, `org_followers`, `events`
+
+Type-specific: `event_sport_details`, `event_science_details`, `event_charity_details`, `event_cultural_details`, `event_speakers`, `event_performers`, `event_ticket_tiers`, `event_doi_links`
+
+Registration: `event_registrations`, `volunteer_roles`, `volunteer_applications`, `teams`, `team_members`
+
+Social: `chat_channels`, `messages`, `message_reactions`, `polls`, `poll_votes`, `stories`, `story_frames`, `story_views`, `connections`, `notifications`, `posts`
+
+Gamification: `badges`, `user_badges`, `xp_transactions`, `skills`, `user_skills`, `certificates`
+
+Other: `qr_tokens`, `sponsorships`, `golden_tickets`
+
+---
+
+## Spec Documents
+| Doc | Lines | Purpose |
+|-----|-------|---------|
+| [prompt.md](file:///d:/Eventfy-fig/prompt.md) | 1037 | Complete navigation/routing reference — every screen, button, transition |
+| [EVENTFY_BACKEND_SPEC.md](file:///d:/Eventfy-fig/EVENTFY_BACKEND_SPEC.md) | 1805 | Full DB schema, RLS policies, API routes, realtime channels |
+| [EVENTFY_FULLSTACK_INTEGRATION.md](file:///d:/Eventfy-fig/EVENTFY_FULLSTACK_INTEGRATION.md) | 1433 | Phase-by-phase frontend↔backend wiring guide |
+
+## .agent Skills
+856 skills available in `.agent/skills/skills/` covering FastAPI, React, Supabase, Stitch UI, database design, testing, and more. Key relevant ones: `fastapi-pro`, `react-patterns`, `supabase-automation`, `stitch-ui-design`, `postgres-best-practices`.

@@ -56,6 +56,8 @@ export default function Feed() {
     const { profile } = useAuth();
     const { showToast } = useToast();
 
+    const isOrgRole = profile?.role === 'organizer' || profile?.role === 'local_admin' || profile?.role === 'global_admin';
+
     // State
     const [events, setEvents] = useState([]);
     const [registeredIds, setRegisteredIds] = useState(new Set());
@@ -63,11 +65,18 @@ export default function Feed() {
     const [activeFilter, setActiveFilter] = useState('all');
     const [loading, setLoading] = useState(true);
     const [followedOrgs, setFollowedOrgs] = useState([]);
+    const [followedOrgIds, setFollowedOrgIds] = useState(new Set());
     const [unreadCount, setUnreadCount] = useState(0);
     const [saved, setSaved] = useState({});
+    const [liked, setLiked] = useState({});
+    const [initialLiked, setInitialLiked] = useState({});
     const [seenStories, setSeenStories] = useState(new Set());
     const [commentSheetEventId, setCommentSheetEventId] = useState(null);
     const [commentText, setCommentText] = useState('');
+    const [commentsList, setCommentsList] = useState({});
+    const [commentsLoading, setCommentsLoading] = useState(false);
+    const [inlineComment, setInlineComment] = useState({});
+    const [localComments, setLocalComments] = useState({});
 
     // Pull-to-refresh
     const [refreshing, setRefreshing] = useState(false);
@@ -155,12 +164,33 @@ export default function Feed() {
 
             if (data.events && data.events.length > 0) {
                 setEvents(prev => pageNum === 1 ? data.events : [...prev, ...data.events]);
-                setHasMore(data.events.length === 5); // 5 is expected limit
+                setHasMore(data.events.length === 5);
             } else {
                 setHasMore(false);
             }
             if (data.registered_event_ids) {
                 setRegisteredIds(prev => new Set([...prev, ...data.registered_event_ids]));
+            }
+            // Task 2.1: Hydrate liked and saved state from server
+            if (data.liked_event_ids) {
+                const likedMap = {};
+                data.liked_event_ids.forEach(id => { likedMap[id] = true; });
+                if (pageNum === 1) {
+                    setLiked(likedMap);
+                    setInitialLiked(likedMap);
+                } else {
+                    setLiked(prev => ({ ...prev, ...likedMap }));
+                    setInitialLiked(prev => ({ ...prev, ...likedMap }));
+                }
+            }
+            if (data.saved_event_ids) {
+                const savedMap = {};
+                data.saved_event_ids.forEach(id => { savedMap[id] = true; });
+                if (pageNum === 1) {
+                    setSaved(savedMap);
+                } else {
+                    setSaved(prev => ({ ...prev, ...savedMap }));
+                }
             }
         } catch (e) {
             console.error('Feed load failed:', e);
@@ -189,7 +219,9 @@ export default function Feed() {
                 .from('org_followers')
                 .select('organizations(id, name, slug, logo_url)')
                 .eq('user_id', profile.id);
-            setFollowedOrgs(data?.map(f => f.organizations) || []);
+            const orgs = data?.map(f => f.organizations) || [];
+            setFollowedOrgs(orgs);
+            setFollowedOrgIds(new Set(orgs.map(o => o.id)));
         } catch { }
     }
 
@@ -208,23 +240,134 @@ export default function Feed() {
         }
     }
 
-    const toggleSave = (eventId) => {
+    const toggleSave = async (eventId) => {
         haptic();
-        setSaved(prev => ({ ...prev, [eventId]: !prev[eventId] }));
-        showToast(saved[eventId] ? 'REMOVED FROM SAVED' : 'EVENT SAVED ◇', 'success');
+        const isSaving = !saved[eventId];
+        setSaved(prev => ({ ...prev, [eventId]: isSaving }));
+        showToast(isSaving ? 'EVENT SAVED ◇' : 'REMOVED FROM SAVED', 'success');
+        try {
+            await api(isSaving ? 'POST' : 'DELETE', `/events/${eventId}/save`);
+        } catch (e) {
+            setSaved(prev => ({ ...prev, [eventId]: !isSaving }));
+        }
+    };
+
+    const toggleLike = async (eventId) => {
+        haptic();
+        const isLiking = !liked[eventId];
+        setLiked(prev => ({ ...prev, [eventId]: isLiking }));
+        try {
+            await api(isLiking ? 'POST' : 'DELETE', `/events/${eventId}/like`);
+        } catch (e) {
+            setLiked(prev => ({ ...prev, [eventId]: !isLiking }));
+        }
+    };
+
+    const handleInlineComment = async (eventId) => {
+        const text = inlineComment[eventId];
+        if (!text || !text.trim()) return;
+        haptic();
+        try {
+            const result = await api('POST', `/events/${eventId}/comment`, { content: text.trim() });
+            showToast('COMMENT POSTED ✓', 'success');
+            setInlineComment(prev => ({ ...prev, [eventId]: '' }));
+            setLocalComments(prev => ({ ...prev, [eventId]: (prev[eventId] || 0) + 1 }));
+            // Push into commentsList if loaded
+            if (commentsList[eventId]) {
+                const newComment = {
+                    ...result,
+                    profiles: { username: profile?.username, full_name: profile?.full_name, avatar_url: profile?.avatar_url, shape: profile?.shape, shape_color: profile?.shape_color, player_number: profile?.player_number },
+                    content: text.trim(),
+                    created_at: new Date().toISOString(),
+                };
+                setCommentsList(prev => ({ ...prev, [eventId]: [...(prev[eventId] || []), newComment] }));
+            }
+        } catch (err) {
+            showToast('COMMENT FAILED', 'error');
+        }
+    };
+
+    // Task 2.3: Fetch comments for the comment sheet
+    const openCommentSheet = async (eventId) => {
+        setCommentSheetEventId(eventId);
+        if (!commentsList[eventId]) {
+            setCommentsLoading(true);
+            try {
+                const data = await api('GET', `/events/${eventId}/comments?page=1&limit=50`);
+                setCommentsList(prev => ({ ...prev, [eventId]: data.comments || [] }));
+            } catch (e) {
+                console.error('Failed to load comments:', e);
+                setCommentsList(prev => ({ ...prev, [eventId]: [] }));
+            } finally {
+                setCommentsLoading(false);
+            }
+        }
     };
 
     const handleComment = async () => {
         if (!commentText.trim() || !commentSheetEventId) return;
         haptic();
         try {
-            await api('POST', `/posts/${commentSheetEventId}/comment`, { content: commentText.trim() });
+            const result = await api('POST', `/events/${commentSheetEventId}/comment`, { content: commentText.trim() });
             showToast('COMMENT SENT ✓', 'success');
+            setLocalComments(prev => ({ ...prev, [commentSheetEventId]: (prev[commentSheetEventId] || 0) + 1 }));
+            // Push comment into list immediately
+            const newComment = {
+                ...result,
+                profiles: { username: profile?.username, full_name: profile?.full_name, avatar_url: profile?.avatar_url, shape: profile?.shape, shape_color: profile?.shape_color, player_number: profile?.player_number },
+                content: commentText.trim(),
+                created_at: new Date().toISOString(),
+            };
+            setCommentsList(prev => ({ ...prev, [commentSheetEventId]: [...(prev[commentSheetEventId] || []), newComment] }));
             setCommentText('');
-            setCommentSheetEventId(null);
         } catch (err) {
             showToast('COMMENT FAILED', 'error');
         }
+    };
+
+    // Task 2.4: Follow/unfollow toggle
+    const toggleFollowOrg = async (orgId, e) => {
+        e.stopPropagation();
+        haptic();
+        const isFollowing = followedOrgIds.has(orgId);
+        // Optimistic update
+        setFollowedOrgIds(prev => {
+            const next = new Set(prev);
+            if (isFollowing) next.delete(orgId); else next.add(orgId);
+            return next;
+        });
+        showToast(isFollowing ? 'UNFOLLOWED' : 'FOLLOWING ✓', 'success');
+        try {
+            await api(isFollowing ? 'DELETE' : 'POST', `/orgs/${orgId}/follow`);
+        } catch (err) {
+            // Rollback
+            setFollowedOrgIds(prev => {
+                const next = new Set(prev);
+                if (isFollowing) next.add(orgId); else next.delete(orgId);
+                return next;
+            });
+            showToast('FOLLOW FAILED', 'error');
+        }
+    };
+
+    // Task 2.2: Compute like delta for display
+    const getLikeCount = (event) => {
+        const base = event.like_count || 0;
+        const wasLiked = !!initialLiked[event.id];
+        const nowLiked = !!liked[event.id];
+        if (nowLiked && !wasLiked) return base + 1;
+        if (!nowLiked && wasLiked) return Math.max(0, base - 1);
+        return base;
+    };
+
+    // Format relative time for comments
+    const formatRelativeTime = (dateStr) => {
+        const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+        if (diff < 60) return 'just now';
+        if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+        if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
+        return `${Math.floor(diff / 604800)}w`;
     };
 
     return (
@@ -386,7 +529,7 @@ export default function Feed() {
                                         {formatEventDate(event.starts_at)}
                                     </div>
                                     {/* LIVE NOW indicator */}
-                                    {event.status === 'live' && (
+                                    {event.is_live && (
                                         <div className="feed-live-badge">
                                             <span className="feed-live-dot" />
                                             LIVE
@@ -401,18 +544,28 @@ export default function Feed() {
                                     </h3>
 
                                     <div className="feed-card-org" onClick={(e) => { e.stopPropagation(); navigate(`/org/${org.slug}`); }} style={{ cursor: 'pointer' }}>
-                                        <div className="feed-card-org-icon">
-                                            <img
-                                                src={org.logo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(org.name || 'O')}&size=24&background=1e293b&color=fff`}
-                                                alt={org.name}
-                                            />
+                                        <div className="feed-card-org-left">
+                                            <div className="feed-card-org-icon">
+                                                <img
+                                                    src={org.logo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(org.name || 'O')}&size=24&background=1e293b&color=fff`}
+                                                    alt={org.name}
+                                                />
+                                            </div>
+                                            <span className="feed-card-org-name">{org.name?.toUpperCase()}</span>
+                                            {org.verified && (
+                                                <svg className="feed-card-verified" width="11" height="10.5" viewBox="0 0 11 11" fill="none">
+                                                    <circle cx="5.5" cy="5.5" r="5" fill="#2dd4bf" />
+                                                    <path d="M3.5 5.5L5 7L7.5 4" stroke="black" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            )}
                                         </div>
-                                        <span className="feed-card-org-name">{org.name?.toUpperCase()}</span>
-                                        {org.verified && (
-                                            <svg className="feed-card-verified" width="11" height="10.5" viewBox="0 0 11 11" fill="none">
-                                                <circle cx="5.5" cy="5.5" r="5" fill="#2dd4bf" />
-                                                <path d="M3.5 5.5L5 7L7.5 4" stroke="black" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                                            </svg>
+                                        {org.id && (
+                                            <button
+                                                className={`feed-follow-btn ${followedOrgIds.has(org.id) ? 'following' : ''}`}
+                                                onClick={(e) => toggleFollowOrg(org.id, e)}
+                                            >
+                                                {followedOrgIds.has(org.id) ? 'FOLLOWING ✓' : 'FOLLOW'}
+                                            </button>
                                         )}
                                     </div>
 
@@ -464,24 +617,41 @@ export default function Feed() {
                                     {/* Footer — actions left, register right */}
                                     <div className="feed-card-footer">
                                         <div className="feed-card-actions">
-                                            <button className="feed-card-action-btn" onClick={(e) => { e.stopPropagation(); toggleSave(event.id); }}>
+                                            {/* LIKE */}
+                                            <button className="feed-card-action-btn" onClick={(e) => { e.stopPropagation(); toggleLike(event.id); }}>
                                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                                                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
-                                                        stroke={saved[event.id] ? '#f43f5e' : 'rgba(255,255,255,0.5)'}
-                                                        fill={saved[event.id] ? '#f43f5e' : 'none'}
+                                                        stroke={liked[event.id] ? '#f43f5e' : 'rgba(255,255,255,0.5)'}
+                                                        fill={liked[event.id] ? '#f43f5e' : 'none'}
                                                         strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                                                 </svg>
                                             </button>
+                                            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '10px', marginRight: '6px', fontFamily: 'DM Mono' }}>{getLikeCount(event)}</span>
+
+                                            {/* COMMENT */}
+                                            <button className="feed-card-action-btn" onClick={(e) => { e.stopPropagation(); openCommentSheet(event.id); }}>
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
+                                                        stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                                                </svg>
+                                            </button>
+                                            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '10px', marginRight: '6px', fontFamily: 'DM Mono' }}>{(event.comment_count || 0) + (localComments[event.id] || 0)}</span>
+
+                                            {/* SAVE */}
+                                            <button className="feed-card-action-btn" onClick={(e) => { e.stopPropagation(); toggleSave(event.id); }}>
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"
+                                                        stroke={saved[event.id] ? '#d946ef' : 'rgba(255,255,255,0.5)'}
+                                                        fill={saved[event.id] ? '#d946ef' : 'none'}
+                                                        strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            </button>
+
+                                            {/* SHARE */}
                                             <button className="feed-card-action-btn" onClick={(e) => { e.stopPropagation(); if (navigator.share) navigator.share({ title: event.title, url: `/event/${event.id}` }); }}>
                                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                                                     <line x1="22" y1="2" x2="11" y2="13" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                                                     <polygon points="22 2 15 22 11 13 2 9 22 2" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" strokeLinejoin="round" fill="none" />
-                                                </svg>
-                                            </button>
-                                            <button className="feed-card-action-btn" onClick={(e) => { e.stopPropagation(); setCommentSheetEventId(event.id); }}>
-                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
-                                                        stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
                                                 </svg>
                                             </button>
                                         </div>
@@ -500,18 +670,15 @@ export default function Feed() {
                 })}
             </div>
 
-            {/* FAB */}
-            <Link to="/event/create" className="feed-fab" onClick={(e) => {
-                if (profile?.role !== 'organizer') {
-                    e.preventDefault();
-                    // Only org users can create events
-                }
-            }}>
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <line x1="10" y1="2" x2="10" y2="18" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-                    <line x1="2" y1="10" x2="18" y2="10" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-                </svg>
-            </Link>
+            {/* FAB — only for organizer/admin roles */}
+            {isOrgRole && (
+                <Link to="/event/create" className="feed-fab">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <line x1="10" y1="2" x2="10" y2="18" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+                        <line x1="2" y1="10" x2="18" y2="10" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+                    </svg>
+                </Link>
+            )}
             {/* Comment Bottom Sheet */}
             <AnimatePresence>
                 {commentSheetEventId && (
@@ -536,7 +703,31 @@ export default function Feed() {
                                 <button onClick={() => setCommentSheetEventId(null)}>✕</button>
                             </div>
                             <div className="comment-sheet-body">
-                                <p className="comment-sheet-empty">Be the first to comment on this event</p>
+                                {commentsLoading ? (
+                                    <div className="comment-sheet-loading">
+                                        <div className="comment-loading-spinner" />
+                                        <span>Loading comments...</span>
+                                    </div>
+                                ) : (commentsList[commentSheetEventId] || []).length === 0 ? (
+                                    <p className="comment-sheet-empty">Be the first to comment on this event</p>
+                                ) : (
+                                    (commentsList[commentSheetEventId] || []).map((c, idx) => (
+                                        <div key={c.id || idx} className="comment-row">
+                                            <img
+                                                className="comment-avatar"
+                                                src={c.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.profiles?.username || 'U')}&size=32&background=1e293b&color=fff`}
+                                                alt=""
+                                            />
+                                            <div className="comment-content">
+                                                <div className="comment-meta">
+                                                    <span className="comment-username">@{c.profiles?.username || 'user'}</span>
+                                                    <span className="comment-time">{formatRelativeTime(c.created_at)}</span>
+                                                </div>
+                                                <p className="comment-text">{c.content}</p>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
                             </div>
                             <button
                                 className="comment-sheet-see-all"

@@ -19,6 +19,8 @@ SQL_FILES = [
     "sql/03_functions.sql",
     "sql/04_saved_events.sql",
     "sql/05_user_stories.sql",
+    "sql/06_event_socials_and_live.sql",
+    "sql/07_event_counters_rpc.sql",
 ]
 
 # Connect to the database
