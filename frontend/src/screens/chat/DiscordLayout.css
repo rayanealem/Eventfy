@@ -1,0 +1,130 @@
+/* ====================================================
+   DISCORD LAYOUT CONTAINER
+   ==================================================== */
+
+:root {
+    --discord-bg: #313338;
+    --discord-sidebar: #2B2D31;
+    --discord-serverlist: #1E1F22;
+    --discord-header: #2B2D31;
+    --discord-text: #DBDEE1;
+    --discord-text-muted: #949BA4;
+    --discord-interactive: #B5BAC1;
+    --discord-interactive-active: #FFFFFF;
+    --discord-background-modifier-hover: rgba(78, 80, 88, 0.3);
+    --discord-background-modifier-selected: rgba(78, 80, 88, 0.6);
+    --discord-input-bg: #383A40;
+    --discord-brand: #5865F2;
+}
+
+.discord-master-layout {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+    background: var(--discord-bg);
+    color: var(--discord-text);
+    font-family: 'Lexend', 'Inter', sans-serif;
+    overflow: hidden;
+}
+
+/* ===== 1. Far-Left Server Bar ===== */
+.server-sidebar {
+    width: 72px;
+    height: 100%;
+    background: var(--discord-serverlist);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 12px;
+    gap: 8px;
+    flex-shrink: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 30;
+}
+
+.server-sidebar::-webkit-scrollbar {
+    display: none;
+}
+
+.server-icon-wrap {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    group: hover;
+}
+
+.server-icon-wrap .nav-pill {
+    position: absolute;
+    left: -16px;
+    width: 8px;
+    height: 8px;
+    background: var(--discord-text);
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    opacity: 0;
+}
+
+.server-icon-wrap:hover .nav-pill {
+    height: 20px;
+    opacity: 1;
+}
+
+.server-icon-wrap.active .nav-pill {
+    height: 40px;
+    opacity: 1;
+}
+
+.server-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 24px;
+    background: var(--discord-bg);
+    border: none;
+    color: var(--discord-text);
+    font-weight: 600;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    overflow: hidden;
+}
+
+.server-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.server-icon-wrap:hover .server-btn {
+    border-radius: 16px;
+    background: var(--discord-brand);
+    color: #fff;
+}
+
+.server-icon-wrap.active .server-btn {
+    border-radius: 16px;
+    background: var(--discord-brand);
+    color: #fff;
+}
+
+.server-separator {
+    width: 32px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.06);
+    margin: 4px 0;
+    border-radius: 1px;
+}
+
+/* Utility to override the Chat.css styles when wrapped */
+.chat-layout {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Slide in overlay functionality is handled inside Chat.css for the Channel/Member sidebars */

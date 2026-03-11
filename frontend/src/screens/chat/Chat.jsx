@@ -51,8 +51,8 @@ export default function Chat() {
     const queryClient = useQueryClient();
 
     // State for UI layout
-    const [leftPanelVisible, setLeftPanelVisible] = useState(true);
-    const [rightPanelVisible, setRightPanelVisible] = useState(true);
+    const [leftPanelVisible, setLeftPanelVisible] = useState(false);
+    const [rightPanelVisible, setRightPanelVisible] = useState(false);
     const [activeChannelId, setActiveChannelId] = useState(null);
     const [msgInput, setMsgInput] = useState('');
     const bottomRef = useRef(null);
@@ -84,32 +84,108 @@ export default function Chat() {
     // Fetch messages for active channel
     const { data: messages = [] } = useQuery({
         queryKey: ['messages', activeChannelId],
-        queryFn: () => api('GET', `/chat/channels/${activeChannelId}/messages`),
+        queryFn: async () => {
+            const data = await api('GET', `/chat/channels/${activeChannelId}/messages`);
+            if (Array.isArray(data)) return data;
+            if (data && Array.isArray(data.messages)) return data.messages;
+            return [];
+        },
         enabled: !!activeChannelId,
     });
 
-    // Real-time subscription for messages
-    useEffect(() => {
-        if (!activeChannelId) return;
+    // Supabase Presence and Typing state
+    const [presenceState, setPresenceState] = useState({});
+    const presenceChannelRef = useRef(null);
+    const typingTimeoutRef = useRef(null);
 
-        const channel = supabase
-            .channel(`chat:${activeChannelId}`)
+    // Real-time subscription for messages and presence
+    useEffect(() => {
+        if (!activeChannelId || !user) return;
+
+        // 1. Subscribe to messages
+        const messageChannel = supabase
+            .channel(`chat_messages:${activeChannelId}`)
             .on('postgres_changes', {
                 event: 'INSERT',
                 schema: 'public',
                 table: 'messages',
                 filter: `channel_id=eq.${activeChannelId}`,
-            }, payload => {
+            }, async payload => {
+                let newMsg = payload.new;
+
+                // Fetch full message to include joined profile data
+                try {
+                    const fullMsg = await api('GET', `/chat/messages/${newMsg.id}`);
+                    if (fullMsg) {
+                        newMsg = fullMsg;
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch full message data', error);
+                    newMsg.profiles = null; // fallback
+                }
+
                 queryClient.setQueryData(['messages', activeChannelId], (old = []) => {
-                    if (old.find(m => m.id === payload.new.id)) return old;
-                    return [...old, payload.new];
+                    if (old.find(m => m.id === newMsg.id)) return old;
+                    return [...old, newMsg];
                 });
                 setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
             })
             .subscribe();
 
-        return () => supabase.removeChannel(channel);
-    }, [activeChannelId, queryClient]);
+        // 2. Subscribe to presence
+        const presenceChannel = supabase.channel(`presence:${activeChannelId}`);
+        presenceChannelRef.current = presenceChannel;
+
+        presenceChannel
+            .on('presence', { event: 'sync' }, () => {
+                setPresenceState(presenceChannel.presenceState());
+            })
+            .subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await presenceChannel.track({
+                        user_id: user.id,
+                        username: profile?.username || 'Player',
+                        avatar_url: profile?.avatar_url,
+                        typing: false
+                    });
+                }
+            });
+
+        return () => {
+            supabase.removeChannel(messageChannel);
+            supabase.removeChannel(presenceChannel);
+        };
+    }, [activeChannelId, user, profile, queryClient]);
+
+    // Derived Presence data
+    const uniqueOnlineUsers = Array.from(new Map(Object.values(presenceState).flat().map(p => [p.user_id, p])).values());
+    const typingUsers = uniqueOnlineUsers.filter(p => p.typing && p.user_id !== user?.id);
+    const onlineCount = uniqueOnlineUsers.length;
+
+    // Handle typing input
+    const handleInputChange = (e) => {
+        setMsgInput(e.target.value);
+        if (presenceChannelRef.current && user) {
+            presenceChannelRef.current.track({
+                user_id: user.id,
+                username: profile?.username || 'Player',
+                avatar_url: profile?.avatar_url,
+                typing: true
+            });
+
+            clearTimeout(typingTimeoutRef.current);
+            typingTimeoutRef.current = setTimeout(() => {
+                if (presenceChannelRef.current) {
+                    presenceChannelRef.current.track({
+                        user_id: user.id,
+                        username: profile?.username || 'Player',
+                        avatar_url: profile?.avatar_url,
+                        typing: false
+                    });
+                }
+            }, 2000);
+        }
+    };
 
     // Send Message Mutation
     const sendMessageMutation = useMutation({
@@ -237,7 +313,6 @@ export default function Chat() {
         setContextMsg(msg);
     };
 
-    const onlineCount = members.filter(m => m.status === 'online').length;
     const totalCount = members.length;
 
     if (isLoading) {
@@ -251,6 +326,22 @@ export default function Chat() {
 
     return (
         <div className="chat-layout">
+            {/* Mobile Sidebar Overlay */}
+            <AnimatePresence>
+                {(leftPanelVisible || rightPanelVisible) && (
+                    <motion.div
+                        className="chat-mobile-overlay"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => {
+                            setLeftPanelVisible(false);
+                            setRightPanelVisible(false);
+                        }}
+                    />
+                )}
+            </AnimatePresence>
+
             {/* Left Sidebar: Channels */}
             <aside className={`chat-sidebar-left ${leftPanelVisible ? 'visible' : ''}`}>
                 <div className="sidebar-header">
@@ -410,6 +501,17 @@ export default function Chat() {
                 </div>
 
                 <div className="chat-input-wrapper">
+                    {/* Typing indicator */}
+                    {typingUsers.length > 0 && (
+                        <div className="chat-typing-indicator">
+                            <div className="typing-dots">
+                                <span></span><span></span><span></span>
+                            </div>
+                            {typingUsers.length === 1
+                                ? `${typingUsers[0].username.toUpperCase()} IS TYPING...`
+                                : 'MULTIPLE PLAYERS ARE TYPING...'}
+                        </div>
+                    )}
                     {/* Edit mode banner */}
                     {editingMsg && (
                         <div className="chat-edit-banner">
@@ -430,7 +532,7 @@ export default function Chat() {
                             type="text"
                             placeholder={editingMsg ? 'Edit your message...' : `Message #${activeChannel?.name || 'channel'}`}
                             value={msgInput}
-                            onChange={e => setMsgInput(e.target.value)}
+                            onChange={handleInputChange}
                             onKeyDown={e => e.key === 'Enter' && handleSend()}
                         />
                         <div className="input-actions">
@@ -445,9 +547,9 @@ export default function Chat() {
             {/* Right Sidebar: Members */}
             <aside className={`chat-sidebar-right ${rightPanelVisible ? 'visible' : ''}`}>
                 <div className="member-list-container">
-                    <div className="member-group">ONLINE — {members.filter(m => m.status === 'online').length}</div>
-                    {members.filter(m => m.status === 'online').map(member => (
-                        <div key={member.id} className="member-item">
+                    <div className="member-group">ONLINE — {onlineCount}</div>
+                    {uniqueOnlineUsers.map(member => (
+                        <div key={member.user_id} className="member-item">
                             <div className="member-avatar-wrap">
                                 <img src={member.avatar_url || 'https://via.placeholder.com/32'} alt={member.username} />
                                 <div className="status-indicator online"></div>
@@ -456,8 +558,8 @@ export default function Chat() {
                         </div>
                     ))}
 
-                    <div className="member-group">OFFLINE — {members.filter(m => m.status !== 'online').length}</div>
-                    {members.filter(m => m.status !== 'online').map(member => (
+                    <div className="member-group">OFFLINE — {members.filter(m => !uniqueOnlineUsers.find(u => u.user_id === m.id)).length}</div>
+                    {members.filter(m => !uniqueOnlineUsers.find(u => u.user_id === m.id)).map(member => (
                         <div key={member.id} className="member-item offline">
                             <div className="member-avatar-wrap">
                                 <img src={member.avatar_url || 'https://via.placeholder.com/32'} alt={member.username} />
