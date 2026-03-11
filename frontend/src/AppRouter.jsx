@@ -15,7 +15,7 @@ import EventDetail from './screens/event/EventDetail';
 import Explore from './screens/explore/Explore';
 import PlayerProfile from './screens/profile/PlayerProfile';
 import Chat from './screens/chat/Chat';
-import ChatHub from './screens/chat/ChatHub';
+import DiscordLayout from './screens/chat/DiscordLayout';
 import Notifications from './screens/notifications/Notifications';
 import Settings from './screens/settings/Settings';
 import OrgDashboard from './screens/org/OrgDashboard';
@@ -90,8 +90,8 @@ const router = createBrowserRouter([
             { path: 'scoreboard', element: <AuthGuard><Scoreboard /></AuthGuard> },
 
             // Social
-            { path: 'chat', element: <AuthGuard><ChatHub /></AuthGuard> },
-            { path: 'chat/:eventId', element: <AuthGuard><Chat /></AuthGuard> },
+            { path: 'chat', element: <AuthGuard><DiscordLayout /></AuthGuard> },
+            { path: 'chat/:eventId', element: <AuthGuard><DiscordLayout /></AuthGuard> },
             { path: 'stories/create', element: <AuthGuard><StoryCreate /></AuthGuard> },
             { path: 'stories/:orgId', element: <AuthGuard><Story /></AuthGuard> },
             { path: 'notifications', element: <AuthGuard><Notifications /></AuthGuard> },

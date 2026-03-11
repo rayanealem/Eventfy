@@ -1,18 +1,18 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
 import { haptic } from '../../lib/haptic';
+import ChatHub from './ChatHub';
 import './Chat.css';
 
 // Simple Markdown Renderer for Chat
 const renderContent = (content) => {
     if (!content) return null;
 
-    // Code blocks: ```code```
     const parts = content.split(/(```[\s\S]*?```)/g);
 
     return parts.map((part, i) => {
@@ -25,13 +25,7 @@ const renderContent = (content) => {
             );
         }
 
-        // Bold and Italic
         let text = part;
-        const segments = [];
-        let key = 0;
-
-        // This is a very basic way to handle it without external libs
-        // For a real Discord clone, we'd use react-markdown
         return (
             <span key={i} dangerouslySetInnerHTML={{
                 __html: text
@@ -44,44 +38,56 @@ const renderContent = (content) => {
     });
 };
 
-export default function Chat() {
+export default function Chat({ eventId: propEventId, isHomeView }) {
+    const { eventId: paramEventId } = useParams();
+    const eventId = propEventId || paramEventId;
     const navigate = useNavigate();
-    const { eventId } = useParams();
+
     const { user, profile } = useAuth();
     const queryClient = useQueryClient();
 
-    // State for UI layout
+    // Mobile specific layout controls
     const [leftPanelVisible, setLeftPanelVisible] = useState(false);
     const [rightPanelVisible, setRightPanelVisible] = useState(false);
-    const [activeChannelId, setActiveChannelId] = useState(null);
+    const [showHubsVisible, setShowHubsVisible] = useState(false);
+
+    const [selectedChannelId, setSelectedChannelId] = useState(null);
     const [msgInput, setMsgInput] = useState('');
     const bottomRef = useRef(null);
 
-    // Context menu, edit mode, reply mode
     const [contextMsg, setContextMsg] = useState(null);
     const [editingMsg, setEditingMsg] = useState(null);
     const [replyingTo, setReplyingTo] = useState(null);
     const longPressTimer = useRef(null);
 
-    // Fetch channels and initial data
+    // Fetch channels for the selected Event Hub
     const { data: chatData, isLoading, isError } = useQuery({
-        queryKey: ['chat', eventId],
+        queryKey: ['chat', eventId, isHomeView],
         queryFn: async () => {
-            const data = await api('GET', `/chat/channels/${eventId}`);
-            // If no active channel selected yet, pick the first one (usually #lobby or #general)
-            if (!activeChannelId && data?.channels?.length > 0) {
-                setActiveChannelId(data.channels[0].id);
+            if (isHomeView) {
+                const data = await api('GET', '/chat/dm');
+                return { channels: data || [], members: [] };
             }
+
+            if (!eventId) return { channels: [], members: [] };
+            
+            const data = await api('GET', `/chat/channels/${eventId}`);
             return data;
         },
-        enabled: !!eventId,
+        enabled: isHomeView ? true : !!eventId,
     });
 
     const channels = chatData?.channels || [];
     const members = chatData?.members || [];
+    const activeChannelId = selectedChannelId || (channels.length > 0 ? channels[0].id : null);
     const activeChannel = channels.find(c => c.id === activeChannelId) || channels[0];
 
-    // Fetch messages for active channel
+    // Reset selected channel when event changes
+    useEffect(() => {
+        setSelectedChannelId(null);
+    }, [eventId]);
+
+    // Fetch messages
     const { data: messages = [] } = useQuery({
         queryKey: ['messages', activeChannelId],
         queryFn: async () => {
@@ -93,16 +99,13 @@ export default function Chat() {
         enabled: !!activeChannelId,
     });
 
-    // Supabase Presence and Typing state
     const [presenceState, setPresenceState] = useState({});
     const presenceChannelRef = useRef(null);
     const typingTimeoutRef = useRef(null);
 
-    // Real-time subscription for messages and presence
     useEffect(() => {
         if (!activeChannelId || !user) return;
 
-        // 1. Subscribe to messages
         const messageChannel = supabase
             .channel(`chat_messages:${activeChannelId}`)
             .on('postgres_changes', {
@@ -112,16 +115,11 @@ export default function Chat() {
                 filter: `channel_id=eq.${activeChannelId}`,
             }, async payload => {
                 let newMsg = payload.new;
-
-                // Fetch full message to include joined profile data
                 try {
                     const fullMsg = await api('GET', `/chat/messages/${newMsg.id}`);
-                    if (fullMsg) {
-                        newMsg = fullMsg;
-                    }
+                    if (fullMsg) newMsg = fullMsg;
                 } catch (error) {
-                    console.error('Failed to fetch full message data', error);
-                    newMsg.profiles = null; // fallback
+                    newMsg.profiles = null;
                 }
 
                 queryClient.setQueryData(['messages', activeChannelId], (old = []) => {
@@ -132,7 +130,6 @@ export default function Chat() {
             })
             .subscribe();
 
-        // 2. Subscribe to presence
         const presenceChannel = supabase.channel(`presence:${activeChannelId}`);
         presenceChannelRef.current = presenceChannel;
 
@@ -157,12 +154,11 @@ export default function Chat() {
         };
     }, [activeChannelId, user, profile, queryClient]);
 
-    // Derived Presence data
     const uniqueOnlineUsers = Array.from(new Map(Object.values(presenceState).flat().map(p => [p.user_id, p])).values());
     const typingUsers = uniqueOnlineUsers.filter(p => p.typing && p.user_id !== user?.id);
     const onlineCount = uniqueOnlineUsers.length;
+    const totalCount = members.length;
 
-    // Handle typing input
     const handleInputChange = (e) => {
         setMsgInput(e.target.value);
         if (presenceChannelRef.current && user) {
@@ -187,7 +183,6 @@ export default function Chat() {
         }
     };
 
-    // Send Message Mutation
     const sendMessageMutation = useMutation({
         mutationFn: (text) => api('POST', `/chat/channels/${activeChannelId}/messages`, { content: text, msg_type: 'text' }),
         onMutate: async (newText) => {
@@ -217,13 +212,11 @@ export default function Chat() {
         if (!msgInput.trim() || !activeChannelId) return;
         haptic();
         let content = msgInput.trim();
-        // If replying, prepend quote
         if (replyingTo) {
             const quoted = replyingTo.content.slice(0, 60);
             content = `> ${quoted}\n${content}`;
             setReplyingTo(null);
         }
-        // If editing, call edit endpoint instead
         if (editingMsg) {
             api('PATCH', `/chat/messages/${editingMsg.id}`, { content }).catch(() => { });
             queryClient.setQueryData(['messages', activeChannelId], (old = []) =>
@@ -238,9 +231,7 @@ export default function Chat() {
     };
 
     const QUICK_REACTIONS = ['❤', '😂', '👍', '🔥', '👀', '✅'];
-    const CONTEXT_QUICK_REACTIONS = ['❤', '😂', '👍', '🔥', '👀', '✅'];
 
-    // Wired reaction mutation — calls POST /chat/messages/{id}/react
     const reactMutation = useMutation({
         mutationFn: ({ msgId, emoji }) => api('POST', `/chat/messages/${msgId}/react`, { emoji }),
         onMutate: async ({ msgId, emoji }) => {
@@ -269,7 +260,6 @@ export default function Chat() {
         reactMutation.mutate({ msgId, emoji });
     };
 
-    // Delete message
     const handleDeleteMessage = (msgId) => {
         if (String(msgId).startsWith('temp-')) return;
         api('DELETE', `/chat/messages/${msgId}`).catch(() => { });
@@ -279,27 +269,23 @@ export default function Chat() {
         setContextMsg(null);
     };
 
-    // Enter edit mode
     const handleEditMessage = (msg) => {
         setEditingMsg(msg);
         setMsgInput(msg.content);
         setContextMsg(null);
     };
 
-    // Enter reply mode
     const handleReply = (msg) => {
         setReplyingTo(msg);
         setContextMsg(null);
     };
 
-    // Copy text
     const handleCopy = (text) => {
         navigator.clipboard?.writeText(text);
         haptic();
         setContextMsg(null);
     };
 
-    // Long press handlers
     const onTouchStartMsg = (msg) => {
         longPressTimer.current = setTimeout(() => {
             haptic();
@@ -313,22 +299,21 @@ export default function Chat() {
         setContextMsg(msg);
     };
 
-    const totalCount = members.length;
-
-    if (isLoading) {
+    if (isLoading && eventId) {
         return (
             <div className="chat-loading">
                 <div className="spinner"></div>
-                <span>CONNECTING TO RTC...</span>
+                <h3 className="heading-3">SYNCING SIGNAL...</h3>
             </div>
         );
     }
 
     return (
-        <div className="chat-layout">
-            {/* Mobile Sidebar Overlay */}
+        <div className="chat-native-layout">
+            
+            {/* Nav Mobile Overlay */}
             <AnimatePresence>
-                {(leftPanelVisible || rightPanelVisible) && (
+                {(leftPanelVisible || rightPanelVisible || showHubsVisible) && (
                     <motion.div
                         className="chat-mobile-overlay"
                         initial={{ opacity: 0 }}
@@ -337,239 +322,237 @@ export default function Chat() {
                         onClick={() => {
                             setLeftPanelVisible(false);
                             setRightPanelVisible(false);
+                            setShowHubsVisible(false);
                         }}
                     />
                 )}
             </AnimatePresence>
 
-            {/* Left Sidebar: Channels */}
-            <aside className={`chat-sidebar-left ${leftPanelVisible ? 'visible' : ''}`}>
-                <div className="sidebar-header">
-                    <h2>EVENT CONTENT</h2>
-                    <button className="panel-toggle" onClick={() => setLeftPanelVisible(false)}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
-                    </button>
-                </div>
-                <div className="channel-list">
-                    <div className="channel-category">TEXT CHANNELS</div>
-                    {channels.map(ch => (
-                        <button
-                            key={ch.id}
-                            className={`channel-item ${activeChannelId === ch.id ? 'active' : ''}`}
-                            onClick={() => setActiveChannelId(ch.id)}
-                        >
-                            <span className="hash">#</span>
-                            <span className="channel-name">{ch.name}</span>
-                        </button>
-                    ))}
-                </div>
-                <div className="user-settings">
-                    <div className="current-user">
-                        <img src={profile?.avatar_url || 'https://via.placeholder.com/32'} alt="avatar" />
-                        <div className="user-info">
-                            <span className="username">{profile?.username || 'Player'}</span>
-                            <span className="status">Online</span>
-                        </div>
-                    </div>
-                </div>
+            {/* PANE 1: Server/Hub Selection (Desktop: slim far-left) */}
+            <aside className={`chat-pane-hub ${showHubsVisible ? 'visible' : ''}`}>
+                <ChatHub 
+                    onSelectHub={(id) => {
+                        navigate(`/chat/${id}`);
+                        setShowHubsVisible(false);
+                        setLeftPanelVisible(true);
+                    }} 
+                    activeHubId={eventId} 
+                />
             </aside>
 
-            {/* Main Chat Area */}
-            <main className="chat-main">
-                <header className="chat-top-bar">
-                    <div className="top-bar-left">
-                        {!leftPanelVisible && (
-                            <button className="panel-toggle-in" onClick={() => setLeftPanelVisible(true)}>
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
-                            </button>
-                        )}
-                        <span className="hash">#</span>
-                        <h1>{activeChannel?.name || 'lobby'}</h1>
-                    </div>
-                    <div className="top-bar-right">
-                        <span className="chat-attendee-count">
-                            <span className="chat-online-dot" />
-                            {onlineCount}/{totalCount} ONLINE
-                        </span>
-                        <button onClick={() => setRightPanelVisible(!rightPanelVisible)}>
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+            {/* PANE 2: Channels List (Context of Selected Hub) */}
+            {eventId && (
+                <aside className={`chat-pane-channels ${leftPanelVisible ? 'visible' : ''}`}>
+                    <div className="sidebar-header">
+                        <h2 className="text-label">{isHomeView ? 'DIRECT MESSAGES' : 'EVENT CHANNELS'}</h2>
+                        <button className="panel-toggle" onClick={() => setLeftPanelVisible(false)}>
+                            ✕
                         </button>
                     </div>
-                </header>
 
-                <div className="messages-container">
-                    {messages.map((msg, i) => {
-                        const prevMsg = messages[i - 1];
-                        const isContinuation = prevMsg && prevMsg.sender_id === msg.sender_id &&
-                            (new Date(msg.created_at) - new Date(prevMsg.created_at) < 300000);
-                        const isSystemMsg = msg.msg_type === 'system' || msg.content?.startsWith('[SYSTEM]');
+                    <div className="channel-list">
+                        {channels.map(ch => {
+                            let displayName = ch.name;
+                            if (isHomeView) {
+                                const otherUserId = ch.name.split(':').find(id => id !== user?.id);
+                                displayName = 'User ' + otherUserId?.slice(0, 4);
+                            }
 
-                        if (isSystemMsg) {
                             return (
-                                <div key={msg.id} className="chat-system-msg">
-                                    <span>{msg.content?.replace('[SYSTEM]', '').trim() || 'System event'}</span>
-                                </div>
+                                <button
+                                    key={ch.id}
+                                    className={`channel-item ${activeChannelId === ch.id ? 'active' : ''}`}
+                                    onClick={() => {
+                                        setSelectedChannelId(ch.id);
+                                        setLeftPanelVisible(false);
+                                    }}
+                                >
+                                    <span className="hash">#</span>
+                                    <span className="channel-name">{displayName}</span>
+                                </button>
                             );
-                        }
+                        })}
+                    </div>
+                </aside>
+            )}
 
-                        // Aggregate reactions for display
-                        const reactionCounts = {};
-                        (msg.reactions || []).forEach(r => {
-                            if (!reactionCounts[r.emoji]) reactionCounts[r.emoji] = { count: 0, hasOwn: false };
-                            reactionCounts[r.emoji].count++;
-                            if (r.user_id === user?.id) reactionCounts[r.emoji].hasOwn = true;
-                        });
+            {/* PANE 3: Main Messages Area */}
+            {eventId ? (
+                <main className="chat-pane-main">
+                    <header className="chat-top-bar">
+                        <div className="top-bar-left">
+                            <button className="panel-toggle-in btn-outline" onClick={() => setLeftPanelVisible(true)}>
+                                ☰ CHANNELS
+                            </button>
+                            <span className="hash">#</span>
+                            <h1 className="heading-2">{activeChannel?.name || 'conversation'}</h1>
+                        </div>
 
-                        return (
-                            <div
-                                key={msg.id}
-                                className={`message-item ${isContinuation ? 'continuation' : ''}`}
-                                onTouchStart={() => onTouchStartMsg(msg)}
-                                onTouchEnd={onTouchEndMsg}
-                                onTouchCancel={onTouchEndMsg}
-                                onContextMenu={(e) => onContextMenuMsg(e, msg)}
-                            >
-                                {!isContinuation && (
-                                    <img
-                                        src={msg.profiles?.avatar_url || 'https://via.placeholder.com/40'}
-                                        alt="avatar"
-                                        className="message-avatar"
-                                    />
-                                )}
-                                <div className="message-content">
-                                    {!isContinuation && (
-                                        <div className="message-header">
-                                            <span className="message-author">{msg.profiles?.username || 'Unknown'}</span>
-                                            <span className="message-timestamp">
-                                                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                {msg.edited_at && <span className="chat-edited-label"> (edited)</span>}
-                                            </span>
-                                        </div>
-                                    )}
-                                    <div className="message-text">
-                                        {renderContent(msg.content)}
+                        <div className="top-bar-right">
+                            {!isHomeView && (
+                                <span className="chat-attendee-count">
+                                    <span className="chat-online-dot" />
+                                    {onlineCount} ACTIVE
+                                </span>
+                            )}
+                            <button className="btn-outline btn-small" onClick={() => setRightPanelVisible(!rightPanelVisible)}>
+                                ATTENDEES
+                            </button>
+                        </div>
+                    </header>
+
+                    <div className="messages-container">
+                        {messages.map((msg, i) => {
+                            const prevMsg = messages[i - 1];
+                            const isContinuation = prevMsg && prevMsg.sender_id === msg.sender_id &&
+                                (new Date(msg.created_at) - new Date(prevMsg.created_at) < 300000);
+                            const isSystemMsg = msg.msg_type === 'system' || msg.content?.startsWith('[SYSTEM]');
+
+                            if (isSystemMsg) {
+                                return (
+                                    <div key={msg.id} className="chat-system-msg">
+                                        <span>{msg.content?.replace('[SYSTEM]', '').trim() || 'System event'}</span>
                                     </div>
-                                    {msg.attachment_url && (
-                                        <div className="message-attachment">
-                                            {msg.attachment_url.match(/\.(jpeg|jpg|gif|png)$/) ? (
-                                                <img
-                                                    src={msg.attachment_url}
-                                                    alt="attachment"
-                                                    className="attachment-preview"
-                                                    onClick={() => window.open(msg.attachment_url, '_blank')}
-                                                />
-                                            ) : (
-                                                <a href={msg.attachment_url} target="_blank" rel="noreferrer" className="attachment-file">
-                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" /></svg>
-                                                    <span>{msg.attachment_url.split('/').pop()}</span>
-                                                </a>
-                                            )}
+                                );
+                            }
+
+                            const reactionCounts = {};
+                            (msg.reactions || []).forEach(r => {
+                                if (!reactionCounts[r.emoji]) reactionCounts[r.emoji] = { count: 0, hasOwn: false };
+                                reactionCounts[r.emoji].count++;
+                                if (r.user_id === user?.id) reactionCounts[r.emoji].hasOwn = true;
+                            });
+
+                            return (
+                                <div
+                                    key={msg.id}
+                                    className={`message-item ${isContinuation ? 'continuation' : ''}`}
+                                    onTouchStart={() => onTouchStartMsg(msg)}
+                                    onTouchEnd={onTouchEndMsg}
+                                    onTouchCancel={onTouchEndMsg}
+                                    onContextMenu={(e) => onContextMenuMsg(e, msg)}
+                                >
+                                    {!isContinuation && (
+                                        <div className="message-avatar-wrap">
+                                            <img
+                                                src={msg.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.profiles?.username || 'U')}&background=0A0A0F&color=fff`}
+                                                alt="avatar"
+                                                className="message-avatar"
+                                            />
                                         </div>
                                     )}
-                                    {/* Reaction count pills */}
-                                    {Object.keys(reactionCounts).length > 0 && (
-                                        <div className="chat-reaction-pills">
-                                            {Object.entries(reactionCounts).map(([emoji, { count, hasOwn }]) => (
-                                                <button
-                                                    key={emoji}
-                                                    className={`chat-reaction-pill ${hasOwn ? 'own' : ''}`}
-                                                    onClick={() => toggleReaction(msg.id, emoji)}
-                                                >
-                                                    {emoji} {count}
+                                    <div className="message-content">
+                                        {!isContinuation && (
+                                            <div className="message-header">
+                                                <span className="message-author">{msg.profiles?.username || 'Unknown'}</span>
+                                                <span className="message-timestamp">
+                                                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    {msg.edited_at && <span className="chat-edited-label"> (edited)</span>}
+                                                </span>
+                                            </div>
+                                        )}
+                                        <div className="message-text">
+                                            {renderContent(msg.content)}
+                                        </div>
+                                        {msg.attachment_url && (
+                                            <div className="message-attachment">
+                                                {msg.attachment_url.match(/\.(jpeg|jpg|gif|png)$/) ? (
+                                                    <img src={msg.attachment_url} alt="attachment" className="attachment-preview" onClick={() => window.open(msg.attachment_url, '_blank')} />
+                                                ) : (
+                                                    <a href={msg.attachment_url} target="_blank" rel="noreferrer" className="attachment-file btn-outline btn-small">
+                                                        <span>{msg.attachment_url.split('/').pop()}</span>
+                                                    </a>
+                                                )}
+                                            </div>
+                                        )}
+                                        
+                                        {Object.keys(reactionCounts).length > 0 && (
+                                            <div className="chat-reaction-pills">
+                                                {Object.entries(reactionCounts).map(([emoji, { count, hasOwn }]) => (
+                                                    <button
+                                                        key={emoji}
+                                                        className={`chat-reaction-pill ${hasOwn ? 'own' : ''}`}
+                                                        onClick={() => toggleReaction(msg.id, emoji)}
+                                                    >
+                                                        {emoji} {count}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                        <div className="chat-reactions-row">
+                                            {QUICK_REACTIONS.map(emoji => (
+                                                <button key={emoji} className="chat-reaction-btn" onClick={() => toggleReaction(msg.id, emoji)}>
+                                                    {emoji}
                                                 </button>
                                             ))}
                                         </div>
-                                    )}
-                                    {/* Hover quick reactions */}
-                                    <div className="chat-reactions-row">
-                                        {QUICK_REACTIONS.slice(0, 4).map(emoji => (
-                                            <motion.button
-                                                key={emoji}
-                                                className="chat-reaction-btn"
-                                                whileTap={{ scale: 1.3 }}
-                                                onClick={() => toggleReaction(msg.id, emoji)}
-                                            >
-                                                {emoji}
-                                            </motion.button>
-                                        ))}
                                     </div>
                                 </div>
-                            </div>
-                        );
-                    })}
-                    <div ref={bottomRef} />
-                </div>
+                            );
+                        })}
+                        <div ref={bottomRef} />
+                    </div>
 
-                <div className="chat-input-wrapper">
-                    {/* Typing indicator */}
-                    {typingUsers.length > 0 && (
-                        <div className="chat-typing-indicator">
-                            <div className="typing-dots">
-                                <span></span><span></span><span></span>
+                    <div className="chat-input-wrapper">
+                        {typingUsers.length > 0 && (
+                            <div className="chat-typing-indicator">
+                                <span className="chat-online-dot"></span>
+                                {typingUsers.length === 1 ? `${typingUsers[0].username.toUpperCase()} IS TYPING` : 'MULTIPLE COMMS ENCRYPTING'}
                             </div>
-                            {typingUsers.length === 1
-                                ? `${typingUsers[0].username.toUpperCase()} IS TYPING...`
-                                : 'MULTIPLE PLAYERS ARE TYPING...'}
-                        </div>
-                    )}
-                    {/* Edit mode banner */}
-                    {editingMsg && (
-                        <div className="chat-edit-banner">
-                            <span>EDITING MESSAGE △</span>
-                            <button onClick={() => { setEditingMsg(null); setMsgInput(''); }}>✕</button>
-                        </div>
-                    )}
-                    {/* Reply quote bar */}
-                    {replyingTo && (
-                        <div className="chat-reply-bar">
-                            <span>{replyingTo.content.slice(0, 60)}{replyingTo.content.length > 60 ? '...' : ''}</span>
-                            <button onClick={() => setReplyingTo(null)}>✕</button>
-                        </div>
-                    )}
-                    <div className="chat-input-container">
-                        <button className="attach-btn">+</button>
-                        <input
-                            type="text"
-                            placeholder={editingMsg ? 'Edit your message...' : `Message #${activeChannel?.name || 'channel'}`}
-                            value={msgInput}
-                            onChange={handleInputChange}
-                            onKeyDown={e => e.key === 'Enter' && handleSend()}
-                        />
-                        <div className="input-actions">
-                            <button>🎁</button>
-                            <button>GIF</button>
-                            <button>😀</button>
+                        )}
+                        {editingMsg && (
+                            <div className="chat-context-banner edit">
+                                <span><span className="hash">✎</span> EDITING</span>
+                                <button onClick={() => { setEditingMsg(null); setMsgInput(''); }}>✕</button>
+                            </div>
+                        )}
+                        {replyingTo && (
+                            <div className="chat-context-banner reply">
+                                <span><span className="hash">↩</span> {replyingTo.content.slice(0, 40)}...</span>
+                                <button onClick={() => setReplyingTo(null)}>✕</button>
+                            </div>
+                        )}
+                        <div className="chat-input-container glass-card">
+                            <button className="attach-btn btn-outline">+</button>
+                            <input
+                                type="text"
+                                placeholder={editingMsg ? 'OVERRIDE PROTOCOL...' : `MESSAGE #${activeChannel?.name || 'CHANNEL'}`}
+                                value={msgInput}
+                                onChange={handleInputChange}
+                                onKeyDown={e => e.key === 'Enter' && handleSend()}
+                            />
                         </div>
                     </div>
-                </div>
-            </main>
+                </main>
+            ) : (
+                <main className="chat-pane-main chat-empty-hub">
+                    <h2 className="heading-display">SELECT A HUB</h2>
+                    <p className="text-body text-small">Choose an event from the far left panel to join the comms.</p>
+                    {/* On mobile, show a button to open hubs */}
+                    <button className="btn btn-coral panel-toggle-in" onClick={() => setShowHubsVisible(true)}>BROWSE HUBS</button>
+                </main>
+            )}
 
-            {/* Right Sidebar: Members */}
-            <aside className={`chat-sidebar-right ${rightPanelVisible ? 'visible' : ''}`}>
-                <div className="member-list-container">
-                    <div className="member-group">ONLINE — {onlineCount}</div>
-                    {uniqueOnlineUsers.map(member => (
-                        <div key={member.user_id} className="member-item">
-                            <div className="member-avatar-wrap">
-                                <img src={member.avatar_url || 'https://via.placeholder.com/32'} alt={member.username} />
-                                <div className="status-indicator online"></div>
+            {/* PANE 4: Members List (Right) */}
+            {eventId && !isHomeView && (
+                <aside className={`chat-pane-members ${rightPanelVisible ? 'visible' : ''}`}>
+                    <div className="sidebar-header">
+                        <h2 className="text-label">MEMBERS — {onlineCount}</h2>
+                        <button className="panel-toggle" onClick={() => setRightPanelVisible(false)}>✕</button>
+                    </div>
+                    <div className="member-list-container">
+                        {uniqueOnlineUsers.map(member => (
+                            <div key={member.user_id} className="member-item">
+                                <div className="member-avatar-wrap">
+                                    <img src={member.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.username || 'U')}&background=0A0A0F&color=fff`} alt={member.username} />
+                                    <div className="status-indicator online"></div>
+                                </div>
+                                <span className="member-name text-body">{member.username}</span>
                             </div>
-                            <span className="member-name">{member.username}</span>
-                        </div>
-                    ))}
-
-                    <div className="member-group">OFFLINE — {members.filter(m => !uniqueOnlineUsers.find(u => u.user_id === m.id)).length}</div>
-                    {members.filter(m => !uniqueOnlineUsers.find(u => u.user_id === m.id)).map(member => (
-                        <div key={member.id} className="member-item offline">
-                            <div className="member-avatar-wrap">
-                                <img src={member.avatar_url || 'https://via.placeholder.com/32'} alt={member.username} />
-                                <div className="status-indicator offline"></div>
-                            </div>
-                            <span className="member-name">{member.username}</span>
-                        </div>
-                    ))}
-                </div>
-            </aside>
+                        ))}
+                    </div>
+                </aside>
+            )}
 
             {/* Context Menu Bottom Sheet */}
             <AnimatePresence>
@@ -577,47 +560,31 @@ export default function Chat() {
                     <>
                         <motion.div
                             className="chat-context-overlay"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             onClick={() => setContextMsg(null)}
                         />
                         <motion.div
-                            className="chat-context-sheet"
-                            initial={{ y: '100%' }}
-                            animate={{ y: 0 }}
-                            exit={{ y: '100%' }}
+                            className="chat-context-sheet glass-card"
+                            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
                             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
                         >
                             <div className="chat-context-handle" />
-                            {/* Quick emoji row */}
                             <div className="chat-context-emoji-row">
-                                {CONTEXT_QUICK_REACTIONS.map(emoji => (
-                                    <button
-                                        key={emoji}
-                                        className="chat-context-emoji-btn"
+                                {QUICK_REACTIONS.map(emoji => (
+                                    <button key={emoji} className="chat-context-emoji-btn btn-outline"
                                         onClick={() => { toggleReaction(contextMsg.id, emoji); setContextMsg(null); }}
                                     >
                                         {emoji}
                                     </button>
                                 ))}
                             </div>
-                            {/* Actions */}
                             <div className="chat-context-actions">
-                                <button onClick={() => handleReply(contextMsg)}>
-                                    <span className="ctx-icon">↩</span> REPLY
-                                </button>
-                                <button onClick={() => handleCopy(contextMsg.content)}>
-                                    <span className="ctx-icon">⊡</span> COPY TEXT
-                                </button>
+                                <button className="btn-outline" onClick={() => handleReply(contextMsg)}>REPLY</button>
+                                <button className="btn-outline" onClick={() => handleCopy(contextMsg.content)}>COPY TEXT</button>
                                 {contextMsg.sender_id === user?.id && !String(contextMsg.id).startsWith('temp-') && (
                                     <>
-                                        <button onClick={() => handleEditMessage(contextMsg)}>
-                                            <span className="ctx-icon">✎</span> EDIT
-                                        </button>
-                                        <button className="chat-context-danger" onClick={() => handleDeleteMessage(contextMsg.id)}>
-                                            <span className="ctx-icon">✕</span> DELETE
-                                        </button>
+                                        <button className="btn-outline" onClick={() => handleEditMessage(contextMsg)}>EDIT</button>
+                                        <button className="btn-outline" style={{ borderColor: 'var(--color-coral)', color: 'var(--color-coral)'}} onClick={() => handleDeleteMessage(contextMsg.id)}>DELETE</button>
                                     </>
                                 )}
                             </div>

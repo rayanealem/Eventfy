@@ -73,7 +73,7 @@ async def get_event_channels(event_id: str, user=Depends(get_current_user)):
     messages = []
     if general:
         msgs = (supabase.table("messages")
-            .select("*, profiles(username, full_name, avatar_url, shape, shape_color)")
+            .select("*, profiles!sender_id(username, full_name, avatar_url, shape, shape_color)")
             .eq("channel_id", general["id"]).is_("deleted_at", "null")
             .order("created_at", desc=False).limit(50).execute())
         messages = msgs.data or []
@@ -98,7 +98,7 @@ async def get_event_channels(event_id: str, user=Depends(get_current_user)):
 async def get_messages(channel_id: str, page: int = 0, page_size: int = 50, user=Depends(get_current_user)):
     """Get message history (paginated)."""
     msgs = (supabase.table("messages")
-        .select("*, profiles(username, full_name, avatar_url, shape, shape_color)")
+        .select("*, profiles!sender_id(username, full_name, avatar_url, shape, shape_color)")
         .eq("channel_id", channel_id).is_("deleted_at", "null")
         .order("created_at", desc=False)
         .range(page * page_size, (page + 1) * page_size - 1).execute())
