@@ -1,0 +1,6 @@
+INFO:     127.0.0.1:62968 - "POST /v1/events/6467fe8a-8909-4a70-84dd-9c7a8ec695f4/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62971 - "POST /v1/orgs/ff2ef564-fbc9-47a5-af64-6293a4c43ae7/follow HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62972 - "POST /v1/users/follow/f9e43bc4-4191-45e7-9fef-0fdffab96878 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50315 - "POST /v1/events/6467fe8a-8909-4a70-84dd-9c7a8ec695f4/save HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50317 - "POST /v1/orgs/ff2ef564-fbc9-47a5-af64-6293a4c43ae7/follow HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50318 - "POST /v1/users/follow/f9e43bc4-4191-45e7-9fef-0fdffab96878 HTTP/1.1" 200 OK

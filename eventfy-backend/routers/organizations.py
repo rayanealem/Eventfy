@@ -226,6 +226,10 @@ async def upload_cover(org_id: str, file: UploadFile = File(...), user=Depends(r
 @router.post("/{org_id}/follow")
 async def follow_org(org_id: str, user=Depends(get_current_user)):
     """Follow an organization."""
+    existing = supabase.table("org_followers").select("user_id").eq("org_id", org_id).eq("user_id", user["id"]).execute()
+    if existing.data:
+        return {"message": "Followed"}
+
     supabase.table("org_followers").insert({
         "org_id": org_id,
         "user_id": user["id"],
@@ -235,7 +239,7 @@ async def follow_org(org_id: str, user=Depends(get_current_user)):
     org = supabase.table("organizations").select("follower_count").eq("id", org_id).single().execute()
     if org.data:
         supabase.table("organizations").update({
-            "follower_count": org.data["follower_count"] + 1,
+            "follower_count": (org.data.get("follower_count") or 0) + 1,
         }).eq("id", org_id).execute()
 
     return {"message": "Followed"}

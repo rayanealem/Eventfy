@@ -96,7 +96,7 @@ async def event_feed(
             )
         """)
         .in_("status", ["live", "scheduled"])
-        .order("starts_at", desc=False)
+        .order("created_at", desc=True)
         .range((page - 1) * limit, page * limit - 1)
     )
 
@@ -447,7 +447,11 @@ async def unregister_from_event(event_id: str, user=Depends(get_current_user)):
 @router.post("/{event_id}/save")
 async def save_event(event_id: str, user=Depends(get_current_user)):
     """Save/bookmark an event."""
-    supabase.table("saved_events").upsert({
+    existing = supabase.table("saved_events").select("user_id").eq("event_id", event_id).eq("user_id", user["id"]).execute()
+    if existing.data:
+        return {"saved": True}
+        
+    supabase.table("saved_events").insert({
         "user_id": user["id"],
         "event_id": event_id,
     }).execute()
@@ -472,8 +476,11 @@ async def like_event(event_id: str, user=Depends(get_current_user)):
     if not event.data:
         raise HTTPException(404, "Event not found")
 
-    # Upsert into event_likes (idempotent)
-    supabase.table("event_likes").upsert({
+    existing = supabase.table("event_likes").select("id").eq("event_id", event_id).eq("user_id", user["id"]).execute()
+    if existing.data:
+        return {"liked": True}
+
+    supabase.table("event_likes").insert({
         "event_id": event_id,
         "user_id": user["id"],
     }).execute()

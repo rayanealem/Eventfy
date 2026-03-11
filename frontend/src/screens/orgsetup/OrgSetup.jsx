@@ -344,7 +344,7 @@ export default function OrgSetup() {
                             <button className="orgset-comp-btn" onClick={async () => {
                                 try {
                                     if (user) {
-                                        await supabase.from('profiles').update({ onboarding_done: true }).eq('id', user.id);
+                                        await api('POST', '/auth/complete-onboarding');
                                         if (refreshProfile) await refreshProfile();
                                     }
                                 } catch (e) {

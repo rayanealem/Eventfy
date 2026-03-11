@@ -16,19 +16,28 @@ async def follow_user(target_user_id: str, user=Depends(get_current_user)):
     """Follow another user (Instagram-style, one-way)."""
     if target_user_id == user["id"]:
         raise HTTPException(400, "Cannot follow yourself")
-    supabase.table("user_follows").upsert({
+        
+    existing = supabase.table("user_follows").select("follower_id").eq("follower_id", user["id"]).eq("following_id", target_user_id).execute()
+    if existing.data:
+        return {"following": True}
+
+    supabase.table("user_follows").insert({
         "follower_id": user["id"],
         "following_id": target_user_id,
     }).execute()
+    
     # Increment counts
-    supabase.table("profiles").update({
-        "following_count": (user.get("following_count") or 0) + 1,
-    }).eq("id", user["id"]).execute()
+    me = supabase.table("profiles").select("following_count").eq("id", user["id"]).single().execute()
+    if me.data:
+        supabase.table("profiles").update({
+            "following_count": (me.data.get("following_count") or 0) + 1,
+        }).eq("id", user["id"]).execute()
     target = supabase.table("profiles").select("follower_count").eq("id", target_user_id).single().execute()
     if target.data:
         supabase.table("profiles").update({
             "follower_count": (target.data.get("follower_count") or 0) + 1,
         }).eq("id", target_user_id).execute()
+        
     # Notification
     try:
         supabase.table("notifications").insert({
@@ -79,9 +88,11 @@ async def get_followers(user_id: str, page: int = 1, limit: int = 20):
 
 @router.get("/following/{user_id}")
 async def get_following(user_id: str, page: int = 1, limit: int = 20):
-    """List users this user follows."""
+    """List users and organizations this user follows."""
     offset = (page - 1) * limit
-    data = (
+    
+    # Get followed users
+    user_data = (
         supabase.table("user_follows")
         .select("following_id, profiles!user_follows_following_id_fkey(id, username, full_name, avatar_url, shape, shape_color)")
         .eq("follower_id", user_id)
@@ -89,8 +100,32 @@ async def get_following(user_id: str, page: int = 1, limit: int = 20):
         .range(offset, offset + limit - 1)
         .execute()
     )
-    following = [r["profiles"] for r in (data.data or []) if r.get("profiles")]
-    return {"following": following, "has_more": len(following) == limit}
+    following_users = [
+        {"type": "user", **r["profiles"]} 
+        for r in (user_data.data or []) if r.get("profiles")
+    ]
+    
+    # Get followed orgs
+    org_data = (
+        supabase.table("org_followers")
+        .select("org_id, organizations(id, name, slug, logo_url)")
+        .eq("user_id", user_id)
+        .range(offset, offset + limit - 1)
+        .execute()
+    )
+    following_orgs = [
+        {
+            "type": "org",
+            "id": r["organizations"]["id"],
+            "username": r["organizations"]["slug"],
+            "full_name": r["organizations"]["name"],
+            "avatar_url": r["organizations"]["logo_url"]
+        }
+        for r in (org_data.data or []) if r.get("organizations")
+    ]
+    
+    following = following_users + following_orgs
+    return {"following": following, "has_more": len(user_data.data or []) == limit or len(org_data.data or []) == limit}
 
 
 @router.get("/{username}")
@@ -111,6 +146,27 @@ async def get_user_profile(username: str, user=Depends(get_optional_user)):
         return {"id": profile.data["id"], "username": username, "visibility": "private"}
 
     result = profile.data
+    uid = result["id"]
+
+    # Compute live counts from junction tables
+    try:
+        followers = supabase.table("user_follows").select("follower_id", count="exact").eq("following_id", uid).execute()
+        result["follower_count"] = followers.count if followers.count is not None else len(followers.data or [])
+    except Exception:
+        pass
+
+    try:
+        following_users = supabase.table("user_follows").select("following_id").eq("follower_id", uid).execute()
+        following_orgs = supabase.table("org_followers").select("org_id").eq("user_id", uid).execute()
+        result["following_count"] = len(following_users.data or []) + len(following_orgs.data or [])
+    except Exception:
+        pass
+
+    try:
+        events = supabase.table("event_registrations").select("event_id", count="exact").eq("user_id", uid).execute()
+        result["event_count"] = events.count if events.count is not None else len(events.data or [])
+    except Exception:
+        pass
 
     # Check if the current user follows this profile
     result["is_following"] = False

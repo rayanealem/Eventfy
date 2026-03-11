@@ -3,10 +3,12 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
 import { api } from '../../lib/api';
+import { useAuth } from '../../context/AuthContext';
 import './Auth.css';
 
 export default function OrgRegisterAuth() {
     const navigate = useNavigate();
+    const { refreshProfile } = useAuth();
     const [isPending, setIsPending] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -65,7 +67,11 @@ export default function OrgRegisterAuth() {
                 registration_number: form.taxId || null,
             });
 
+            if (refreshProfile) await refreshProfile();
             setIsPending(true);
+            setTimeout(() => {
+                navigate('/org/setup');
+            }, 3000);
         } catch (err) {
             setError(err.message || 'Registration failed');
         } finally {

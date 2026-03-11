@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
@@ -53,7 +54,8 @@ function formatEventTime(startsAt) {
 
 export default function Feed() {
     const navigate = useNavigate();
-    const { profile } = useAuth();
+    const queryClient = useQueryClient();
+    const { profile, refreshProfile } = useAuth();
     const { showToast } = useToast();
 
     const isOrgRole = profile?.role === 'organizer' || profile?.role === 'local_admin' || profile?.role === 'global_admin';
@@ -340,6 +342,10 @@ export default function Feed() {
         showToast(isFollowing ? 'UNFOLLOWED' : 'FOLLOWING ✓', 'success');
         try {
             await api(isFollowing ? 'DELETE' : 'POST', `/orgs/${orgId}/follow`);
+            queryClient.invalidateQueries({ queryKey: ['profile'] });
+            queryClient.invalidateQueries({ queryKey: ['following'] });
+            // refresh AuthContext profile immediately
+            refreshProfile && refreshProfile();
         } catch (err) {
             // Rollback
             setFollowedOrgIds(prev => {

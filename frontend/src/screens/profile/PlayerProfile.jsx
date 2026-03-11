@@ -29,12 +29,14 @@ export default function PlayerProfile() {
     const isOwnProfile = !username || username === '@me' || username === myProfile?.username;
     const targetUsername = isOwnProfile ? myProfile?.username : username;
 
-    // Only fetch from API when viewing another user's profile
+    // Fetch profile from API for both own and other users (live counters)
     const { data: profileData, isLoading, isError, refetch } = useQuery({
         queryKey: ['profile', targetUsername],
-        queryFn: () => api('GET', `/users/${targetUsername}`),
-        enabled: !!targetUsername && !isOwnProfile,
-        placeholderData: isOwnProfile ? myProfile : undefined,
+        queryFn: () => isOwnProfile
+            ? api('GET', '/auth/me')
+            : api('GET', `/users/${targetUsername}`),
+        enabled: !!targetUsername,
+        placeholderData: myProfile || undefined,
     });
 
     // Fetch passport entries
@@ -44,30 +46,37 @@ export default function PlayerProfile() {
         enabled: !!targetUsername && !isOwnProfile,
     });
 
-    // For own profile, always use AuthContext data
-    const effectiveProfile = isOwnProfile ? myProfile : profileData;
-    const p = effectiveProfile || myProfile || {};
+    // Prefer fresh API data, fall back to AuthContext
+    const effectiveProfile = profileData || myProfile;
+    const p = effectiveProfile || {};
 
     // Followers list
-    const { data: followersData } = useQuery({
+    const { data: followersData, refetch: refetchFollowers } = useQuery({
         queryKey: ['followers', targetUsername || myProfile?.username],
         queryFn: () => api('GET', `/users/followers/${p.id}`),
         enabled: sheetType === 'followers' && !!p.id,
     });
 
     // Following list
-    const { data: followingData } = useQuery({
+    const { data: followingData, refetch: refetchFollowing } = useQuery({
         queryKey: ['following', targetUsername || myProfile?.username],
         queryFn: () => api('GET', `/users/following/${p.id}`),
         enabled: sheetType === 'following' && !!p.id,
     });
 
     // Fetch own connections (for the bottom sheet)
-    const { data: connectionsData } = useQuery({
+    const { data: connectionsData, refetch: refetchConnections } = useQuery({
         queryKey: ['connections'],
         queryFn: () => api('GET', '/users/me/connections'),
         enabled: sheetType === 'connections' && isOwnProfile,
     });
+
+    // Force refetch when sheet opens
+    useEffect(() => {
+        if (sheetType === 'followers') refetchFollowers();
+        if (sheetType === 'following') refetchFollowing();
+        if (sheetType === 'connections') refetchConnections();
+    }, [sheetType, refetchFollowers, refetchFollowing, refetchConnections]);
 
     // Refresh data on visibility change
     useEffect(() => {
@@ -140,6 +149,11 @@ export default function PlayerProfile() {
         try {
             await api(wasFollowing ? 'DELETE' : 'POST', `/users/follow/${p.id}`);
             showToast(wasFollowing ? 'UNFOLLOWED' : 'FOLLOWING ✓', 'success');
+            // Refresh profile data to get live counters
+            queryClient.invalidateQueries({ queryKey: ['profile'] });
+            queryClient.invalidateQueries({ queryKey: ['following'] });
+            queryClient.invalidateQueries({ queryKey: ['followers'] });
+            refreshProfile && refreshProfile();
         } catch (err) {
             setIsFollowing(wasFollowing);
             setLocalFollowerDelta(prev => wasFollowing ? prev + 1 : prev - 1);
@@ -470,7 +484,7 @@ export default function PlayerProfile() {
                                 {sheetType === 'following' && (
                                     followingData?.following?.length > 0 ? (
                                         followingData.following.map((u, i) => (
-                                            <div key={i} className="profile-connection-item" onClick={() => { setSheetType(null); navigate(`/profile/${u.username}`); }}>
+                                            <div key={i} className="profile-connection-item" onClick={() => { setSheetType(null); navigate(u.type === 'org' ? `/org/${u.username}` : `/profile/${u.username}`); }}>
                                                 <img src={u.avatar_url || `https://api.dicebear.com/7.x/shapes/svg?seed=${u.username}`} alt="" />
                                                 <div>
                                                     <span className="profile-conn-name">@{u.username}</span>

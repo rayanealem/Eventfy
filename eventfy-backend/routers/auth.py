@@ -126,10 +126,36 @@ async def get_me(user=Depends(get_current_user)):
         .execute()
     )
 
-    return {
+    result = {
         **(profile.data or user),
         "managed_orgs": [m["organizations"] for m in (orgs.data or [])],
     }
+
+    # Compute live counts from junction tables
+    uid = user["id"]
+    try:
+        followers = supabase.table("user_follows").select("follower_id").eq("following_id", uid).execute()
+        result["follower_count"] = len(followers.data or [])
+    except Exception as e:
+        print(f"Error computing follower_count: {e}")
+        result["follower_count"] = 0
+
+    try:
+        following_users = supabase.table("user_follows").select("following_id").eq("follower_id", uid).execute()
+        following_orgs = supabase.table("org_followers").select("org_id").eq("user_id", uid).execute()
+        result["following_count"] = len(following_users.data or []) + len(following_orgs.data or [])
+    except Exception as e:
+        print(f"Error computing following_count: {e}")
+        result["following_count"] = 0
+
+    try:
+        events = supabase.table("event_registrations").select("event_id").eq("user_id", uid).execute()
+        result["event_count"] = len(events.data or [])
+    except Exception as e:
+        print(f"Error computing event_count: {e}")
+        result["event_count"] = 0
+
+    return result
 
 
 @router.patch("/me")

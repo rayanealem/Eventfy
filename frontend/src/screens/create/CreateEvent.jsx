@@ -111,7 +111,7 @@ export default function CreateEvent() {
             return;
         }
 
-        const org = profile?.organizations?.[0];
+        const org = profile?.managed_orgs?.[0];
         if (!org) {
             alert("You must belong to an organization to create events.");
             return;
@@ -162,7 +162,7 @@ export default function CreateEvent() {
 
             const created = await api('POST', '/events', payload);
             await api('POST', `/events/${created.id}/publish`);
-            navigate('/feed');
+            navigate(`/manage/${created.id}`);
         } catch (e) {
             console.error("Deploy failed:", e);
             alert("Failed to create event: " + e.message);
