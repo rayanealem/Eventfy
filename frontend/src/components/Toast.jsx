@@ -38,10 +38,10 @@ export function ToastProvider({ children }) {
                         <motion.div
                             key={key}
                             className={`toast toast-${toast.type}`}
-                            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                            initial={{ opacity: 0, y: 50, scale: 0.8 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                            transition={{ duration: 0.25, ease: 'easeOut' }}
+                            exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
+                            transition={{ type: 'spring', damping: 20, stiffness: 350 }}
                         >
                             <span className="toast-icon">{ICONS[toast.type] || '○'}</span>
                             {toast.message}

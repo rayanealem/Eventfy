@@ -135,13 +135,15 @@ export default function BottomNav() {
                             {isActive && (
                                 <motion.div
                                     layoutId="nav-indicator"
+                                    transition={{ type: "spring", stiffness: 350, damping: 30 }}
                                     style={{
                                         position: 'absolute',
                                         bottom: '0px',
                                         width: '32px',
                                         height: '3px',
                                         background: activeColor,
-                                        borderRadius: '3px'
+                                        borderRadius: '3px',
+                                        boxShadow: `0 0 8px ${activeColor}`
                                     }}
                                 />
                             )}

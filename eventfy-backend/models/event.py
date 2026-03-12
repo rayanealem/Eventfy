@@ -48,6 +48,12 @@ class EventCreate(BaseModel):
     # Fundraising
     fundraising_goal: Optional[int] = None
 
+    # Extra Options
+    require_custom_form: bool = False
+    type_details: Optional[dict] = None
+    volunteer_shifts: Optional[list] = None
+    badge: Optional[dict] = None
+
     # Org
     org_id: str
 
@@ -73,10 +79,14 @@ class EventUpdate(BaseModel):
     waitlist_enabled: Optional[bool] = None
     cover_url: Optional[str] = None
     tags: Optional[list[str]] = None
+    require_custom_form: Optional[bool] = None
 
 
 class RegistrationCreate(BaseModel):
     ticket_tier_id: Optional[str] = None
+    fullName: Optional[str] = None
+    phoneNumber: Optional[str] = None
+    extraInfo: Optional[str] = None
 
 
 class VolunteerApply(BaseModel):

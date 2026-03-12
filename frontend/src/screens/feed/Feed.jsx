@@ -160,7 +160,7 @@ export default function Feed() {
     async function loadFeed(pageNum = 1) {
         setLoading(true);
         try {
-            const params = new URLSearchParams({ scope, page: pageNum, limit: 5 });
+            const params = new URLSearchParams({ scope, page: pageNum, limit: 5, _t: Date.now() });
             if (activeFilter !== 'all') params.set('event_type', activeFilter);
             const data = await api('GET', `/events/feed?${params}`);
 
@@ -230,17 +230,8 @@ export default function Feed() {
 
     async function handleRegister(eventId, e) {
         e.stopPropagation();
-        if (registeredIds.has(eventId)) return;
         haptic();
-        setRegisteredIds(prev => new Set([...prev, eventId]));  // optimistic
-        try {
-            await api('POST', `/events/${eventId}/register`);
-            showToast('REGISTERED ✓ CHECK YOUR NOTIFICATIONS', 'success');
-        } catch (err) {
-            setRegisteredIds(prev => { const s = new Set(prev); s.delete(eventId); return s; });
-            showToast(err.message || 'REGISTRATION FAILED', 'error');
-            console.error('Register failed:', err);
-        }
+        navigate(`/event/${eventId}`);
     }
 
     const toggleSave = async (eventId) => {
@@ -296,7 +287,7 @@ export default function Feed() {
         if (!commentsList[eventId]) {
             setCommentsLoading(true);
             try {
-                const data = await api('GET', `/events/${eventId}/comments?page=1&limit=50`);
+                const data = await api('GET', `/events/${eventId}/comments?page=1&limit=50&_t=${Date.now()}`);
                 setCommentsList(prev => ({ ...prev, [eventId]: data.comments || [] }));
             } catch (e) {
                 console.error('Failed to load comments:', e);
@@ -512,9 +503,10 @@ export default function Feed() {
                         <motion.div
                             key={event.id}
                             ref={events.length === i + 1 ? lastEventElementRef : null}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1, duration: 0.4 }}
+                            initial={{ opacity: 0, y: 30, scale: 0.98 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            transition={{ delay: (i % 5) * 0.05, duration: 0.35, type: 'spring', stiffness: 250, damping: 25 }}
+                            whileHover={{ y: -4, transition: { duration: 0.15 } }}
                             className="feed-card-wrap"
                         >
                             <div

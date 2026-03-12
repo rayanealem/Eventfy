@@ -12,6 +12,7 @@ import OrgRegisterAuth from './screens/auth/OrgRegisterAuth';
 // Core screens (eager load)
 import Feed from './screens/feed/Feed';
 import EventDetail from './screens/event/EventDetail';
+import EventRegister from './screens/event/EventRegister';
 import Explore from './screens/explore/Explore';
 import PlayerProfile from './screens/profile/PlayerProfile';
 import Chat from './screens/chat/Chat';
@@ -75,6 +76,7 @@ const router = createBrowserRouter([
             { path: 'explore', element: <AuthGuard><Explore /></AuthGuard> },
             { path: 'event/create', element: <OrgGuard><CreateEvent /></OrgGuard> },
             { path: 'event/:id', element: <AuthGuard><EventDetail /></AuthGuard> },
+            { path: 'event/:id/register', element: <AuthGuard><EventRegister /></AuthGuard> },
             { path: 'event/:id/teams', element: <AuthGuard><TeamLobby /></AuthGuard> },
 
             // Profile

@@ -63,6 +63,28 @@ export default function CreateEvent() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [stepErrors, setStepErrors] = useState({});
 
+    // --- Type Specific & Form Options ---
+    const [requireCustomForm, setRequireCustomForm] = useState(false);
+    
+    // Sport
+    const [sportTeamA, setSportTeamA] = useState('');
+    const [sportTeamB, setSportTeamB] = useState('');
+    const [sportLeague, setSportLeague] = useState('');
+    const [sportLiveScore, setSportLiveScore] = useState(false);
+
+    // Science
+    const [scienceCallPapers, setScienceCallPapers] = useState(false);
+    const [scienceDeadline, setScienceDeadline] = useState('');
+    const [scienceWordLimit, setScienceWordLimit] = useState('');
+    const [sciencePdf, setSciencePdf] = useState(true);
+
+    // Charity
+    const [charityNgoCert, setCharityNgoCert] = useState('');
+    const [charityLiveProgress, setCharityLiveProgress] = useState(true);
+
+    // Cultural
+    const [culturalAgeVerify, setCulturalAgeVerify] = useState(false);
+
     // -- Shift management --
     const addShift = () => setShifts(prev => [...prev, emptyShift()]);
     const removeShift = (id) => setShifts(prev => prev.filter(s => s.id !== id));
@@ -122,6 +144,17 @@ export default function CreateEvent() {
             const startsAt = new Date(`${date}T${time}`).toISOString();
             const endsAt = new Date(new Date(startsAt).getTime() + 2 * 60 * 60 * 1000).toISOString();
 
+            let typeDetails = null;
+            if (activeCategory === 'sport') {
+                typeDetails = { team_a_name: sportTeamA, team_b_name: sportTeamB, league_name: sportLeague, live_score_enabled: sportLiveScore };
+            } else if (activeCategory === 'science') {
+                typeDetails = { call_for_papers: scienceCallPapers, submission_deadline: scienceDeadline || null, abstract_word_limit: scienceWordLimit ? parseInt(scienceWordLimit) : null, accept_pdf_uploads: sciencePdf };
+            } else if (activeCategory === 'charity') {
+                typeDetails = { ngo_cert_number: charityNgoCert, show_live_progress: charityLiveProgress };
+            } else if (activeCategory === 'cultural') {
+                typeDetails = { require_age_verify: culturalAgeVerify };
+            }
+
             const payload = {
                 org_id: org.id,
                 title,
@@ -146,6 +179,8 @@ export default function CreateEvent() {
                 xp_completion: xpCompletion,
                 xp_winner: 0,
                 xp_volunteer_multiplier: true,
+                require_custom_form: requireCustomForm,
+                type_details: typeDetails,
                 volunteer_shifts: needsVolunteers ? shifts.map(s => ({
                     role_name: s.roleName,
                     time_start: s.timeStart,
@@ -300,6 +335,107 @@ export default function CreateEvent() {
                                         onChange={(e) => setLocation(e.target.value)}
                                         style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', color: 'white' }}
                                     />
+                                </div>
+                            </div>
+
+                            <div className="ce-field ce-full-width" style={{ marginTop: '20px' }}>
+                                <div className="ce-section-head" style={{ marginBottom: '16px' }}>
+                                    <span className="ce-section-title">TYPE-SPECIFIC DETAILS</span>
+                                </div>
+                                
+                                {activeCategory === 'sport' && (
+                                    <>
+                                        <div className="ce-fields-row" style={{ marginBottom: '16px' }}>
+                                            <div className="ce-field">
+                                                <label className="ce-field-label">Team A Name</label>
+                                                <input type="text" className="ce-input" placeholder="Home Team" value={sportTeamA} onChange={(e) => setSportTeamA(e.target.value)} style={{ background: 'transparent', border: '1px solid #334155', color: 'white' }} />
+                                            </div>
+                                            <div className="ce-field">
+                                                <label className="ce-field-label">Team B Name</label>
+                                                <input type="text" className="ce-input" placeholder="Away Team" value={sportTeamB} onChange={(e) => setSportTeamB(e.target.value)} style={{ background: 'transparent', border: '1px solid #334155', color: 'white' }} />
+                                            </div>
+                                        </div>
+                                        <div className="ce-field" style={{ marginBottom: '16px' }}>
+                                            <label className="ce-field-label">League/Tournament Name</label>
+                                            <input type="text" className="ce-input" placeholder="e.g. World Cup 2026" value={sportLeague} onChange={(e) => setSportLeague(e.target.value)} style={{ background: 'transparent', border: '1px solid #334155', color: 'white' }} />
+                                        </div>
+                                        <div className="ce-toggle-row" style={{ padding: 0 }}>
+                                            <span className="ce-toggle-label">ENABLE LIVE SCORES ○</span>
+                                            <div className={`ce-toggle ${sportLiveScore ? 'active' : ''}`} onClick={() => setSportLiveScore(!sportLiveScore)} style={{ cursor: 'pointer' }}>
+                                                <div className="ce-toggle-dot" />
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {activeCategory === 'science' && (
+                                    <>
+                                        <div className="ce-toggle-row" style={{ padding: 0, marginBottom: '16px' }}>
+                                            <span className="ce-toggle-label">CALL FOR PAPERS ○</span>
+                                            <div className={`ce-toggle ${scienceCallPapers ? 'active' : ''}`} onClick={() => setScienceCallPapers(!scienceCallPapers)} style={{ cursor: 'pointer' }}>
+                                                <div className="ce-toggle-dot" />
+                                            </div>
+                                        </div>
+                                        {scienceCallPapers && (
+                                            <>
+                                                <div className="ce-fields-row" style={{ marginBottom: '16px' }}>
+                                                    <div className="ce-field">
+                                                        <label className="ce-field-label">Submission Deadline</label>
+                                                        <input type="date" className="ce-input" value={scienceDeadline} onChange={(e) => setScienceDeadline(e.target.value)} style={{ background: 'transparent', border: '1px solid #334155', color: 'white' }} />
+                                                    </div>
+                                                    <div className="ce-field">
+                                                        <label className="ce-field-label">Word Limit</label>
+                                                        <input type="number" className="ce-input" placeholder="e.g. 500" value={scienceWordLimit} onChange={(e) => setScienceWordLimit(e.target.value)} style={{ background: 'transparent', border: '1px solid #334155', color: 'white' }} />
+                                                    </div>
+                                                </div>
+                                                <div className="ce-toggle-row" style={{ padding: 0 }}>
+                                                    <span className="ce-toggle-label">ACCEPT PDF UPLOADS ○</span>
+                                                    <div className={`ce-toggle ${sciencePdf ? 'active' : ''}`} onClick={() => setSciencePdf(!sciencePdf)} style={{ cursor: 'pointer' }}>
+                                                        <div className="ce-toggle-dot" />
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+                                    </>
+                                )}
+
+                                {activeCategory === 'charity' && (
+                                    <>
+                                        <div className="ce-field" style={{ marginBottom: '16px' }}>
+                                            <label className="ce-field-label">NGO Certification Number</label>
+                                            <input type="text" className="ce-input" placeholder="Required for legal charity" value={charityNgoCert} onChange={(e) => setCharityNgoCert(e.target.value)} style={{ background: 'transparent', border: '1px solid #334155', color: 'white' }} />
+                                        </div>
+                                        <div className="ce-toggle-row" style={{ padding: 0 }}>
+                                            <span className="ce-toggle-label">SHOW DONATION PROGRESS ○</span>
+                                            <div className={`ce-toggle ${charityLiveProgress ? 'active' : ''}`} onClick={() => setCharityLiveProgress(!charityLiveProgress)} style={{ cursor: 'pointer' }}>
+                                                <div className="ce-toggle-dot" />
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {activeCategory === 'cultural' && (
+                                    <>
+                                        <div className="ce-toggle-row" style={{ padding: 0 }}>
+                                            <span className="ce-toggle-label">REQUIRE AGE VERIFICATION (+18) ○</span>
+                                            <div className={`ce-toggle ${culturalAgeVerify ? 'active' : ''}`} onClick={() => setCulturalAgeVerify(!culturalAgeVerify)} style={{ cursor: 'pointer', borderColor: culturalAgeVerify ? '#ef4444' : '' }}>
+                                                <div className="ce-toggle-dot" style={{ background: culturalAgeVerify ? '#ef4444' : '' }} />
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                <div className="ce-section-head" style={{ marginTop: '32px', marginBottom: '16px' }}>
+                                    <span className="ce-section-title">REGISTRATION & FORM</span>
+                                </div>
+                                <div className="ce-info-card" style={{ padding: '16px', background: 'rgba(255,255,255,0.02)', border: '1px dashed #3A3D42', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div style={{ marginRight: '16px' }}>
+                                        <h4 style={{ margin: 0, fontSize: '13px', color: '#f8fafc', fontWeight: 600 }}>Require Custom Form</h4>
+                                        <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#94a3b8' }}>If enabled, players must fill out their Name, Phone, and Extra Info instead of instant 1-click registration.</p>
+                                    </div>
+                                    <div className={`ce-toggle ${requireCustomForm ? 'active' : ''}`} onClick={() => setRequireCustomForm(!requireCustomForm)} style={{ cursor: 'pointer', flexShrink: 0 }}>
+                                        <div className="ce-toggle-dot" />
+                                    </div>
                                 </div>
                             </div>
                         </motion.section>

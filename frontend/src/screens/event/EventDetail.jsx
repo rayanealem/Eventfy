@@ -272,7 +272,17 @@ export default function EventDetail() {
     });
 
     const handleRegister = () => {
+        if (!profile) {
+            navigate('/auth/participant/login');
+            return;
+        }
         if (isRegisteredOpt || registerMutation.isPending) return;
+
+        if (event?.require_custom_form) {
+            navigate(`/event/${id}/register`);
+            return;
+        }
+
         registerMutation.mutate();
     };
 

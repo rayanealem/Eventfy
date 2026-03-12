@@ -211,7 +211,6 @@ async def get_user_passport(username: str):
         supabase.table("event_registrations")
         .select("*, events(title, event_type, cover_url, starts_at, org_id)")
         .eq("user_id", uid)
-        .eq("checked_in", True)
         .execute()
     )
 

@@ -96,7 +96,8 @@ async def event_feed(
             )
         """)
         .in_("status", ["live", "scheduled"])
-        .order("created_at", desc=True)
+        .order("starts_at", desc=False)
+        .order("id", desc=True)
         .range((page - 1) * limit, page * limit - 1)
     )
 
@@ -296,6 +297,7 @@ async def create_event(body: EventCreate, user=Depends(require_org)):
         "xp_winner": body.xp_winner,
         "xp_volunteer_multiplier": body.xp_volunteer_multiplier,
         "fundraising_goal": body.fundraising_goal,
+        "require_custom_form": body.require_custom_form,
         "status": "draft",
     }
 
@@ -304,6 +306,31 @@ async def create_event(body: EventCreate, user=Depends(require_org)):
 
     result = supabase.table("events").insert(event_data).execute()
     event = result.data[0]
+
+    # Insert type specific details if provided
+    if body.type_details:
+        table_name = f"event_{body.event_type}_details"
+        details_data = {**body.type_details, "event_id": event["id"]}
+        try:
+            supabase.table(table_name).insert(details_data).execute()
+        except Exception as e:
+            print("Failed to insert type details:", e)
+
+    # Insert Volunteer Shifts if any
+    if body.volunteer_shifts:
+        roles_data = []
+        for i, shift in enumerate(body.volunteer_shifts):
+            roles_data.append({
+                "event_id": event["id"],
+                "name": shift.get("role_name", f"Role {i+1}"),
+                "slots": shift.get("count", 1),
+                "skills": shift.get("required_skills", []),
+                "shift_start": shift.get("time_start"),
+                "shift_end": shift.get("time_end"),
+                "sort_order": i
+            })
+        if roles_data:
+            supabase.table("volunteer_roles").insert(roles_data).execute()
 
     # Create default chat channels
     for ch_name in ["general", "announcements", "team-formation"]:
@@ -393,8 +420,21 @@ async def register_for_event(
         "user_id": user["id"],
         "status": status,
     }
-    if body and body.ticket_tier_id:
-        reg_data["ticket_tier_id"] = body.ticket_tier_id
+    
+    # Capture custom form fields if provided in the body
+    metadata = {}
+    if body:
+        if body.ticket_tier_id:
+            reg_data["ticket_tier_id"] = body.ticket_tier_id
+        
+        # Support dynamic fields for the new EventRegister forms
+        extra = body.model_dump(exclude_unset=True)
+        for k in ["fullName", "phoneNumber", "extraInfo"]:
+            if k in extra:
+                metadata[k] = extra[k]
+                
+    if metadata:
+         reg_data["metadata"] = metadata
 
     result = supabase.table("event_registrations").insert(reg_data).execute()
 

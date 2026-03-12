@@ -27,6 +27,11 @@ export async function api(method, path, body = null) {
     })
 
     if (!res.ok) {
+        if (res.status === 401) {
+            await supabase.auth.signOut();
+            window.location.href = '/auth'; // Redirect to login
+            throw new Error('Session expired. Please log in again.');
+        }
         const error = await res.json().catch(() => ({ detail: 'Request failed' }))
         throw new Error(error.detail || `HTTP ${res.status}`)
     }
@@ -59,6 +64,11 @@ export async function apiUpload(path, file, fieldName = 'file') {
     })
 
     if (!res.ok) {
+        if (res.status === 401) {
+            await supabase.auth.signOut();
+            window.location.href = '/auth';
+            throw new Error('Session expired. Please log in again.');
+        }
         const error = await res.json().catch(() => ({ detail: 'Upload failed' }))
         throw new Error(error.detail || `HTTP ${res.status}`)
     }

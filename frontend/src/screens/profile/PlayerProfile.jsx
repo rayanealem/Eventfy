@@ -43,7 +43,7 @@ export default function PlayerProfile() {
     const { data: passportData } = useQuery({
         queryKey: ['passport', targetUsername],
         queryFn: () => api('GET', `/users/${targetUsername}/passport`),
-        enabled: !!targetUsername && !isOwnProfile,
+        enabled: !!targetUsername,
     });
 
     // Prefer fresh API data, fall back to AuthContext
@@ -128,8 +128,7 @@ export default function PlayerProfile() {
     const xpProgress = xpToNext > 0 ? Math.min(100, Math.round((xp % 1000) / xpToNext * 100)) : 0;
 
     // Fix passport parsing: use actual events_attended and badges arrays
-    const passportObj = passportData || {};
-    const passportLists = isOwnProfile ? myProfile : passportObj;
+    const passportLists = passportData || {};
     const passportEvents = passportLists?.events_attended || [];
     const passportBadges = passportLists?.badges || p.user_badges || [];
 
@@ -389,7 +388,7 @@ export default function PlayerProfile() {
                                                     {entry.title || entry.events?.title || 'Event'}
                                                 </div>
                                             </div>
-                                            {entry.certificate_issued && (
+                                            {entry.checked_in && (
                                                 <div style={{ position: 'absolute', top: '4px', right: '4px', width: '16px', height: '16px', borderRadius: '50%', background: 'rgba(19,236,200,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                     <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 6l2 2 4-4" stroke="black" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                                                 </div>

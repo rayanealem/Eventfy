@@ -318,9 +318,11 @@ export default function Explore() {
                                         return (
                                             <motion.div
                                                 key={event.id || `c1-${i}`}
-                                                initial={{ opacity: 0, scale: 0.95 }}
-                                                whileInView={{ opacity: 1, scale: 1 }}
-                                                viewport={{ once: true }}
+                                                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                                                whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                                                viewport={{ once: true, margin: "0px 0px -50px 0px" }}
+                                                transition={{ delay: (i % 4) * 0.1, duration: 0.4, type: 'spring', stiffness: 200, damping: 25 }}
+                                                whileHover={{ y: -4, scale: 1.01, transition: { duration: 0.2 } }}
                                                 onClick={() => navigate(`/event/${event.id}`)}
                                                 style={{ position: 'relative', width: '100%', paddingBottom: isTall ? '133%' : '100%', cursor: 'pointer', overflow: 'hidden', background: '#1a1d2e' }}
                                             >
@@ -348,9 +350,11 @@ export default function Explore() {
                                         return (
                                             <motion.div
                                                 key={event.id || `c2-${i}`}
-                                                initial={{ opacity: 0, scale: 0.95 }}
-                                                whileInView={{ opacity: 1, scale: 1 }}
-                                                viewport={{ once: true }}
+                                                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                                                whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                                                viewport={{ once: true, margin: "0px 0px -50px 0px" }}
+                                                transition={{ delay: (i % 4) * 0.1, duration: 0.4, type: 'spring', stiffness: 200, damping: 25 }}
+                                                whileHover={{ y: -4, scale: 1.01, transition: { duration: 0.2 } }}
                                                 onClick={() => navigate(`/event/${event.id}`)}
                                                 style={{ position: 'relative', width: '100%', paddingBottom: isTall ? '133%' : '100%', cursor: 'pointer', overflow: 'hidden', background: '#1a1d2e' }}
                                             >
