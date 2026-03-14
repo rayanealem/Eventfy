@@ -1,53 +1,125 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
-import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
-import { supabase } from '../../lib/supabase';
+import { motion } from 'framer-motion';
+import { instaSpring } from '../../lib/physics';
 import './Story.css';
-
-const ACCENT_OPTIONS = [
-    { label: 'Cyan', color: '#13ecec', bg: 'linear-gradient(180deg, #0a0a1a 0%, #0a1a2e 50%, #0a0a1a 100%)' },
-    { label: 'Teal', color: '#2dd4bf', bg: 'linear-gradient(180deg, #0a0a1a 0%, #0a2e1a 50%, #0a0a1a 100%)' },
-    { label: 'Gold', color: '#fbbf24', bg: 'linear-gradient(180deg, #1a0a0a 0%, #2e1a0a 50%, #1a0a0a 100%)' },
-    { label: 'Pink', color: '#f472b6', bg: 'linear-gradient(180deg, #1a0a1a 0%, #2e0a1a 50%, #1a0a1a 100%)' },
-    { label: 'Orange', color: '#f56e3d', bg: 'linear-gradient(180deg, #1a0a0a 0%, #2e0f0a 50%, #1a0a0a 100%)' },
-];
-
-const BADGE_OPTIONS = ['📢 ANNOUNCEMENT', '🔴 LIVE EVENT', '🏆 RESULTS', '🎟️ EARLY ACCESS', '🔥 TRENDING', '📸 HIGHLIGHT'];
 
 export default function StoryCreate() {
     const navigate = useNavigate();
     const { profile } = useAuth();
 
-    const [title, setTitle] = useState('');
-    const [body, setBody] = useState('');
-    const [badge, setBadge] = useState(BADGE_OPTIONS[0]);
-    const [accentIdx, setAccentIdx] = useState(0);
+    // The Layer Manager State
+    const [bgImage, setBgImage] = useState(null);
+    const [bgImagePreview, setBgImagePreview] = useState(null);
+    const [elements, setElements] = useState([]);
+    const [activeElementId, setActiveElementId] = useState(null);
+    const [highestZIndex, setHighestZIndex] = useState(1);
     const [publishing, setPublishing] = useState(false);
 
-    <Navigate to="/feed" replace />;
+    const canvasRef = useRef(null);
 
-    const accent = ACCENT_OPTIONS[accentIdx];
+    // Redirect to feed if user isn't logged in (assuming profile is needed)
+    if (!profile) return <Navigate to="/feed" replace />;
+
+    // --- Actions ---
+
+    const handleCancel = () => {
+        navigate(-1);
+    };
+
+    const handleBgImageSelect = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setBgImage(file);
+            setBgImagePreview(URL.createObjectURL(file));
+        }
+    };
+
+    const bringToFront = (id) => {
+        const newZ = highestZIndex + 1;
+        setHighestZIndex(newZ);
+        setElements(prev => prev.map(el => el.id === id ? { ...el, zIndex: newZ } : el));
+        setActiveElementId(id);
+    };
+
+    const handleCanvasClick = (e) => {
+        if (e.target === canvasRef.current || e.target.classList.contains('story-canvas-bg')) {
+            setActiveElementId(null);
+        }
+    };
+
+    const addText = () => {
+        const newZ = highestZIndex + 1;
+        setHighestZIndex(newZ);
+        const newText = {
+            id: `text_${Date.now()}`,
+            type: 'text',
+            content: '',
+            color: '#ffffff',
+            x: 0,
+            y: 0,
+            scale: 1,
+            rotation: 0,
+            zIndex: newZ,
+        };
+        setElements(prev => [...prev, newText]);
+        setActiveElementId(newText.id);
+    };
+
+    const addSticker = () => {
+        const newZ = highestZIndex + 1;
+        setHighestZIndex(newZ);
+        const newSticker = {
+            id: `sticker_${Date.now()}`,
+            type: 'sticker',
+            content: '🔥', // Default sticker
+            color: '#ffffff',
+            x: 0,
+            y: 0,
+            scale: 1,
+            rotation: 0,
+            zIndex: newZ,
+        };
+        setElements(prev => [...prev, newSticker]);
+        setActiveElementId(newSticker.id);
+    };
+
+    const updateElement = (id, updates) => {
+        setElements(prev => prev.map(el => el.id === id ? { ...el, ...updates } : el));
+    };
 
     const handlePublish = async () => {
-        if (!title.trim()) return;
+        if (!bgImage) return;
         setPublishing(true);
 
         try {
-            await api('POST', `/stories`, {
-                org_id: profile.managed_orgs[0].id,
+            // Create the parent story
+            const storyRes = await api('POST', `/stories`, {
+                org_id: profile.managed_orgs?.[0]?.id || profile.id, // Fallback if managed_orgs not available
                 type: 'announcement',
-                badge,
-                title: title.trim(),
-                body: body.trim(),
-                accent: accent.color,
-                bg: accent.bg,
+                badge: '',
+                title: 'Story',
+                body: '',
+                accent: '#ffffff',
+                bg: '#000000',
             });
+
+            const storyId = storyRes.id;
+
+            // Prepare the frames payload
+            const payload = {
+                media_url: 'https://placeholder.com/bg.jpg', // Temporary hardcode
+                overlays: elements
+            };
+
+            await api('POST', `/stories/${storyId}/frames`, payload);
+
             navigate(-1);
         } catch (err) {
             console.error('Failed to publish story:', err);
-            // Still navigate back on error for now
+            // We should still navigate back for now or show error
             navigate(-1);
         } finally {
             setPublishing(false);
@@ -55,109 +127,101 @@ export default function StoryCreate() {
     };
 
     return (
-        <div className="story-root">
-            <div className="story-viewer" style={{ background: accent.bg }}>
-                {/* Header */}
-                <div className="story-header">
-                    <div className="story-user">
-                        <div className="story-user-avatar" style={{ borderColor: accent.color }}>
-                            <img
-                                src={profile?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.username || 'O')}&size=80&background=1e293b&color=fff`}
-                                alt="You"
-                            />
-                        </div>
-                        <div className="story-user-info">
-                            <span className="story-username">CREATE STORY</span>
-                            <span className="story-time">Preview</span>
-                        </div>
-                    </div>
-                    <div className="story-actions">
-                        <span className="story-action" onClick={() => navigate(-1)} style={{ cursor: 'pointer' }}>✕</span>
-                    </div>
+        <div className="story-create-root">
+            {/* Top Toolbar */}
+            <div className="story-toolbar">
+                <button className="toolbar-btn cancel-btn" onClick={handleCancel}>✕</button>
+                <div className="toolbar-actions">
+                    <button className="toolbar-btn" onClick={addText}>Aa</button>
+                    <button className="toolbar-btn" onClick={addSticker}>🔥</button>
                 </div>
+            </div>
 
-                {/* Live Preview */}
-                <div className="story-content" style={{ cursor: 'default' }}>
-                    <div className="story-bg-gradient" />
-                    <div className="story-center-content">
-                        <span className="story-event-badge">{badge}</span>
-                        <h2 className="story-event-title">
-                            {title || 'YOUR TITLE\nGOES HERE'}
-                        </h2>
-                        <p className="story-event-sub">
-                            {body || 'Add a description for your story.'}
-                        </p>
-                    </div>
-                </div>
-
-                {/* Creation Form */}
-                <div className="story-create-form">
-                    {/* Badge Selector */}
-                    <div className="create-form-row">
-                        <label className="create-form-label">BADGE</label>
-                        <div className="create-badge-scroll">
-                            {BADGE_OPTIONS.map(b => (
-                                <button
-                                    key={b}
-                                    className={`create-badge-btn ${badge === b ? 'active' : ''}`}
-                                    onClick={() => setBadge(b)}
-                                >
-                                    {b}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Title */}
-                    <div className="create-form-row">
-                        <label className="create-form-label">TITLE</label>
+            {/* Canvas */}
+            <div
+                className="story-canvas"
+                ref={canvasRef}
+                onClick={handleCanvasClick}
+            >
+                {!bgImagePreview ? (
+                    <label className="story-add-bg">
+                        <div className="add-bg-label">+ ADD BACKGROUND</div>
                         <input
-                            className="create-form-input"
-                            placeholder="HACKATHON REGISTRATION OPEN"
-                            value={title}
-                            onChange={e => setTitle(e.target.value.toUpperCase())}
-                            maxLength={60}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleBgImageSelect}
+                            style={{ display: 'none' }}
                         />
-                    </div>
+                    </label>
+                ) : (
+                    <img
+                        src={bgImagePreview}
+                        className="story-canvas-bg"
+                        alt="Background"
+                    />
+                )}
 
-                    {/* Body */}
-                    <div className="create-form-row">
-                        <label className="create-form-label">DESCRIPTION</label>
-                        <textarea
-                            className="create-form-textarea"
-                            placeholder="48 hours of pure code chaos..."
-                            value={body}
-                            onChange={e => setBody(e.target.value)}
-                            maxLength={140}
-                            rows={2}
-                        />
-                    </div>
-
-                    {/* Accent Color */}
-                    <div className="create-form-row">
-                        <label className="create-form-label">THEME</label>
-                        <div className="create-accent-row">
-                            {ACCENT_OPTIONS.map((a, i) => (
-                                <button
-                                    key={a.label}
-                                    className={`create-accent-btn ${i === accentIdx ? 'active' : ''}`}
-                                    style={{ background: a.color }}
-                                    onClick={() => setAccentIdx(i)}
+                {/* Elements */}
+                {elements.map((el) => {
+                    const isActive = el.id === activeElementId;
+                    return (
+                        <motion.div
+                            key={el.id}
+                            drag
+                            dragConstraints={canvasRef}
+                            dragMomentum={false}
+                            onDragStart={() => bringToFront(el.id)}
+                            onDragEnd={(event, info) => {
+                                // Accumulate position
+                                updateElement(el.id, {
+                                    x: el.x + info.offset.x,
+                                    y: el.y + info.offset.y
+                                });
+                            }}
+                            className={`story-element ${isActive ? 'active' : ''}`}
+                            style={{
+                                zIndex: el.zIndex,
+                                x: `calc(-50% + ${el.x}px)`,
+                                y: `calc(-50% + ${el.y}px)`,
+                                scale: el.scale,
+                                rotate: el.rotation,
+                            }}
+                            transition={instaSpring}
+                            onPointerDown={(e) => {
+                                e.stopPropagation();
+                                bringToFront(el.id);
+                            }}
+                        >
+                            {el.type === 'text' && (
+                                <input
+                                    type="text"
+                                    className="story-text-input"
+                                    value={el.content}
+                                    onChange={(e) => updateElement(el.id, { content: e.target.value })}
+                                    autoFocus={isActive}
+                                    style={{ color: el.color }}
+                                    placeholder="Type something..."
                                 />
-                            ))}
-                        </div>
-                    </div>
+                            )}
+                            {el.type === 'sticker' && (
+                                <span className="story-sticker">
+                                    {el.content}
+                                </span>
+                            )}
+                        </motion.div>
+                    );
+                })}
+            </div>
 
-                    {/* Publish */}
-                    <button
-                        className="create-publish-btn"
-                        onClick={handlePublish}
-                        disabled={publishing || !title.trim()}
-                        style={{ opacity: publishing || !title.trim() ? 0.5 : 1 }}
-                    >
-                        {publishing ? 'PUBLISHING...' : 'PUBLISH STORY'}
-                    </button>
-                </div>
+            {/* Bottom Actions (Publish) */}
+            <div className="story-bottom-bar">
+                <button
+                    className="publish-btn"
+                    onClick={handlePublish}
+                    disabled={!bgImage || publishing}
+                >
+                    {publishing ? 'PUBLISHING...' : 'PUBLISH'}
+                </button>
             </div>
         </div>
     );
