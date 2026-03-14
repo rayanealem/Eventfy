@@ -1,0 +1,1 @@
+export const instaSpring = { type: "spring", stiffness: 400, damping: 30, mass: 1 };
