@@ -13,7 +13,7 @@ export default function AppShell() {
     const hideBottomNav = ['/splash', '/auth', '/onboarding', '/stories', '/qr', '/volunteer', '/manage', '/admin', '/event/create', '/post/create']
         .some(p => location.pathname === p || location.pathname.startsWith(p + '/'));
 
-    const isFullscreen = location.pathname === '/chat' || location.pathname.startsWith('/chat/');
+    const isFullscreen = location.pathname === '/chat' || location.pathname.startsWith('/chat/') || location.pathname.startsWith('/stories/create');
 
     return (
         <ToastProvider>
