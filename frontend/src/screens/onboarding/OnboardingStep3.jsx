@@ -12,6 +12,7 @@ export default function OnboardingStep3() {
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [loadingData, setLoadingData] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [filterText, setFilterText] = useState('');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -115,6 +116,24 @@ export default function OnboardingStep3() {
                 <section className="obs-step">
                     <h2 className="obs-step-title">STEP 3: WHAT ARE YOU<br />MADE OF? △</h2>
 
+                    <input
+                        type="text"
+                        placeholder="Search skills..."
+                        value={filterText}
+                        onChange={(e) => setFilterText(e.target.value)}
+                        className="obs-skills-filter-input"
+                        style={{
+                            width: '100%',
+                            padding: '12px',
+                            marginBottom: '16px',
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '8px',
+                            color: 'white',
+                            fontFamily: 'Space Grotesk, sans-serif'
+                        }}
+                    />
+
                     {loadingData ? (
                         <div className="obs-skills-cloud">
                             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
@@ -123,7 +142,7 @@ export default function OnboardingStep3() {
                         </div>
                     ) : (
                         <div className="obs-skills-cloud">
-                            {skills.map((s, i) => {
+                            {skills.filter(s => s.name.toLowerCase().includes(filterText.toLowerCase())).map((s, i) => {
                                 const isActive = selectedIds.has(s.id);
                                 return (
                                     <button

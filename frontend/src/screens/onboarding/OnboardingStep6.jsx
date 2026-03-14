@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { hapticSuccess, hapticHeavy } from '../../lib/haptic';
+import { hapticSuccess, hapticHeavy, haptic } from '../../lib/haptic';
+import { useToast } from '../../components/Toast';
 import './OnboardingSteps.css';
 
 export default function OnboardingStep6() {
     const navigate = useNavigate();
     const { user, refreshProfile } = useAuth();
+    const { showToast } = useToast();
     const [loading, setLoading] = useState(false);
     const [countdown, setCountdown] = useState(null);
 
@@ -73,7 +75,15 @@ export default function OnboardingStep6() {
                                 <span className="obs-mission-date">OCT 24</span>
                             </div>
                             <p className="obs-mission-desc">Join the elite 456 developers in Algiers for the ultimate coding survival challenge. 48 hours. No mercy.</p>
-                            <button className="obs-register-btn">REGISTER NOW ○</button>
+                            <button
+                                className="obs-register-btn"
+                                onClick={() => {
+                                    haptic();
+                                    showToast("Preview locked");
+                                }}
+                            >
+                                REGISTER NOW ○
+                            </button>
                         </div>
                     </div>
 
