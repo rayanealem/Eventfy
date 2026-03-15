@@ -22,38 +22,6 @@
     background: linear-gradient(180deg, #0a0a1a 0%, #1a0a2e 50%, #0a0a1a 100%);
 }
 
-/* PROGRESS */
-.story-progress {
-    display: flex;
-    gap: 4px;
-    padding: 12px 16px 0;
-    position: relative;
-    z-index: 10;
-}
-
-.story-prog-bar {
-    flex: 1;
-    height: 2px;
-    background: rgba(255, 255, 255, .2);
-    border-radius: 2px;
-    overflow: hidden;
-}
-
-.story-prog-bar.done .story-prog-fill {
-    width: 100%;
-}
-
-.story-prog-bar.active .story-prog-fill {
-    width: 60%;
-}
-
-.story-prog-fill {
-    height: 100%;
-    background: #fff;
-    border-radius: 2px;
-    /* transition is controlled inline for active bar (none) */
-}
-
 /* HEADER */
 .story-header {
     display: flex;
@@ -62,6 +30,11 @@
     padding: 12px 16px;
     position: relative;
     z-index: 10;
+    transition: opacity 0.3s ease;
+}
+
+.story-header.paused-opacity {
+    opacity: 0.5;
 }
 
 .story-user {
@@ -307,6 +280,33 @@
 }
 
 /* ===== STORY CREATE ROOT (NEW DRAG-AND-DROP CANVAS) ===== */
+/* SMART STICKERS (VIEWER) */
+.story-smart-sticker {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 24px;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    backdrop-filter: blur(8px);
+    cursor: pointer;
+    transition: transform 0.1s;
+    white-space: nowrap;
+}
+
+.story-smart-sticker:active {
+    transform: scale(0.95);
+}
+
+.story-smart-mention { background: linear-gradient(135deg, #fb5151 0%, #ff8a8a 100%); }
+.story-smart-location { background: linear-gradient(135deg, #00ffc2 0%, #00b388 100%); color: #000; }
+.story-smart-link { background: rgba(255, 255, 255, 0.9); color: #000; padding: 12px 24px; border-radius: 24px;}
+
+
+/* ===== STORY CREATE ROOT (NEW DRAG-AND-DROP CANVAS) ===== */
 .story-create-root {
     position: relative;
     width: 100%;
@@ -529,6 +529,20 @@
     filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));
 }
 
+/* CENTER GUIDE */
+.story-center-guide {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1px;
+    background-image: linear-gradient(to bottom, #00ffc2 50%, transparent 50%);
+    background-size: 1px 12px;
+    z-index: 50;
+    pointer-events: none;
+}
+
 /* MAGNETIC TRASH ZONE */
 .story-trash-zone {
     position: absolute;
@@ -604,12 +618,15 @@
 }
 
 .tray-content h4 {
-    margin: 0 0 12px;
+    margin: 24px 0 12px;
     font-family: 'Space Grotesk', sans-serif;
     font-size: 14px;
     color: rgba(255, 255, 255, 0.5);
     text-transform: uppercase;
     letter-spacing: 1px;
+}
+.tray-content h4:first-child {
+    margin-top: 0;
 }
 
 .sticker-grid {
@@ -617,6 +634,30 @@
     grid-template-columns: repeat(4, 1fr);
     gap: 16px;
     margin-bottom: 24px;
+}
+
+.smart-stickers-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.smart-sticker-btn {
+    padding: 12px 20px;
+    border-radius: 12px;
+    border: none;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    color: #fff;
+    cursor: pointer;
+    transition: transform 0.1s;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.smart-sticker-btn:active {
+    transform: scale(0.95);
 }
 
 .shapes-grid {

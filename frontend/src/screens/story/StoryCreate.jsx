@@ -39,6 +39,7 @@ export default function StoryCreate() {
     const [isDragging, setIsDragging] = useState(false);
     const [dragTrashScale, setDragTrashScale] = useState(1);
     const [showStickerTray, setShowStickerTray] = useState(false);
+    const [showCenterGuide, setShowCenterGuide] = useState(false);
 
     const canvasRef = useRef(null);
 
@@ -114,9 +115,40 @@ export default function StoryCreate() {
         setShowStickerTray(false);
     };
 
+    const addSmartSticker = (type) => {
+        const newZ = highestZIndex + 1;
+        setHighestZIndex(newZ);
+
+        let content = '';
+        if (type === 'mention') content = '@username';
+        if (type === 'location') content = 'City, Country';
+        if (type === 'link') content = 'www.example.com';
+
+        const newSticker = {
+            id: `smart_${Date.now()}`,
+            type: type,
+            content: content,
+            color: '#ffffff', // Not strictly used by smart stickers as they have default styling, but kept for consistency
+            x: 0,
+            y: 0,
+            scale: 1,
+            rotation: 0,
+            zIndex: newZ,
+        };
+        setElements(prev => [...prev, newSticker]);
+        setActiveElementId(newSticker.id);
+        setShowStickerTray(false);
+    };
+
     const toggleStickerTray = () => {
         setShowStickerTray(!showStickerTray);
         setActiveElementId(null);
+    };
+
+    const triggerHaptic = () => {
+        if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
+            window.navigator.vibrate(10);
+        }
     };
 
     const updateElement = (id, updates) => {
@@ -246,6 +278,9 @@ export default function StoryCreate() {
                 ref={canvasRef}
                 onClick={handleCanvasClick}
             >
+                {/* Center Guide */}
+                {showCenterGuide && <div className="story-center-guide" />}
+
                 {!bgImagePreview ? (
                     <label className="story-add-bg">
                         <div className="add-bg-label">+ ADD BACKGROUND</div>
@@ -280,21 +315,43 @@ export default function StoryCreate() {
                                 setShowStickerTray(false);
                             }}
                             onDrag={(event, info) => {
+                                // Magnetic Trash
                                 if (info.point.y > window.innerHeight - 100) {
                                     setDragTrashScale(1.2);
                                 } else {
                                     setDragTrashScale(1);
                                 }
+
+                                // Center Guide snapping logic
+                                const newX = el.x + info.offset.x;
+                                if (Math.abs(newX) < 5) {
+                                    if (!showCenterGuide) {
+                                        setShowCenterGuide(true);
+                                        triggerHaptic();
+                                    }
+                                } else {
+                                    setShowCenterGuide(false);
+                                }
                             }}
                             onDragEnd={(event, info) => {
                                 setIsDragging(false);
                                 setDragTrashScale(1);
+                                setShowCenterGuide(false);
+
                                 if (info.point.y > window.innerHeight - 100) {
                                     setElements(prev => prev.filter(item => item.id !== el.id));
+                                    triggerHaptic();
                                     if (isActive) setActiveElementId(null);
                                 } else {
+                                    // Hard Snap to Center
+                                    let finalX = el.x + info.offset.x;
+                                    if (Math.abs(finalX) < 5) {
+                                        finalX = 0;
+                                        triggerHaptic();
+                                    }
+
                                     updateElement(el.id, {
-                                        x: el.x + info.offset.x,
+                                        x: finalX,
                                         y: el.y + info.offset.y
                                     });
                                 }
@@ -335,6 +392,29 @@ export default function StoryCreate() {
                                     {el.content}
                                 </span>
                             )}
+                            {['mention', 'location', 'link'].includes(el.type) && (
+                                <div className={`story-smart-sticker story-smart-${el.type}`}>
+                                    {el.type === 'mention' && '👤 '}
+                                    {el.type === 'location' && '📍 '}
+                                    {el.type === 'link' && '🔗 '}
+                                    <input
+                                        type="text"
+                                        value={el.content}
+                                        onChange={(e) => updateElement(el.id, { content: e.target.value })}
+                                        autoFocus={isActive}
+                                        style={{
+                                            background: 'transparent',
+                                            border: 'none',
+                                            outline: 'none',
+                                            color: 'inherit',
+                                            fontFamily: 'inherit',
+                                            fontSize: 'inherit',
+                                            fontWeight: 'inherit',
+                                            width: `${Math.max(el.content.length, 5)}ch` // Auto-grow basic approximation
+                                        }}
+                                    />
+                                </div>
+                            )}
                         </motion.div>
                     );
                 })}
@@ -370,6 +450,13 @@ export default function StoryCreate() {
                             <h3>Stickers</h3>
                         </div>
                         <div className="tray-content">
+                            <h4>Smart Stickers</h4>
+                            <div className="smart-stickers-grid">
+                                <button className="smart-sticker-btn" onClick={() => addSmartSticker('mention')}>@ Mention</button>
+                                <button className="smart-sticker-btn" onClick={() => addSmartSticker('location')}>📍 Location</button>
+                                <button className="smart-sticker-btn" onClick={() => addSmartSticker('link')}>🔗 Link</button>
+                            </div>
+
                             <h4>Eventfy Shapes</h4>
                             <div className="sticker-grid shapes-grid">
                                 {EVENTFY_SHAPES.map((s, i) => (

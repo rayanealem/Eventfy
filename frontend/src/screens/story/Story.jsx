@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
+import ProgressBar from '../../components/StoryViewer/ProgressBar';
 import './Story.css';
 
 // Fallback stories for when the API isn't available
@@ -57,12 +58,9 @@ export default function Story() {
     const { profile } = useAuth();
 
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
     const [liked, setLiked] = useState({});
-    const [progress, setProgress] = useState(0);
     const [paused, setPaused] = useState(false);
-    const timerRef = useRef(null);
-    const startTimeRef = useRef(Date.now());
-    const elapsedRef = useRef(0);
 
     // Fetch org info
     const { data: org } = useQuery({
@@ -94,70 +92,63 @@ export default function Story() {
 
     const story = stories[currentIndex] || stories[0];
     const totalStories = stories.length;
+    const currentFrames = story?.frames || [story]; // Fallback for legacy stories without frames
+    const totalFrames = currentFrames.length;
 
-    // Auto-advance timer
-    const startTimer = useCallback(() => {
-        clearInterval(timerRef.current);
-        startTimeRef.current = Date.now();
-
-        timerRef.current = setInterval(() => {
-            const elapsed = elapsedRef.current + (Date.now() - startTimeRef.current);
-            const pct = Math.min((elapsed / STORY_DURATION) * 100, 100);
-            setProgress(pct);
-
-            if (pct >= 100) {
-                clearInterval(timerRef.current);
-                goNext();
-            }
-        }, 50);
-    }, [currentIndex, totalStories]);
-
-    const goNext = useCallback(() => {
+    const goNextStory = useCallback(() => {
         if (currentIndex < totalStories - 1) {
             setCurrentIndex(i => i + 1);
-            setProgress(0);
-            elapsedRef.current = 0;
+            setCurrentFrameIndex(0);
         } else {
             navigate(-1); // Exit stories
         }
     }, [currentIndex, totalStories, navigate]);
 
-    const goPrev = useCallback(() => {
+    const goPrevStory = useCallback(() => {
         if (currentIndex > 0) {
             setCurrentIndex(i => i - 1);
-            setProgress(0);
-            elapsedRef.current = 0;
+            setCurrentFrameIndex(0); // Optional: could go to the *last* frame of previous story
         }
     }, [currentIndex]);
 
-    // Start timer whenever story changes
-    useEffect(() => {
-        setProgress(0);
-        elapsedRef.current = 0;
-        if (!paused) startTimer();
-        return () => clearInterval(timerRef.current);
-    }, [currentIndex, paused]);
+    const nextFrame = useCallback(() => {
+        if (currentFrameIndex < totalFrames - 1) {
+            setCurrentFrameIndex(i => i + 1);
+        } else {
+            goNextStory();
+        }
+    }, [currentFrameIndex, totalFrames, goNextStory]);
+
+    const prevFrame = useCallback(() => {
+        if (currentFrameIndex > 0) {
+            setCurrentFrameIndex(i => i - 1);
+        } else {
+            goPrevStory();
+        }
+    }, [currentFrameIndex, goPrevStory]);
 
     // Pause/resume on hold
     const handlePauseStart = () => {
         setPaused(true);
-        clearInterval(timerRef.current);
-        elapsedRef.current += Date.now() - startTimeRef.current;
     };
 
     const handlePauseEnd = () => {
         setPaused(false);
-        startTimer();
     };
 
     // Tap zones: left 30% = prev, right 70% = next
     const handleTap = (e) => {
+        // Prevent tapping if they click a smart sticker or interactive element
+        if (e.target.closest('.story-smart-sticker') || e.target.closest('.story-header') || e.target.closest('.story-footer')) {
+            return;
+        }
+
         const rect = e.currentTarget.getBoundingClientRect();
         const x = e.clientX - rect.left;
         if (x < rect.width * 0.3) {
-            goPrev();
+            prevFrame();
         } else {
-            goNext();
+            nextFrame();
         }
     };
 
@@ -166,8 +157,8 @@ export default function Story() {
     const handleSwipeStart = (e) => { touchStartX.current = e.touches[0].clientX; };
     const handleSwipeEnd = (e) => {
         const diff = touchStartX.current - e.changedTouches[0].clientX;
-        if (diff > 50) goNext();
-        else if (diff < -50) goPrev();
+        if (diff > 50) nextFrame();
+        else if (diff < -50) prevFrame();
     };
 
     const toggleLike = () => {
@@ -182,23 +173,17 @@ export default function Story() {
             <div className="story-viewer"
                 style={{ background: story.bg || 'linear-gradient(180deg, #0a0a1a 0%, #1a0a2e 50%, #0a0a1a 100%)' }}
             >
-                {/* Progress Bars */}
-                <div className="story-progress">
-                    {stories.map((_, i) => (
-                        <div key={i} className={`story-prog-bar ${i < currentIndex ? 'done' : ''} ${i === currentIndex ? 'active' : ''}`}>
-                            <div
-                                className="story-prog-fill"
-                                style={{
-                                    width: i < currentIndex ? '100%' : i === currentIndex ? `${progress}%` : '0%',
-                                    transition: i === currentIndex ? 'none' : undefined,
-                                }}
-                            />
-                        </div>
-                    ))}
-                </div>
+                {/* Segmented Progress Bar */}
+                <ProgressBar
+                    totalSegments={totalFrames}
+                    activeSegmentIndex={currentFrameIndex}
+                    paused={paused}
+                    duration={STORY_DURATION}
+                    onComplete={nextFrame}
+                />
 
                 {/* Header */}
-                <div className="story-header">
+                <div className={`story-header ${paused ? 'paused-opacity' : ''}`}>
                     <div className="story-user">
                         <div className="story-user-avatar" style={{ borderColor: story.accent || '#13ecec' }}>
                             <img src={orgLogo} alt={orgName} />
@@ -225,19 +210,19 @@ export default function Story() {
                     style={{ position: 'relative', overflow: 'hidden' }}
                 >
                     {/* Render specific frame media_url if available */}
-                    {story.frames?.[0]?.media_url && (
+                    {currentFrames[currentFrameIndex]?.media_url && (
                         <img
-                            src={story.frames[0].media_url}
+                            src={currentFrames[currentFrameIndex].media_url}
                             alt="Story background"
                             style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }}
                         />
                     )}
 
                     {/* Render old legacy background gradient if no media_url */}
-                    {!story.frames?.[0]?.media_url && <div className="story-bg-gradient" />}
+                    {!currentFrames[currentFrameIndex]?.media_url && <div className="story-bg-gradient" />}
 
                     {/* Render interactive overlays if available */}
-                    {story.frames?.[0]?.overlays?.map((el) => (
+                    {currentFrames[currentFrameIndex]?.overlays?.map((el) => (
                         <div
                             key={el.id}
                             style={{
@@ -279,11 +264,27 @@ export default function Story() {
                                     {el.content}
                                 </span>
                             )}
+                            {['mention', 'location', 'link'].includes(el.type) && (
+                                <div
+                                    className={`story-smart-sticker story-smart-${el.type}`}
+                                    onClick={(e) => {
+                                        e.stopPropagation(); // prevent navigation
+                                        if (el.type === 'mention') navigate(`/profile/${el.content.replace('@', '')}`);
+                                        if (el.type === 'link') window.open(el.content.startsWith('http') ? el.content : `https://${el.content}`, '_blank');
+                                        // location could open a map
+                                    }}
+                                >
+                                    {el.type === 'mention' && '👤 '}
+                                    {el.type === 'location' && '📍 '}
+                                    {el.type === 'link' && '🔗 '}
+                                    {el.content}
+                                </div>
+                            )}
                         </div>
                     ))}
 
                     {/* Render legacy text content if no overlays */}
-                    {!story.frames?.[0]?.overlays?.length && (
+                    {!currentFrames[currentFrameIndex]?.overlays?.length && (
                         <div className="story-center-content">
                             <span className="story-event-badge">{story.badge || '📢 UPDATE'}</span>
                             <h2 className="story-event-title">
@@ -298,11 +299,6 @@ export default function Story() {
                             </p>
                         </div>
                     )}
-
-                    {/* Story counter */}
-                    <div className="story-counter">
-                        {currentIndex + 1} / {totalStories}
-                    </div>
                 </div>
 
                 {/* Footer */}
