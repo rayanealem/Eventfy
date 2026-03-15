@@ -1,6 +1,18 @@
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function StickerTray({ showStickerTray, addSmartSticker, addSticker, EVENTFY_SHAPES, EMOJIS }) {
+export default function StickerTray({ showStickerTray, addSmartSticker, addSticker, addPhotoSticker, EVENTFY_SHAPES, EMOJIS }) {
+    const handlePhotoSelect = (e) => {
+        const file = e.target.files[0];
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                addPhotoSticker(reader.result); // Base64 Data URL
+            };
+            reader.readAsDataURL(file);
+        }
+        e.target.value = null; // reset
+    };
+
     return (
         <AnimatePresence>
             {showStickerTray && (
@@ -16,8 +28,12 @@ export default function StickerTray({ showStickerTray, addSmartSticker, addStick
                         <h3>Stickers</h3>
                     </div>
                     <div className="tray-content">
-                        <h4>Smart Stickers</h4>
+                        <h4>Media & Smart Stickers</h4>
                         <div className="smart-stickers-grid">
+                            <label className="smart-sticker-btn photo-sticker-btn">
+                                🖼️ Add Photo
+                                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoSelect} />
+                            </label>
                             <button className="smart-sticker-btn" onClick={() => addSmartSticker('mention')}>@ Mention</button>
                             <button className="smart-sticker-btn" onClick={() => addSmartSticker('location')}>📍 Location</button>
                             <button className="smart-sticker-btn" onClick={() => addSmartSticker('link')}>🔗 Link</button>

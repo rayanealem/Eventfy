@@ -38,6 +38,28 @@ export default function FormatToolbar({
                             >
                                 {activeElement.textStyle === 'plain' ? 'A' : 'A*'}
                             </button>
+                            <button
+                                className="format-btn"
+                                onClick={() => {
+                                    const aligns = ['center', 'left', 'right'];
+                                    const currentIdx = aligns.indexOf(activeElement.textAlign || 'center');
+                                    const nextIdx = (currentIdx + 1) % aligns.length;
+                                    updateElement(activeElement.id, { textAlign: aligns[nextIdx] });
+                                }}
+                            >
+                                {activeElement.textAlign === 'left' ? '⫷' : activeElement.textAlign === 'right' ? '⫸' : '≡'}
+                            </button>
+                            <button
+                                className="format-btn"
+                                onClick={() => {
+                                    const anims = ['none', 'pulse', 'wobble'];
+                                    const currentIdx = anims.indexOf(activeElement.animationType || 'none');
+                                    const nextIdx = (currentIdx + 1) % anims.length;
+                                    updateElement(activeElement.id, { animationType: anims[nextIdx] });
+                                }}
+                            >
+                                {activeElement.animationType === 'pulse' ? '💓' : activeElement.animationType === 'wobble' ? '〰️' : '✨'}
+                            </button>
                         </div>
                     )}
                     <div className="color-picker">

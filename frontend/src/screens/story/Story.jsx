@@ -297,6 +297,7 @@ export default function Story() {
                                 top: '50%',
                                 transform: `translate(calc(-50% + ${el.x}px), calc(-50% + ${el.y}px)) scale(${el.scale}) rotate(${el.rotation}deg)`,
                             }}
+                            className={`anim-${el.animationType || 'none'}`}
                         >
                             {el.type === 'text' && (
                                 <div
@@ -311,12 +312,26 @@ export default function Story() {
                                         borderRadius: el.textStyle === 'solid' ? '12px' : '0',
                                         outline: 'none',
                                         border: 'none',
-                                        textAlign: 'center',
-                                        minWidth: '150px'
+                                        textAlign: el.textAlign || 'center',
+                                        width: '100%',
+                                        minWidth: 'max-content'
                                     }}
                                 >
                                     {el.content}
                                 </div>
+                            )}
+                            {el.type === 'photo_sticker' && (
+                                <img
+                                    src={el.content}
+                                    alt="Photo Sticker"
+                                    className={`story-photo-sticker shape-${el.shape || 'square'}`}
+                                    style={{
+                                        width: '150px',
+                                        height: '150px',
+                                        objectFit: 'cover',
+                                        pointerEvents: 'none'
+                                    }}
+                                />
                             )}
                             {el.type === 'sticker' && (
                                 <span
