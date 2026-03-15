@@ -580,10 +580,9 @@
 /* ELEMENTS (LAYERS) */
 .story-element {
     position: absolute;
-    /* Center it initially */
+    /* Absolute anchor for 0,0 center coordinates */
     left: 50%;
     top: 50%;
-    transform: translate(-50%, -50%); /* Base transform, framer-motion overrides this */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -592,15 +591,22 @@
     touch-action: none;
 }
 
+.story-element-anchor-content {
+    /* Always pull the content back by 50% to center it exactly on the anchor point */
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .story-element:active {
     cursor: grabbing;
 }
 
-.story-element.active {
+.story-element.active .story-element-anchor-content {
     border: 2px dashed #00ffc2;
     border-radius: 8px;
-    padding: 4px; /* Give some breathing room for the border */
-    /* Adjust margin negatively so layout doesn't shift, or just rely on padding */
+    padding: 4px;
 }
 
 /* TEXT ELEMENT */
@@ -882,6 +888,50 @@
     pointer-events: none;
     z-index: 1000;
     filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+}
+
+/* PRECISION SCALE SLIDER */
+.story-scale-slider-wrap {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 200px;
+    z-index: 102;
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    border-radius: 20px;
+    padding: 16px 0;
+}
+
+.story-scale-slider {
+    /* CSS trick to make a horizontal range slider vertical */
+    appearance: slider-vertical;
+    writing-mode: bt-lr; /* IE */
+    -webkit-appearance: slider-vertical; /* Webkit */
+    width: 24px;
+    height: 160px;
+    background: transparent;
+    outline: none;
+}
+
+.story-scale-slider::-webkit-slider-runnable-track {
+    width: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+}
+
+.story-scale-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 16px;
+    width: 16px;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    margin-top: -6px; /* align with track */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 /* BOTTOM BAR (CREATOR) */
