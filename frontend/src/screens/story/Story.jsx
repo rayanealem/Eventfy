@@ -222,21 +222,80 @@ export default function Story() {
                     onTouchEnd={handleSwipeEnd}
                     onPointerDown={handlePauseStart}
                     onPointerUp={handlePauseEnd}
+                    style={{ position: 'relative', overflow: 'hidden' }}
                 >
-                    <div className="story-bg-gradient" />
-                    <div className="story-center-content">
-                        <span className="story-event-badge">{story.badge || '📢 UPDATE'}</span>
-                        <h2 className="story-event-title">
-                            {story.title?.split('\n').map((line, i) => (
-                                <span key={i}>{line}{i < story.title.split('\n').length - 1 && <br />}</span>
-                            ))}
-                        </h2>
-                        <p className="story-event-sub">
-                            {story.body?.split('\n').map((line, i) => (
-                                <span key={i}>{line}{i < story.body.split('\n').length - 1 && <br />}</span>
-                            ))}
-                        </p>
-                    </div>
+                    {/* Render specific frame media_url if available */}
+                    {story.frames?.[0]?.media_url && (
+                        <img
+                            src={story.frames[0].media_url}
+                            alt="Story background"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }}
+                        />
+                    )}
+
+                    {/* Render old legacy background gradient if no media_url */}
+                    {!story.frames?.[0]?.media_url && <div className="story-bg-gradient" />}
+
+                    {/* Render interactive overlays if available */}
+                    {story.frames?.[0]?.overlays?.map((el) => (
+                        <div
+                            key={el.id}
+                            style={{
+                                position: 'absolute',
+                                zIndex: el.zIndex,
+                                left: '50%',
+                                top: '50%',
+                                transform: `translate(calc(-50% + ${el.x}px), calc(-50% + ${el.y}px)) scale(${el.scale}) rotate(${el.rotation}deg)`,
+                            }}
+                        >
+                            {el.type === 'text' && (
+                                <div
+                                    style={{
+                                        color: el.color,
+                                        fontFamily: "'Space Grotesk', sans-serif",
+                                        fontSize: '32px',
+                                        fontWeight: 700,
+                                        textShadow: '0 2px 4px rgba(0,0,0,0.8)',
+                                        background: 'transparent',
+                                        outline: 'none',
+                                        border: 'none',
+                                        textAlign: 'center',
+                                        minWidth: '150px'
+                                    }}
+                                >
+                                    {el.content}
+                                </div>
+                            )}
+                            {el.type === 'sticker' && (
+                                <span
+                                    style={{
+                                        fontSize: '64px',
+                                        filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))',
+                                        cursor: 'grab'
+                                    }}
+                                >
+                                    {el.content}
+                                </span>
+                            )}
+                        </div>
+                    ))}
+
+                    {/* Render legacy text content if no overlays */}
+                    {!story.frames?.[0]?.overlays?.length && (
+                        <div className="story-center-content">
+                            <span className="story-event-badge">{story.badge || '📢 UPDATE'}</span>
+                            <h2 className="story-event-title">
+                                {story.title?.split('\n').map((line, i) => (
+                                    <span key={i}>{line}{i < story.title.split('\n').length - 1 && <br />}</span>
+                                ))}
+                            </h2>
+                            <p className="story-event-sub">
+                                {story.body?.split('\n').map((line, i) => (
+                                    <span key={i}>{line}{i < story.body.split('\n').length - 1 && <br />}</span>
+                                ))}
+                            </p>
+                        </div>
+                    )}
 
                     {/* Story counter */}
                     <div className="story-counter">
