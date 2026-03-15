@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
+import { supabase } from '../../lib/supabase';
 import { motion } from 'framer-motion';
 import { instaSpring } from '../../lib/physics';
 import './Story.css';
@@ -95,6 +96,27 @@ export default function StoryCreate() {
         setPublishing(true);
 
         try {
+            // Upload the background image
+            const fileExt = bgImage.name.split('.').pop();
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+            const filePath = `uploads/${fileName}`;
+
+            const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('stories')
+                .upload(filePath, bgImage);
+
+            if (uploadError) {
+                console.error('Upload Error:', uploadError);
+                alert("Failed to upload image");
+                setPublishing(false);
+                return;
+            }
+
+            // Retrieve the public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('stories')
+                .getPublicUrl(filePath);
+
             // Create the parent story
             const storyRes = await api('POST', `/stories`, {
                 org_id: profile.managed_orgs?.[0]?.id || profile.id, // Fallback if managed_orgs not available
@@ -110,7 +132,7 @@ export default function StoryCreate() {
 
             // Prepare the frames payload
             const payload = {
-                media_url: 'https://placeholder.com/bg.jpg', // Temporary hardcode
+                media_url: publicUrl,
                 overlays: elements
             };
 
