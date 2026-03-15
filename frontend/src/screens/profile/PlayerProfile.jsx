@@ -117,7 +117,6 @@ export default function PlayerProfile() {
     const xp = p.xp || 0;
     const level = p.level || 1;
     const eventCount = p.event_count || p.events_attended || 0;
-    const badgeCount = p.badge_count || p.user_badges?.length || 0;
     const followerCount = (p.follower_count || 0) + localFollowerDelta;
     const followingCount = p.following_count || 0;
     const bio = p.bio || '';
@@ -130,7 +129,11 @@ export default function PlayerProfile() {
     // Fix passport parsing: use actual events_attended and badges arrays
     const passportLists = passportData || {};
     const passportEvents = passportLists?.events_attended || [];
-    const passportBadges = passportLists?.badges || p.user_badges || [];
+    const passportBadges = passportLists?.badges || [];
+
+    // Derive counts from passport data if available
+    const effectiveEventCount = passportLists?.events_attended ? passportEvents.length : eventCount;
+    const effectiveBadgeCount = passportLists?.badges ? passportBadges.length : (p.badge_count || 0);
 
     // Sync isFollowing from profile data
     useEffect(() => {
@@ -222,7 +225,8 @@ export default function PlayerProfile() {
                 {/* Stats */}
                 <div style={{ display: 'flex', flex: 1, justifyContent: 'space-around' }}>
                     {[
-                        { value: eventCount, label: 'Events' },
+                        { value: effectiveEventCount, label: 'Events' },
+                        { value: effectiveBadgeCount, label: 'Badges', onClick: () => { haptic(); setActiveTab('badges'); } },
                         { value: followerCount, label: 'Followers', onClick: () => { haptic(); setSheetType('followers'); } },
                         { value: followingCount, label: 'Following', onClick: () => { haptic(); setSheetType('following'); } },
                         ...(!isOwnProfile ? [{ value: Math.floor(Math.abs(((p.id?.charCodeAt?.(0) || 0) * 7 + 3) % 12)), label: 'Mutual', onClick: () => showToast('MUTUAL EVENTS — COMING SOON', 'info') }] : []),
