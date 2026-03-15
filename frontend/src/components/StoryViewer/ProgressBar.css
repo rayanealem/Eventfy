@@ -1,0 +1,35 @@
+.story-progress-container {
+    display: flex;
+    gap: 4px;
+    padding: 12px 16px 0;
+    position: relative;
+    z-index: 10;
+    transition: opacity 0.3s ease;
+}
+
+.story-progress-container.paused-opacity {
+    opacity: 0.5;
+}
+
+.story-prog-bar {
+    flex: 1;
+    height: 2px;
+    background: rgba(255, 255, 255, .2);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.story-prog-fill {
+    height: 100%;
+    background: #fff;
+    border-radius: 2px;
+}
+
+@keyframes fillProgress {
+    from {
+        width: 0%;
+    }
+    to {
+        width: 100%;
+    }
+}

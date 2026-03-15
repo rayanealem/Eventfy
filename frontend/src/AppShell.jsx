@@ -2,7 +2,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import BottomNav from './components/BottomNav';
-import { pageVariants } from './router/transitions';
+import { fadeTransition } from './router/transitions';
 import { ToastProvider } from './components/Toast';
 
 export default function AppShell() {
@@ -24,7 +24,7 @@ export default function AppShell() {
                         initial="initial"
                         animate="animate"
                         exit="exit"
-                        variants={pageVariants}
+                        variants={fadeTransition}
                         style={{ width: '100%', height: '100%' }}
                     >
                         <Outlet />
