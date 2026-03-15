@@ -18,7 +18,7 @@ export default function AppShell() {
     return (
         <ToastProvider>
             <div className={isFullscreen ? "" : "app-shell"} style={isFullscreen ? { height: '100vh', width: '100vw', overflow: 'hidden' } : { paddingBottom: '80px', position: 'relative', height: '100vh' }}>
-                <AnimatePresence mode="wait">
+                <AnimatePresence mode="popLayout">
                     <motion.div
                         key={location.pathname}
                         initial="initial"

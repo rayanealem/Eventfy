@@ -558,7 +558,7 @@ export default function Feed() {
                             >
                                 {/* Image area — clickable to event detail */}
                                 <div className="feed-card-image" onClick={() => navigate(`/event/${event.id}`)} style={{ cursor: 'pointer' }}>
-                                    <img src={event.cover_url || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&h=400&fit=crop'} alt={event.title} />
+                                    <motion.img layoutId={"event-image-" + event.id} src={event.cover_url || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&h=400&fit=crop'} alt={event.title} />
                                     <div className="feed-card-gradient" />
                                     <div
                                         className="feed-card-type"
