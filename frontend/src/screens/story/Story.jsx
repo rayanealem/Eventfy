@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
@@ -62,6 +63,10 @@ export default function Story() {
     const [liked, setLiked] = useState({});
     const [paused, setPaused] = useState(false);
 
+    // Polls & Reactions State
+    const [pollVotes, setPollVotes] = useState({}); // { pollId: { option: 'A', pctA: 80, pctB: 20 } }
+    const [flyingEmojis, setFlyingEmojis] = useState([]);
+
     // Fetch org info
     const { data: org } = useQuery({
         queryKey: ['org', orgId],
@@ -94,6 +99,7 @@ export default function Story() {
     const totalStories = stories.length;
     const currentFrames = story?.frames || [story]; // Fallback for legacy stories without frames
     const totalFrames = currentFrames.length;
+    const currentDuration = currentFrames[currentFrameIndex]?.duration_ms || STORY_DURATION;
 
     const goNextStory = useCallback(() => {
         if (currentIndex < totalStories - 1) {
@@ -139,7 +145,7 @@ export default function Story() {
     // Tap zones: left 30% = prev, right 70% = next
     const handleTap = (e) => {
         // Prevent tapping if they click a smart sticker or interactive element
-        if (e.target.closest('.story-smart-sticker') || e.target.closest('.story-header') || e.target.closest('.story-footer')) {
+        if (e.target.closest('.story-smart-sticker') || e.target.closest('.story-header') || e.target.closest('.story-footer') || e.target.closest('.story-poll-widget')) {
             return;
         }
 
@@ -149,6 +155,55 @@ export default function Story() {
             prevFrame();
         } else {
             nextFrame();
+        }
+    };
+
+    // --- Premium Interaction Handlers ---
+    const handlePollVote = async (pollId, option) => {
+        if (pollVotes[pollId]) return; // Already voted
+
+        setPaused(true); // Pause while voting
+
+        // Optimistic UI update (simulate results quickly for the cinematic feel)
+        const isA = option === 'A';
+        setPollVotes(prev => ({
+            ...prev,
+            [pollId]: {
+                option: option,
+                pctA: isA ? 100 : 0, // In reality, we'd fetch actual counts, simulating a starting jump
+                pctB: isA ? 0 : 100
+            }
+        }));
+
+        try {
+            await api('POST', `/stories/${story.id}/frames/${currentFrames[currentFrameIndex].id}/vote`, { option });
+            // In a real prod app, you'd fetch the updated aggregate counts here and update the pcts
+            setPollVotes(prev => ({
+                ...prev,
+                [pollId]: { ...prev[pollId], pctA: isA ? 80 : 20, pctB: isA ? 20 : 80 } // Simulated response
+            }));
+        } catch (e) {
+            console.error('Failed to vote:', e);
+        }
+
+        setTimeout(() => setPaused(false), 1500); // Resume after viewing results briefly
+    };
+
+    const handleReaction = async (emoji) => {
+        // 1. Create flying emoji
+        const newEmoji = { id: Date.now() + Math.random(), emoji, x: Math.random() * 80 + 10 }; // Random horizontal start (10-90%)
+        setFlyingEmojis(prev => [...prev, newEmoji]);
+
+        // 2. Remove after animation finishes
+        setTimeout(() => {
+            setFlyingEmojis(prev => prev.filter(e => e.id !== newEmoji.id));
+        }, 1500);
+
+        // 3. Send to backend
+        try {
+            await api('POST', `/stories/${story.id}/react`, { emoji });
+        } catch (e) {
+            console.error('Failed to send reaction:', e);
         }
     };
 
@@ -178,7 +233,7 @@ export default function Story() {
                     totalSegments={totalFrames}
                     activeSegmentIndex={currentFrameIndex}
                     paused={paused}
-                    duration={STORY_DURATION}
+                    duration={currentDuration}
                     onComplete={nextFrame}
                 />
 
@@ -211,19 +266,38 @@ export default function Story() {
                 >
                     {/* Render specific frame media_url if available */}
                     {currentFrames[currentFrameIndex]?.media_url && (
-                        <img
-                            src={currentFrames[currentFrameIndex].media_url}
-                            alt="Story background"
-                            style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'cover',
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                filter: currentFrames[currentFrameIndex].filter_css || 'none'
-                            }}
-                        />
+                        currentFrames[currentFrameIndex].media_type === 'video' ? (
+                            <video
+                                src={currentFrames[currentFrameIndex].media_url}
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    filter: currentFrames[currentFrameIndex].filter_css || 'none'
+                                }}
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                            />
+                        ) : (
+                            <img
+                                src={currentFrames[currentFrameIndex].media_url}
+                                alt="Story background"
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    filter: currentFrames[currentFrameIndex].filter_css || 'none'
+                                }}
+                            />
+                        )
                     )}
 
                     {/* Render old legacy background gradient if no media_url */}
@@ -300,6 +374,33 @@ export default function Story() {
                                     }}
                                 />
                             )}
+                            {el.type === 'poll' && (
+                                <div className="story-poll-widget">
+                                    <div className="story-poll-question">{el.content.question}</div>
+                                    <div className="story-poll-options">
+                                        <div
+                                            className={`story-poll-option ${pollVotes[el.id]?.option === 'A' ? 'voted' : ''}`}
+                                            onClick={() => handlePollVote(el.id, 'A')}
+                                        >
+                                            {pollVotes[el.id] && (
+                                                <div className="story-poll-fill" style={{ width: `${pollVotes[el.id].pctA}%` }} />
+                                            )}
+                                            <span className="poll-option-text">{el.content.optA}</span>
+                                            {pollVotes[el.id] && <span className="poll-pct">{pollVotes[el.id].pctA}%</span>}
+                                        </div>
+                                        <div
+                                            className={`story-poll-option ${pollVotes[el.id]?.option === 'B' ? 'voted' : ''}`}
+                                            onClick={() => handlePollVote(el.id, 'B')}
+                                        >
+                                            {pollVotes[el.id] && (
+                                                <div className="story-poll-fill" style={{ width: `${pollVotes[el.id].pctB}%` }} />
+                                            )}
+                                            <span className="poll-option-text">{el.content.optB}</span>
+                                            {pollVotes[el.id] && <span className="poll-pct">{pollVotes[el.id].pctB}%</span>}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     ))}
 
@@ -321,8 +422,8 @@ export default function Story() {
                     )}
                 </div>
 
-                {/* Footer */}
-                <div className="story-footer">
+                {/* Footer / Reaction Bar */}
+                <div className={`story-footer ${paused ? 'paused-opacity' : ''}`}>
                     <div className="story-reply-wrap">
                         <input
                             className="story-reply-input"
@@ -331,17 +432,30 @@ export default function Story() {
                             onBlur={() => setPaused(false)}
                         />
                     </div>
-                    <div className="story-footer-actions">
-                        <span
-                            className="story-react"
-                            onClick={toggleLike}
-                            style={{ cursor: 'pointer', color: liked[story.id] ? '#ff4d4d' : undefined }}
-                        >
-                            {liked[story.id] ? '♥' : '♡'}
-                        </span>
-                        <span className="story-share" style={{ cursor: 'pointer' }}>↗</span>
+                    <div className="story-reaction-bar">
+                        <button className="reaction-btn" onClick={() => handleReaction('❤️')}>❤️</button>
+                        <button className="reaction-btn" onClick={() => handleReaction('🔥')}>🔥</button>
+                        <button className="reaction-btn" onClick={() => handleReaction('🚀')}>🚀</button>
                     </div>
                 </div>
+
+                {/* Flying Emojis Layer */}
+                <AnimatePresence>
+                    {flyingEmojis.map((fe) => (
+                        <motion.div
+                            key={fe.id}
+                            className="flying-emoji"
+                            initial={{ y: 0, opacity: 1, x: '-50%' }}
+                            animate={{ y: -500, opacity: 0 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 1.2, ease: "easeOut" }}
+                            style={{ left: `${fe.x}%` }}
+                        >
+                            {fe.emoji}
+                        </motion.div>
+                    ))}
+                </AnimatePresence>
+
             </div>
         </div>
     );

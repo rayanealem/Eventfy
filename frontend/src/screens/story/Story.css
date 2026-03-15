@@ -280,6 +280,97 @@
 }
 
 /* ===== STORY CREATE ROOT (NEW DRAG-AND-DROP CANVAS) ===== */
+/* POLL WIDGET */
+.story-poll-widget {
+    background: #fff;
+    border-radius: 16px;
+    padding: 16px;
+    width: 240px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    cursor: default;
+}
+
+.story-poll-question {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    color: #000;
+    text-align: center;
+    border: none;
+    outline: none;
+    background: transparent;
+    resize: none;
+    width: 100%;
+}
+
+.story-poll-options {
+    display: flex;
+    gap: 8px;
+}
+
+.story-poll-option {
+    flex: 1;
+    background: #f1f5f9;
+    border-radius: 99px;
+    padding: 12px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+.story-poll-option:active {
+    transform: scale(0.95);
+}
+
+.story-poll-option input {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: #000;
+    text-align: center;
+    border: none;
+    outline: none;
+    background: transparent;
+    width: 100%;
+    z-index: 2;
+}
+
+.poll-option-text {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: #000;
+    z-index: 2;
+}
+
+.poll-pct {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: #000;
+    z-index: 2;
+    margin-left: 8px;
+}
+
+.story-poll-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    background: #2dd4bf;
+    z-index: 1;
+    transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.story-poll-option.voted .story-poll-fill {
+    background: #f56e3d; /* Highlight chosen option */
+}
+
 /* SMART STICKERS (VIEWER) */
 .story-smart-sticker {
     display: inline-flex;
@@ -759,7 +850,41 @@
     transform: scale(1.05);
 }
 
-/* BOTTOM BAR */
+/* REACTION BAR (VIEWER) */
+.story-reaction-bar {
+    display: flex;
+    gap: 8px;
+}
+
+.reaction-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    cursor: pointer;
+    transition: transform 0.1s, background 0.2s;
+}
+
+.reaction-btn:active {
+    transform: scale(0.9);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.flying-emoji {
+    position: absolute;
+    bottom: 80px;
+    font-size: 40px;
+    pointer-events: none;
+    z-index: 1000;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+}
+
+/* BOTTOM BAR (CREATOR) */
 .story-bottom-bar {
     position: absolute;
     bottom: 0;

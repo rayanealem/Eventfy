@@ -77,6 +77,29 @@ async def delete_story(story_id: str, user=Depends(require_org)):
     return {"message": "Story deleted"}
 
 
+@router.post("/{story_id}/frames/{frame_id}/vote")
+async def vote_poll(story_id: str, frame_id: str, body: dict, user=Depends(get_current_user)):
+    """Vote on a poll in a story frame."""
+    vote = supabase.table("story_poll_votes").insert({
+        "story_id": story_id,
+        "frame_id": frame_id,
+        "user_id": user["id"],
+        "option": body.get("option", "A"),
+    }).execute()
+    return vote.data[0] if vote.data else {}
+
+
+@router.post("/{story_id}/react")
+async def react_story(story_id: str, body: dict, user=Depends(get_current_user)):
+    """React to a story."""
+    reaction = supabase.table("story_reactions").insert({
+        "story_id": story_id,
+        "user_id": user["id"],
+        "emoji": body.get("emoji", "❤️"),
+    }).execute()
+    return reaction.data[0] if reaction.data else {}
+
+
 @router.post("/{story_id}/view")
 async def record_view(story_id: str, user=Depends(get_current_user)):
     """Record a story view."""

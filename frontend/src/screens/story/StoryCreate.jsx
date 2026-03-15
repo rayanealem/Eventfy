@@ -30,6 +30,8 @@ export default function StoryCreate() {
     // The Layer Manager State
     const [bgImage, setBgImage] = useState(null);
     const [bgImagePreview, setBgImagePreview] = useState(null);
+    const [isVideo, setIsVideo] = useState(false);
+    const [videoDuration, setVideoDuration] = useState(5000); // ms, default for images
     const [elements, setElements] = useState([]);
     const [activeElementId, setActiveElementId] = useState(null);
     const [highestZIndex, setHighestZIndex] = useState(1);
@@ -75,8 +77,33 @@ export default function StoryCreate() {
     const handleBgImageSelect = (e) => {
         const file = e.target.files[0];
         if (file) {
-            setBgImage(file);
-            setBgImagePreview(URL.createObjectURL(file));
+            // Video Validation
+            if (file.type.startsWith('video/')) {
+                if (file.size > 20 * 1024 * 1024) { // 20MB
+                    alert("Video exceeds 20MB maximum size limit.");
+                    return;
+                }
+
+                const tempVideo = document.createElement('video');
+                tempVideo.preload = 'metadata';
+                tempVideo.onloadedmetadata = function() {
+                    window.URL.revokeObjectURL(tempVideo.src);
+                    if (tempVideo.duration > 15) {
+                        alert("Video exceeds 15 seconds maximum duration limit.");
+                    } else {
+                        setIsVideo(true);
+                        setVideoDuration(Math.round(tempVideo.duration * 1000));
+                        setBgImage(file);
+                        setBgImagePreview(URL.createObjectURL(file));
+                    }
+                }
+                tempVideo.src = URL.createObjectURL(file);
+            } else {
+                setIsVideo(false);
+                setVideoDuration(5000);
+                setBgImage(file);
+                setBgImagePreview(URL.createObjectURL(file));
+            }
         }
     };
 
@@ -221,6 +248,25 @@ export default function StoryCreate() {
         setShowStickerTray(false);
     };
 
+    const addPoll = () => {
+        const newZ = highestZIndex + 1;
+        setHighestZIndex(newZ);
+        const newPoll = {
+            id: `poll_${Date.now()}`,
+            type: 'poll',
+            content: { question: 'Ask a question...', optA: 'Yes', optB: 'No' },
+            color: '#000000',
+            x: 0,
+            y: 0,
+            scale: 1,
+            rotation: 0,
+            zIndex: newZ,
+        };
+        setElements(prev => [...prev, newPoll]);
+        setActiveElementId(newPoll.id);
+        setShowStickerTray(false);
+    };
+
     const addSmartSticker = (type) => {
         const newZ = highestZIndex + 1;
         setHighestZIndex(newZ);
@@ -319,6 +365,8 @@ export default function StoryCreate() {
             // Prepare the frames payload
             const payload = {
                 media_url: publicUrl,
+                media_type: isVideo ? 'video' : 'image',
+                duration_ms: videoDuration,
                 overlays: finalElements,
                 filter_css: activeFilter
             };
@@ -351,6 +399,7 @@ export default function StoryCreate() {
                     <div className="toolbar-actions">
                         <button className="toolbar-btn" onClick={toggleDrawingMode}>🖌️</button>
                         <button className="toolbar-btn" onClick={toggleFilters}>✨</button>
+                        <button className="toolbar-btn" onClick={addPoll}>📊</button>
                         <button className="toolbar-btn" onClick={addText}>Aa</button>
                         <button className="toolbar-btn" onClick={toggleStickerTray}>🔥</button>
                     </div>
@@ -425,19 +474,31 @@ export default function StoryCreate() {
                         <div className="add-bg-label">+ ADD BACKGROUND</div>
                         <input
                             type="file"
-                            accept="image/*"
+                            accept="image/*,video/mp4,video/webm"
                             onChange={handleBgImageSelect}
                             style={{ display: 'none' }}
                         />
                     </label>
                 ) : (
                     <>
-                        <img
-                            src={bgImagePreview}
-                            className="story-canvas-bg"
-                            style={{ filter: activeFilter }}
-                            alt="Background"
-                        />
+                        {isVideo ? (
+                            <video
+                                src={bgImagePreview}
+                                className="story-canvas-bg"
+                                style={{ filter: activeFilter }}
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                            />
+                        ) : (
+                            <img
+                                src={bgImagePreview}
+                                className="story-canvas-bg"
+                                style={{ filter: activeFilter }}
+                                alt="Background"
+                            />
+                        )}
                         {/* Drawing Canvas Overlay */}
                         <canvas
                             ref={drawCanvasRef}
@@ -564,6 +625,33 @@ export default function StoryCreate() {
                                             width: `${Math.max(el.content.length, 5)}ch` // Auto-grow basic approximation
                                         }}
                                     />
+                                </div>
+                            )}
+                            {el.type === 'poll' && (
+                                <div className="story-poll-widget">
+                                    <input
+                                        type="text"
+                                        className="story-poll-question"
+                                        value={el.content.question}
+                                        onChange={(e) => updateElement(el.id, { content: { ...el.content, question: e.target.value } })}
+                                        placeholder="Ask a question..."
+                                    />
+                                    <div className="story-poll-options">
+                                        <div className="story-poll-option">
+                                            <input
+                                                type="text"
+                                                value={el.content.optA}
+                                                onChange={(e) => updateElement(el.id, { content: { ...el.content, optA: e.target.value } })}
+                                            />
+                                        </div>
+                                        <div className="story-poll-option">
+                                            <input
+                                                type="text"
+                                                value={el.content.optB}
+                                                onChange={(e) => updateElement(el.id, { content: { ...el.content, optB: e.target.value } })}
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </motion.div>
