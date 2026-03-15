@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
+import { supabase } from '../../lib/supabase';
 import { motion } from 'framer-motion';
 import { instaSpring } from '../../lib/physics';
 import './Story.css';
@@ -90,14 +91,35 @@ export default function StoryCreate() {
         setElements(prev => prev.map(el => el.id === id ? { ...el, ...updates } : el));
     };
 
-    const handlePublish = async () => {
+const handlePublish = async () => {
         if (!bgImage) return;
         setPublishing(true);
 
         try {
-            // Create the parent story
+            // 1. Upload the background image to Supabase
+            const fileExt = bgImage.name.split('.').pop();
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+            const filePath = `uploads/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('stories')
+                .upload(filePath, bgImage);
+
+            if (uploadError) {
+                console.error('Supabase Upload Error:', uploadError);
+                alert(`Supabase Upload failed: ${uploadError.message}`);
+                setPublishing(false);
+                return;
+            }
+
+            // 2. Retrieve the actual public URL from Supabase
+            const { data: { publicUrl } } = supabase.storage
+                .from('stories')
+                .getPublicUrl(filePath);
+
+            // 3. Create the parent story
             const storyRes = await api('POST', `/stories`, {
-                org_id: profile.managed_orgs?.[0]?.id || profile.id, // Fallback if managed_orgs not available
+                org_id: profile.managed_orgs?.[0]?.id || profile.id,
                 type: 'announcement',
                 badge: '',
                 title: 'Story',
@@ -108,19 +130,20 @@ export default function StoryCreate() {
 
             const storyId = storyRes.id;
 
-            // Prepare the frames payload
+            // 4. Save the frame with the REAL image URL and sticker coordinates
             const payload = {
-                media_url: 'https://placeholder.com/bg.jpg', // Temporary hardcode
+                media_url: publicUrl,
                 overlays: elements
             };
 
             await api('POST', `/stories/${storyId}/frames`, payload);
 
+            // 5. Success! Navigate back
             navigate(-1);
         } catch (err) {
             console.error('Failed to publish story:', err);
-            // We should still navigate back for now or show error
-            navigate(-1);
+            // This alert stops the silent exit and tells you exactly what failed
+            alert(`Failed to save story to database: ${err.message}`);
         } finally {
             setPublishing(false);
         }
