@@ -5,7 +5,10 @@ import { api } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { instaSpring } from '../../lib/physics';
-import './Story.css';
+import StickerTray from './components/StickerTray';
+import FilterTray from './components/FilterTray';
+import FormatToolbar from './components/FormatToolbar';
+import './StoryCreate.css';
 
 const COLORS = ['#ffffff', '#000000', '#fb5151', '#00ffc2', '#ffd700', '#b484ce'];
 const EVENTFY_SHAPES = [
@@ -419,58 +422,17 @@ export default function StoryCreate() {
             </AnimatePresence>
 
             {/* Formatting Toolbar (For active text OR drawing mode) */}
-            <AnimatePresence>
-                {((activeElement && activeElement.type === 'text') || isDrawingMode) && !isDragging && (
-                    <motion.div
-                        className="story-format-toolbar"
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                    >
-                        {!isDrawingMode && (
-                            <div className="format-toggles">
-                                <button
-                                    className="format-btn"
-                                    onClick={() => updateElement(activeElement.id, {
-                                        fontFamily: activeElement.fontFamily === 'Space Grotesk' ? 'Bebas Neue' : 'Space Grotesk'
-                                    })}
-                                >
-                                    {activeElement.fontFamily === 'Space Grotesk' ? 'Aa' : 'AA'}
-                                </button>
-                                <button
-                                    className="format-btn"
-                                    onClick={() => updateElement(activeElement.id, {
-                                        textStyle: activeElement.textStyle === 'plain' ? 'solid' : 'plain'
-                                    })}
-                                >
-                                    {activeElement.textStyle === 'plain' ? 'A' : 'A*'}
-                                </button>
-                            </div>
-                        )}
-                        <div className="color-picker">
-                            {COLORS.map(c => (
-                                <button
-                                    key={c}
-                                    className={`color-swatch ${isDrawingMode ? (brushColor === c ? 'active' : '') : (activeElement?.textStyle === 'solid' ? (activeElement.bgColor === c ? 'active' : '') : (activeElement?.color === c ? 'active' : ''))}`}
-                                    style={{ backgroundColor: c }}
-                                    onClick={() => {
-                                        if (isDrawingMode) {
-                                            setBrushColor(c);
-                                            if (ctxRef.current) ctxRef.current.strokeStyle = c;
-                                        } else if (activeElement) {
-                                            if (activeElement.textStyle === 'solid') {
-                                                updateElement(activeElement.id, { bgColor: c, color: getContrastColor(c) });
-                                            } else {
-                                                updateElement(activeElement.id, { color: c });
-                                            }
-                                        }
-                                    }}
-                                />
-                            ))}
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <FormatToolbar
+                activeElement={activeElement}
+                isDrawingMode={isDrawingMode}
+                isDragging={isDragging}
+                updateElement={updateElement}
+                COLORS={COLORS}
+                brushColor={brushColor}
+                setBrushColor={setBrushColor}
+                ctxRef={ctxRef}
+                getContrastColor={getContrastColor}
+            />
 
             {/* Canvas */}
             <div
@@ -697,56 +659,13 @@ export default function StoryCreate() {
             </AnimatePresence>
 
             {/* Sticker Tray Bottom Sheet */}
-            <AnimatePresence>
-                {showStickerTray && (
-                    <motion.div
-                        className="story-sticker-tray"
-                        initial={{ y: '100%' }}
-                        animate={{ y: 0 }}
-                        exit={{ y: '100%' }}
-                        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                    >
-                        <div className="tray-header">
-                            <div className="tray-handle" />
-                            <h3>Stickers</h3>
-                        </div>
-                        <div className="tray-content">
-                            <h4>Smart Stickers</h4>
-                            <div className="smart-stickers-grid">
-                                <button className="smart-sticker-btn" onClick={() => addSmartSticker('mention')}>@ Mention</button>
-                                <button className="smart-sticker-btn" onClick={() => addSmartSticker('location')}>📍 Location</button>
-                                <button className="smart-sticker-btn" onClick={() => addSmartSticker('link')}>🔗 Link</button>
-                            </div>
-
-                            <h4>Eventfy Shapes</h4>
-                            <div className="sticker-grid shapes-grid">
-                                {EVENTFY_SHAPES.map((s, i) => (
-                                    <button
-                                        key={i}
-                                        className="sticker-item"
-                                        style={{ color: s.color }}
-                                        onClick={() => addSticker(s.content, s.color)}
-                                    >
-                                        {s.content}
-                                    </button>
-                                ))}
-                            </div>
-                            <h4>Emojis</h4>
-                            <div className="sticker-grid">
-                                {EMOJIS.map((em, i) => (
-                                    <button
-                                        key={i}
-                                        className="sticker-item"
-                                        onClick={() => addSticker(em)}
-                                    >
-                                        {em}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <StickerTray
+                showStickerTray={showStickerTray}
+                addSmartSticker={addSmartSticker}
+                addSticker={addSticker}
+                EVENTFY_SHAPES={EVENTFY_SHAPES}
+                EMOJIS={EMOJIS}
+            />
 
             {/* Precision Scale Slider */}
             <AnimatePresence>
@@ -772,35 +691,13 @@ export default function StoryCreate() {
             </AnimatePresence>
 
             {/* Filter Tray */}
-            <AnimatePresence>
-                {showFilters && (
-                    <motion.div
-                        className="story-filter-tray"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 20 }}
-                    >
-                        <div className="filter-scroll">
-                            {FILTERS.map(f => (
-                                <div
-                                    key={f.name}
-                                    className={`filter-item ${activeFilter === f.css ? 'active' : ''}`}
-                                    onClick={() => setActiveFilter(f.css)}
-                                >
-                                    <div
-                                        className="filter-preview"
-                                        style={{
-                                            backgroundImage: `url(${bgImagePreview})`,
-                                            filter: f.css
-                                        }}
-                                    />
-                                    <span>{f.name}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <FilterTray
+                showFilters={showFilters}
+                activeFilter={activeFilter}
+                setActiveFilter={setActiveFilter}
+                FILTERS={FILTERS}
+                bgImagePreview={bgImagePreview}
+            />
 
             {/* Bottom Actions (Publish) (Auto-Hides when editing) */}
             <AnimatePresence>
