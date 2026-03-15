@@ -69,6 +69,7 @@ export default function Feed() {
     const [followedOrgs, setFollowedOrgs] = useState([]);
     const [followedOrgIds, setFollowedOrgIds] = useState(new Set());
     const [unreadCount, setUnreadCount] = useState(0);
+    const [hasActiveStory, setHasActiveStory] = useState(false);
     const [saved, setSaved] = useState({});
     const [liked, setLiked] = useState({});
     const [initialLiked, setInitialLiked] = useState({});
@@ -138,10 +139,11 @@ export default function Feed() {
     // Load feed
     useEffect(() => { if (hasMore || page === 1) loadFeed(page); }, [page, scope, activeFilter]);
 
-    // Load followed orgs + notifications on mount
+    // Load followed orgs + notifications + personal stories on mount
     useEffect(() => {
         loadFollowedOrgs();
         loadNotifications();
+        checkPersonalStories();
     }, [profile]);
 
     // Realtime: new notifications
@@ -213,6 +215,19 @@ export default function Feed() {
                 .eq('is_read', false);
             setUnreadCount(data?.length || 0);
         } catch { }
+    }
+
+    async function checkPersonalStories() {
+        if (!profile) return;
+        try {
+            // Check if user has active stories using the profile endpoint
+            const data = await api('GET', `/profile/${profile.id}`);
+            const hasStories = data?.stories && data.stories.length > 0;
+            setHasActiveStory(hasStories);
+        } catch (e) {
+            console.error('Failed to check personal stories', e);
+            setHasActiveStory(false);
+        }
     }
 
     async function loadFollowedOrgs() {
@@ -415,15 +430,43 @@ export default function Feed() {
 
             {/* Story Row — followed orgs */}
             <div className="feed-stories">
-                {/* Everyone can add a story now */}
-                <div className="feed-story" onClick={() => navigate('/stories/create')} style={{ cursor: 'pointer' }}>
-                    <div className="feed-story-ring dashed" style={{ borderColor: '#f472b6' }}>
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                            <line x1="7" y1="1" x2="7" y2="13" stroke="#f472b6" strokeWidth="2" strokeLinecap="round" />
-                            <line x1="1" y1="7" x2="13" y2="7" stroke="#f472b6" strokeWidth="2" strokeLinecap="round" />
-                        </svg>
+                {/* "Your Story" Bubble */}
+                <div
+                    className="feed-story"
+                    onClick={() => hasActiveStory ? navigate(`/stories/${profile.id}`) : navigate('/stories/create')}
+                    style={{ cursor: 'pointer', position: 'relative' }}
+                >
+                    <div className={`feed-story-ring ${hasActiveStory ? 'gradient' : 'dashed'}`} style={!hasActiveStory ? { borderColor: '#f472b6' } : {}}>
+                        <div className="feed-story-avatar-inner">
+                            <img
+                                src={profile?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.username || 'U')}&size=80&background=1e293b&color=fff`}
+                                alt="Your Story"
+                            />
+                        </div>
                     </div>
-                    <span className="feed-story-name" style={{ color: '#f472b6' }}>ADD STORY</span>
+                    {!hasActiveStory && (
+                        <div style={{
+                            position: 'absolute',
+                            bottom: 16,
+                            right: 0,
+                            background: '#f472b6',
+                            borderRadius: '50%',
+                            width: 16,
+                            height: 16,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: '2px solid #000'
+                        }}>
+                            <svg width="8" height="8" viewBox="0 0 14 14" fill="none">
+                                <line x1="7" y1="1" x2="7" y2="13" stroke="#000" strokeWidth="3" strokeLinecap="round" />
+                                <line x1="1" y1="7" x2="13" y2="7" stroke="#000" strokeWidth="3" strokeLinecap="round" />
+                            </svg>
+                        </div>
+                    )}
+                    <span className="feed-story-name" style={{ color: hasActiveStory ? '#f1f5f9' : '#f472b6' }}>
+                        {hasActiveStory ? 'YOUR STORY' : 'ADD STORY'}
+                    </span>
                 </div>
 
                 {followedOrgs.map((org, idx) => {

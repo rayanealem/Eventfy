@@ -214,7 +214,15 @@ export default function Story() {
                         <img
                             src={currentFrames[currentFrameIndex].media_url}
                             alt="Story background"
-                            style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }}
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                filter: currentFrames[currentFrameIndex].filter_css || 'none'
+                            }}
                         />
                     )}
 
@@ -279,6 +287,18 @@ export default function Story() {
                                     {el.type === 'link' && '🔗 '}
                                     {el.content}
                                 </div>
+                            )}
+                            {el.type === 'image' && (
+                                <img
+                                    src={el.content}
+                                    alt="Drawing Overlay"
+                                    style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'contain',
+                                        pointerEvents: 'none' // allow taps to pass through drawings
+                                    }}
+                                />
                             )}
                         </div>
                     ))}

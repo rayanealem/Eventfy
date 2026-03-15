@@ -57,13 +57,14 @@ async def create_story(body: dict, user=Depends(get_current_user)):
 
 
 @router.post("/{story_id}/frames")
-async def add_frame(story_id: str, body: dict, user=Depends(require_org)):
+async def add_frame(story_id: str, body: dict, user=Depends(get_current_user)):
     """Add a frame to a story."""
     frame = supabase.table("story_frames").insert({
         "story_id": story_id, "media_url": body["media_url"],
         "media_type": body.get("media_type", "image"),
         "duration_ms": body.get("duration_ms", 5000),
         "overlays": body.get("overlays", []),
+        "filter_css": body.get("filter_css", "none"),
         "sort_order": body.get("sort_order", 0),
     }).execute()
     return frame.data[0] if frame.data else {}

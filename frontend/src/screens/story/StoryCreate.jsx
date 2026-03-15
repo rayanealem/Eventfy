@@ -41,6 +41,26 @@ export default function StoryCreate() {
     const [showStickerTray, setShowStickerTray] = useState(false);
     const [showCenterGuide, setShowCenterGuide] = useState(false);
 
+    // Draw Engine State
+    const [isDrawingMode, setIsDrawingMode] = useState(false);
+    const [strokes, setStrokes] = useState([]); // Array of stroke image data URLs for undo
+    const drawCanvasRef = useRef(null);
+    const ctxRef = useRef(null);
+    const isDrawingRef = useRef(false);
+    const [brushColor, setBrushColor] = useState('#ffffff');
+
+    // Filter Engine State
+    const [showFilters, setShowFilters] = useState(false);
+    const [activeFilter, setActiveFilter] = useState('none');
+
+    const FILTERS = [
+        { name: 'Normal', css: 'none' },
+        { name: 'B&W', css: 'grayscale(100%)' },
+        { name: 'Vintage', css: 'sepia(80%)' },
+        { name: 'Vivid', css: 'contrast(120%) saturate(150%)' },
+        { name: 'Blur', css: 'blur(4px)' }
+    ];
+
     const canvasRef = useRef(null);
 
     // Redirect to feed if user isn't logged in (assuming profile is needed)
@@ -58,6 +78,92 @@ export default function StoryCreate() {
             setBgImage(file);
             setBgImagePreview(URL.createObjectURL(file));
         }
+    };
+
+    // --- Drawing Engine Methods ---
+    useEffect(() => {
+        if (drawCanvasRef.current) {
+            const canvas = drawCanvasRef.current;
+            // Set explicit dimensions to avoid stretching
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = 6;
+            ctxRef.current = ctx;
+        }
+    }, [bgImagePreview]); // Re-init when canvas container mounts
+
+    const saveStrokeState = () => {
+        if (!drawCanvasRef.current) return;
+        setStrokes(prev => [...prev, drawCanvasRef.current.toDataURL()]);
+    };
+
+    const handleUndo = () => {
+        if (strokes.length === 0 || !ctxRef.current || !drawCanvasRef.current) return;
+        const newStrokes = [...strokes];
+        newStrokes.pop(); // Remove current state
+        setStrokes(newStrokes);
+
+        const ctx = ctxRef.current;
+        const canvas = drawCanvasRef.current;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (newStrokes.length > 0) {
+            const img = new Image();
+            img.src = newStrokes[newStrokes.length - 1];
+            img.onload = () => ctx.drawImage(img, 0, 0);
+        }
+    };
+
+    const startDrawing = (e) => {
+        if (!isDrawingMode || !ctxRef.current) return;
+        const { offsetX, offsetY } = getPointerPos(e);
+        ctxRef.current.strokeStyle = brushColor;
+        ctxRef.current.beginPath();
+        ctxRef.current.moveTo(offsetX, offsetY);
+        isDrawingRef.current = true;
+    };
+
+    const draw = (e) => {
+        if (!isDrawingRef.current || !ctxRef.current) return;
+        const { offsetX, offsetY } = getPointerPos(e);
+        ctxRef.current.lineTo(offsetX, offsetY);
+        ctxRef.current.stroke();
+    };
+
+    const stopDrawing = () => {
+        if (!isDrawingRef.current || !ctxRef.current) return;
+        ctxRef.current.closePath();
+        isDrawingRef.current = false;
+        saveStrokeState();
+    };
+
+    const getPointerPos = (e) => {
+        const canvas = drawCanvasRef.current;
+        const rect = canvas.getBoundingClientRect();
+        // Handle both touch and mouse events
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+            offsetX: clientX - rect.left,
+            offsetY: clientY - rect.top
+        };
+    };
+
+    const toggleDrawingMode = () => {
+        setIsDrawingMode(!isDrawingMode);
+        setActiveElementId(null);
+        setShowStickerTray(false);
+        setShowFilters(false);
+    };
+
+    const toggleFilters = () => {
+        setShowFilters(!showFilters);
+        setActiveElementId(null);
+        setIsDrawingMode(false);
+        setShowStickerTray(false);
     };
 
     const bringToFront = (id) => {
@@ -160,6 +266,22 @@ export default function StoryCreate() {
         setPublishing(true);
 
         try {
+            // Include Drawing Canvas as an overlay element if strokes exist
+            let finalElements = [...elements];
+            if (strokes.length > 0 && drawCanvasRef.current) {
+                const drawDataUrl = drawCanvasRef.current.toDataURL();
+                finalElements.push({
+                    id: `drawing_${Date.now()}`,
+                    type: 'image',
+                    content: drawDataUrl, // DataURL of the drawing
+                    x: 0,
+                    y: 0,
+                    scale: 1,
+                    rotation: 0,
+                    zIndex: 0 // Ensure drawing is behind interactive elements (which start at zIndex 1)
+                });
+            }
+
             // Upload the background image
             const fileExt = bgImage.name.split('.').pop();
             const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
@@ -197,7 +319,8 @@ export default function StoryCreate() {
             // Prepare the frames payload
             const payload = {
                 media_url: publicUrl,
-                overlays: elements
+                overlays: finalElements,
+                filter_css: activeFilter
             };
 
             await api('POST', `/stories/${storyId}/frames`, payload);
@@ -219,50 +342,66 @@ export default function StoryCreate() {
             {/* Top Toolbar */}
             <div className="story-toolbar">
                 <button className="toolbar-btn cancel-btn" onClick={handleCancel}>✕</button>
-                <div className="toolbar-actions">
-                    <button className="toolbar-btn" onClick={addText}>Aa</button>
-                    <button className="toolbar-btn" onClick={toggleStickerTray}>🔥</button>
-                </div>
+                {isDrawingMode ? (
+                    <div className="toolbar-actions">
+                        <button className="toolbar-btn" onClick={handleUndo}>↩️</button>
+                        <button className="toolbar-btn" onClick={toggleDrawingMode}>Done</button>
+                    </div>
+                ) : (
+                    <div className="toolbar-actions">
+                        <button className="toolbar-btn" onClick={toggleDrawingMode}>🖌️</button>
+                        <button className="toolbar-btn" onClick={toggleFilters}>✨</button>
+                        <button className="toolbar-btn" onClick={addText}>Aa</button>
+                        <button className="toolbar-btn" onClick={toggleStickerTray}>🔥</button>
+                    </div>
+                )}
             </div>
 
-            {/* Formatting Toolbar (Only for active text) */}
+            {/* Formatting Toolbar (For active text OR drawing mode) */}
             <AnimatePresence>
-                {activeElement && activeElement.type === 'text' && !isDragging && (
+                {((activeElement && activeElement.type === 'text') || isDrawingMode) && !isDragging && (
                     <motion.div
                         className="story-format-toolbar"
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
                     >
-                        <div className="format-toggles">
-                            <button
-                                className="format-btn"
-                                onClick={() => updateElement(activeElement.id, {
-                                    fontFamily: activeElement.fontFamily === 'Space Grotesk' ? 'Bebas Neue' : 'Space Grotesk'
-                                })}
-                            >
-                                {activeElement.fontFamily === 'Space Grotesk' ? 'Aa' : 'AA'}
-                            </button>
-                            <button
-                                className="format-btn"
-                                onClick={() => updateElement(activeElement.id, {
-                                    textStyle: activeElement.textStyle === 'plain' ? 'solid' : 'plain'
-                                })}
-                            >
-                                {activeElement.textStyle === 'plain' ? 'A' : 'A*'}
-                            </button>
-                        </div>
+                        {!isDrawingMode && (
+                            <div className="format-toggles">
+                                <button
+                                    className="format-btn"
+                                    onClick={() => updateElement(activeElement.id, {
+                                        fontFamily: activeElement.fontFamily === 'Space Grotesk' ? 'Bebas Neue' : 'Space Grotesk'
+                                    })}
+                                >
+                                    {activeElement.fontFamily === 'Space Grotesk' ? 'Aa' : 'AA'}
+                                </button>
+                                <button
+                                    className="format-btn"
+                                    onClick={() => updateElement(activeElement.id, {
+                                        textStyle: activeElement.textStyle === 'plain' ? 'solid' : 'plain'
+                                    })}
+                                >
+                                    {activeElement.textStyle === 'plain' ? 'A' : 'A*'}
+                                </button>
+                            </div>
+                        )}
                         <div className="color-picker">
                             {COLORS.map(c => (
                                 <button
                                     key={c}
-                                    className={`color-swatch ${activeElement.textStyle === 'solid' ? (activeElement.bgColor === c ? 'active' : '') : (activeElement.color === c ? 'active' : '')}`}
+                                    className={`color-swatch ${isDrawingMode ? (brushColor === c ? 'active' : '') : (activeElement?.textStyle === 'solid' ? (activeElement.bgColor === c ? 'active' : '') : (activeElement?.color === c ? 'active' : ''))}`}
                                     style={{ backgroundColor: c }}
                                     onClick={() => {
-                                        if (activeElement.textStyle === 'solid') {
-                                            updateElement(activeElement.id, { bgColor: c, color: getContrastColor(c) });
-                                        } else {
-                                            updateElement(activeElement.id, { color: c });
+                                        if (isDrawingMode) {
+                                            setBrushColor(c);
+                                            if (ctxRef.current) ctxRef.current.strokeStyle = c;
+                                        } else if (activeElement) {
+                                            if (activeElement.textStyle === 'solid') {
+                                                updateElement(activeElement.id, { bgColor: c, color: getContrastColor(c) });
+                                            } else {
+                                                updateElement(activeElement.id, { color: c });
+                                            }
                                         }
                                     }}
                                 />
@@ -292,11 +431,23 @@ export default function StoryCreate() {
                         />
                     </label>
                 ) : (
-                    <img
-                        src={bgImagePreview}
-                        className="story-canvas-bg"
-                        alt="Background"
-                    />
+                    <>
+                        <img
+                            src={bgImagePreview}
+                            className="story-canvas-bg"
+                            style={{ filter: activeFilter }}
+                            alt="Background"
+                        />
+                        {/* Drawing Canvas Overlay */}
+                        <canvas
+                            ref={drawCanvasRef}
+                            className={`story-draw-canvas ${isDrawingMode ? 'drawing-active' : ''}`}
+                            onPointerDown={startDrawing}
+                            onPointerMove={draw}
+                            onPointerUp={stopDrawing}
+                            onPointerOut={stopDrawing}
+                        />
+                    </>
                 )}
 
                 {/* Elements */}
@@ -482,6 +633,37 @@ export default function StoryCreate() {
                                     </button>
                                 ))}
                             </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Filter Tray */}
+            <AnimatePresence>
+                {showFilters && (
+                    <motion.div
+                        className="story-filter-tray"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20 }}
+                    >
+                        <div className="filter-scroll">
+                            {FILTERS.map(f => (
+                                <div
+                                    key={f.name}
+                                    className={`filter-item ${activeFilter === f.css ? 'active' : ''}`}
+                                    onClick={() => setActiveFilter(f.css)}
+                                >
+                                    <div
+                                        className="filter-preview"
+                                        style={{
+                                            backgroundImage: `url(${bgImagePreview})`,
+                                            filter: f.css
+                                        }}
+                                    />
+                                    <span>{f.name}</span>
+                                </div>
+                            ))}
                         </div>
                     </motion.div>
                 )}
