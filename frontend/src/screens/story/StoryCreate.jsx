@@ -42,7 +42,7 @@ export default function StoryCreate() {
     const [dragTrashScale, setDragTrashScale] = useState(1);
     const [showStickerTray, setShowStickerTray] = useState(false);
     const [showCenterGuide, setShowCenterGuide] = useState(false);
-
+    
     // Draw Engine State
     const [isDrawingMode, setIsDrawingMode] = useState(false);
     const [strokes, setStrokes] = useState([]); // Array of stroke image data URLs for undo
@@ -270,7 +270,7 @@ export default function StoryCreate() {
     const addSmartSticker = (type) => {
         const newZ = highestZIndex + 1;
         setHighestZIndex(newZ);
-
+        
         let content = '';
         if (type === 'mention') content = '@username';
         if (type === 'location') content = 'City, Country';
@@ -352,7 +352,7 @@ export default function StoryCreate() {
             // Create the parent story
             const storyRes = await api('POST', `/stories`, {
                 org_id: profile.managed_orgs?.[0]?.id || profile.id, // Fallback if managed_orgs not available
-                type: 'announcement',
+                type: 'announcement', 
                 badge: '',
                 title: 'Story',
                 body: '',
@@ -409,7 +409,7 @@ export default function StoryCreate() {
             {/* Formatting Toolbar (For active text OR drawing mode) */}
             <AnimatePresence>
                 {((activeElement && activeElement.type === 'text') || isDrawingMode) && !isDragging && (
-                    <motion.div
+                    <motion.div 
                         className="story-format-toolbar"
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -417,18 +417,18 @@ export default function StoryCreate() {
                     >
                         {!isDrawingMode && (
                             <div className="format-toggles">
-                                <button
+                                <button 
                                     className="format-btn"
-                                    onClick={() => updateElement(activeElement.id, {
-                                        fontFamily: activeElement.fontFamily === 'Space Grotesk' ? 'Bebas Neue' : 'Space Grotesk'
+                                    onClick={() => updateElement(activeElement.id, { 
+                                        fontFamily: activeElement.fontFamily === 'Space Grotesk' ? 'Bebas Neue' : 'Space Grotesk' 
                                     })}
                                 >
                                     {activeElement.fontFamily === 'Space Grotesk' ? 'Aa' : 'AA'}
                                 </button>
-                                <button
+                                <button 
                                     className="format-btn"
-                                    onClick={() => updateElement(activeElement.id, {
-                                        textStyle: activeElement.textStyle === 'plain' ? 'solid' : 'plain'
+                                    onClick={() => updateElement(activeElement.id, { 
+                                        textStyle: activeElement.textStyle === 'plain' ? 'solid' : 'plain' 
                                     })}
                                 >
                                     {activeElement.textStyle === 'plain' ? 'A' : 'A*'}
@@ -437,7 +437,7 @@ export default function StoryCreate() {
                         )}
                         <div className="color-picker">
                             {COLORS.map(c => (
-                                <button
+                                <button 
                                     key={c}
                                     className={`color-swatch ${isDrawingMode ? (brushColor === c ? 'active' : '') : (activeElement?.textStyle === 'solid' ? (activeElement.bgColor === c ? 'active' : '') : (activeElement?.color === c ? 'active' : ''))}`}
                                     style={{ backgroundColor: c }}
@@ -461,8 +461,8 @@ export default function StoryCreate() {
             </AnimatePresence>
 
             {/* Canvas */}
-            <div
-                className="story-canvas"
+            <div 
+                className="story-canvas" 
                 ref={canvasRef}
                 onClick={handleCanvasClick}
             >
@@ -472,31 +472,31 @@ export default function StoryCreate() {
                 {!bgImagePreview ? (
                     <label className="story-add-bg">
                         <div className="add-bg-label">+ ADD BACKGROUND</div>
-                        <input
-                            type="file"
-                            accept="image/*,video/mp4,video/webm"
-                            onChange={handleBgImageSelect}
-                            style={{ display: 'none' }}
+                        <input 
+                            type="file" 
+                            accept="image/*,video/mp4,video/webm" 
+                            onChange={handleBgImageSelect} 
+                            style={{ display: 'none' }} 
                         />
                     </label>
                 ) : (
                     <>
                         {isVideo ? (
-                            <video
-                                src={bgImagePreview}
-                                className="story-canvas-bg"
+                            <video 
+                                src={bgImagePreview} 
+                                className="story-canvas-bg" 
                                 style={{ filter: activeFilter }}
-                                autoPlay
-                                loop
-                                muted
+                                autoPlay 
+                                loop 
+                                muted 
                                 playsInline
                             />
                         ) : (
-                            <img
-                                src={bgImagePreview}
-                                className="story-canvas-bg"
+                            <img 
+                                src={bgImagePreview} 
+                                className="story-canvas-bg" 
                                 style={{ filter: activeFilter }}
-                                alt="Background"
+                                alt="Background" 
                             />
                         )}
                         {/* Drawing Canvas Overlay */}
@@ -562,9 +562,9 @@ export default function StoryCreate() {
                                         triggerHaptic();
                                     }
 
-                                    updateElement(el.id, {
-                                        x: finalX,
-                                        y: el.y + info.offset.y
+                                    updateElement(el.id, { 
+                                        x: finalX, 
+                                        y: el.y + info.offset.y 
                                     });
                                 }
                             }}
@@ -589,7 +589,7 @@ export default function StoryCreate() {
                                     value={el.content}
                                     onChange={(e) => updateElement(el.id, { content: e.target.value })}
                                     autoFocus={isActive}
-                                    style={{
+                                    style={{ 
                                         color: el.color,
                                         fontFamily: el.fontFamily,
                                         backgroundColor: el.textStyle === 'solid' ? el.bgColor : 'transparent',
@@ -614,10 +614,10 @@ export default function StoryCreate() {
                                         value={el.content}
                                         onChange={(e) => updateElement(el.id, { content: e.target.value })}
                                         autoFocus={isActive}
-                                        style={{
-                                            background: 'transparent',
-                                            border: 'none',
-                                            outline: 'none',
+                                        style={{ 
+                                            background: 'transparent', 
+                                            border: 'none', 
+                                            outline: 'none', 
                                             color: 'inherit',
                                             fontFamily: 'inherit',
                                             fontSize: 'inherit',
@@ -629,25 +629,25 @@ export default function StoryCreate() {
                             )}
                             {el.type === 'poll' && (
                                 <div className="story-poll-widget">
-                                    <input
-                                        type="text"
+                                    <input 
+                                        type="text" 
                                         className="story-poll-question"
-                                        value={el.content.question}
+                                        value={el.content.question} 
                                         onChange={(e) => updateElement(el.id, { content: { ...el.content, question: e.target.value } })}
                                         placeholder="Ask a question..."
                                     />
                                     <div className="story-poll-options">
                                         <div className="story-poll-option">
-                                            <input
-                                                type="text"
-                                                value={el.content.optA}
+                                            <input 
+                                                type="text" 
+                                                value={el.content.optA} 
                                                 onChange={(e) => updateElement(el.id, { content: { ...el.content, optA: e.target.value } })}
                                             />
                                         </div>
                                         <div className="story-poll-option">
-                                            <input
-                                                type="text"
-                                                value={el.content.optB}
+                                            <input 
+                                                type="text" 
+                                                value={el.content.optB} 
                                                 onChange={(e) => updateElement(el.id, { content: { ...el.content, optB: e.target.value } })}
                                             />
                                         </div>
@@ -662,7 +662,7 @@ export default function StoryCreate() {
             {/* Magnetic Trash Zone */}
             <AnimatePresence>
                 {isDragging && (
-                    <motion.div
+                    <motion.div 
                         className="story-trash-zone"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0, scale: dragTrashScale }}
@@ -677,7 +677,7 @@ export default function StoryCreate() {
             {/* Sticker Tray Bottom Sheet */}
             <AnimatePresence>
                 {showStickerTray && (
-                    <motion.div
+                    <motion.div 
                         className="story-sticker-tray"
                         initial={{ y: '100%' }}
                         animate={{ y: 0 }}
@@ -699,9 +699,9 @@ export default function StoryCreate() {
                             <h4>Eventfy Shapes</h4>
                             <div className="sticker-grid shapes-grid">
                                 {EVENTFY_SHAPES.map((s, i) => (
-                                    <button
-                                        key={i}
-                                        className="sticker-item"
+                                    <button 
+                                        key={i} 
+                                        className="sticker-item" 
                                         style={{ color: s.color }}
                                         onClick={() => addSticker(s.content, s.color)}
                                     >
@@ -712,8 +712,8 @@ export default function StoryCreate() {
                             <h4>Emojis</h4>
                             <div className="sticker-grid">
                                 {EMOJIS.map((em, i) => (
-                                    <button
-                                        key={i}
+                                    <button 
+                                        key={i} 
                                         className="sticker-item"
                                         onClick={() => addSticker(em)}
                                     >
@@ -729,7 +729,7 @@ export default function StoryCreate() {
             {/* Filter Tray */}
             <AnimatePresence>
                 {showFilters && (
-                    <motion.div
+                    <motion.div 
                         className="story-filter-tray"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -737,17 +737,17 @@ export default function StoryCreate() {
                     >
                         <div className="filter-scroll">
                             {FILTERS.map(f => (
-                                <div
+                                <div 
                                     key={f.name}
                                     className={`filter-item ${activeFilter === f.css ? 'active' : ''}`}
                                     onClick={() => setActiveFilter(f.css)}
                                 >
-                                    <div
-                                        className="filter-preview"
-                                        style={{
+                                    <div 
+                                        className="filter-preview" 
+                                        style={{ 
                                             backgroundImage: `url(${bgImagePreview})`,
                                             filter: f.css
-                                        }}
+                                        }} 
                                     />
                                     <span>{f.name}</span>
                                 </div>
@@ -759,9 +759,9 @@ export default function StoryCreate() {
 
             {/* Bottom Actions (Publish) */}
             <div className="story-bottom-bar">
-                <button
-                    className="publish-btn"
-                    onClick={handlePublish}
+                <button 
+                    className="publish-btn" 
+                    onClick={handlePublish} 
                     disabled={!bgImage || publishing}
                 >
                     {publishing ? 'PUBLISHING...' : 'PUBLISH'}
