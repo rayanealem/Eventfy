@@ -252,11 +252,13 @@ export default function Story() {
                                 <div
                                     style={{
                                         color: el.color,
-                                        fontFamily: "'Space Grotesk', sans-serif",
+                                        fontFamily: el.fontFamily || "'Space Grotesk', sans-serif",
                                         fontSize: '32px',
                                         fontWeight: 700,
-                                        textShadow: '0 2px 4px rgba(0,0,0,0.8)',
-                                        background: 'transparent',
+                                        textShadow: el.textStyle === 'solid' ? 'none' : '0 2px 4px rgba(0,0,0,0.8)',
+                                        background: el.textStyle === 'solid' ? el.bgColor : 'transparent',
+                                        padding: el.textStyle === 'solid' ? '8px 16px' : '0',
+                                        borderRadius: el.textStyle === 'solid' ? '12px' : '0',
                                         outline: 'none',
                                         border: 'none',
                                         textAlign: 'center',
@@ -269,9 +271,9 @@ export default function Story() {
                             {el.type === 'sticker' && (
                                 <span
                                     style={{
+                                        color: el.color || '#ffffff',
                                         fontSize: '64px',
                                         filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))',
-                                        cursor: 'grab'
                                     }}
                                 >
                                     {el.content}

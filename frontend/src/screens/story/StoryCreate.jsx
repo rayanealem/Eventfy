@@ -3,9 +3,25 @@ import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { instaSpring } from '../../lib/physics';
 import './Story.css';
+
+const COLORS = ['#ffffff', '#000000', '#fb5151', '#00ffc2', '#ffd700', '#b484ce'];
+const EVENTFY_SHAPES = [
+    { content: '○', color: '#fb5151' },
+    { content: '△', color: '#00ffc2' },
+    { content: '□', color: '#ffd700' },
+    { content: '◇', color: '#b484ce' }
+];
+const EMOJIS = ['🔥', '⚡', '✨', '🎯', '💡', '💯', '🚀', '❤️'];
+
+function getContrastColor(hexColor) {
+    if (!hexColor) return '#ffffff';
+    // Simplified contrast logic: if it's white or bright yellow/cyan, return black. Otherwise white.
+    const darkColors = ['#ffffff', '#00ffc2', '#ffd700'];
+    return darkColors.includes(hexColor.toLowerCase()) ? '#000000' : '#ffffff';
+}
 
 export default function StoryCreate() {
     const navigate = useNavigate();
@@ -18,6 +34,11 @@ export default function StoryCreate() {
     const [activeElementId, setActiveElementId] = useState(null);
     const [highestZIndex, setHighestZIndex] = useState(1);
     const [publishing, setPublishing] = useState(false);
+
+    // Premium Features State
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragTrashScale, setDragTrashScale] = useState(1);
+    const [showStickerTray, setShowStickerTray] = useState(false);
 
     const canvasRef = useRef(null);
 
@@ -48,6 +69,7 @@ export default function StoryCreate() {
     const handleCanvasClick = (e) => {
         if (e.target === canvasRef.current || e.target.classList.contains('story-canvas-bg')) {
             setActiveElementId(null);
+            setShowStickerTray(false);
         }
     };
 
@@ -59,6 +81,9 @@ export default function StoryCreate() {
             type: 'text',
             content: '',
             color: '#ffffff',
+            fontFamily: 'Space Grotesk',
+            textStyle: 'plain',
+            bgColor: 'transparent',
             x: 0,
             y: 0,
             scale: 1,
@@ -67,16 +92,17 @@ export default function StoryCreate() {
         };
         setElements(prev => [...prev, newText]);
         setActiveElementId(newText.id);
+        setShowStickerTray(false);
     };
 
-    const addSticker = () => {
+    const addSticker = (content, color = '#ffffff') => {
         const newZ = highestZIndex + 1;
         setHighestZIndex(newZ);
         const newSticker = {
             id: `sticker_${Date.now()}`,
             type: 'sticker',
-            content: '🔥', // Default sticker
-            color: '#ffffff',
+            content: content,
+            color: color,
             x: 0,
             y: 0,
             scale: 1,
@@ -85,6 +111,12 @@ export default function StoryCreate() {
         };
         setElements(prev => [...prev, newSticker]);
         setActiveElementId(newSticker.id);
+        setShowStickerTray(false);
+    };
+
+    const toggleStickerTray = () => {
+        setShowStickerTray(!showStickerTray);
+        setActiveElementId(null);
     };
 
     const updateElement = (id, updates) => {
@@ -148,6 +180,8 @@ export default function StoryCreate() {
         }
     };
 
+    const activeElement = elements.find(el => el.id === activeElementId);
+
     return (
         <div className="story-create-root">
             {/* Top Toolbar */}
@@ -155,9 +189,56 @@ export default function StoryCreate() {
                 <button className="toolbar-btn cancel-btn" onClick={handleCancel}>✕</button>
                 <div className="toolbar-actions">
                     <button className="toolbar-btn" onClick={addText}>Aa</button>
-                    <button className="toolbar-btn" onClick={addSticker}>🔥</button>
+                    <button className="toolbar-btn" onClick={toggleStickerTray}>🔥</button>
                 </div>
             </div>
+
+            {/* Formatting Toolbar (Only for active text) */}
+            <AnimatePresence>
+                {activeElement && activeElement.type === 'text' && !isDragging && (
+                    <motion.div
+                        className="story-format-toolbar"
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                    >
+                        <div className="format-toggles">
+                            <button
+                                className="format-btn"
+                                onClick={() => updateElement(activeElement.id, {
+                                    fontFamily: activeElement.fontFamily === 'Space Grotesk' ? 'Bebas Neue' : 'Space Grotesk'
+                                })}
+                            >
+                                {activeElement.fontFamily === 'Space Grotesk' ? 'Aa' : 'AA'}
+                            </button>
+                            <button
+                                className="format-btn"
+                                onClick={() => updateElement(activeElement.id, {
+                                    textStyle: activeElement.textStyle === 'plain' ? 'solid' : 'plain'
+                                })}
+                            >
+                                {activeElement.textStyle === 'plain' ? 'A' : 'A*'}
+                            </button>
+                        </div>
+                        <div className="color-picker">
+                            {COLORS.map(c => (
+                                <button
+                                    key={c}
+                                    className={`color-swatch ${activeElement.textStyle === 'solid' ? (activeElement.bgColor === c ? 'active' : '') : (activeElement.color === c ? 'active' : '')}`}
+                                    style={{ backgroundColor: c }}
+                                    onClick={() => {
+                                        if (activeElement.textStyle === 'solid') {
+                                            updateElement(activeElement.id, { bgColor: c, color: getContrastColor(c) });
+                                        } else {
+                                            updateElement(activeElement.id, { color: c });
+                                        }
+                                    }}
+                                />
+                            ))}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Canvas */}
             <div
@@ -192,13 +273,31 @@ export default function StoryCreate() {
                             drag
                             dragConstraints={canvasRef}
                             dragMomentum={false}
-                            onDragStart={() => bringToFront(el.id)}
+                            onDragStart={() => {
+                                bringToFront(el.id);
+                                setIsDragging(true);
+                                setDragTrashScale(1);
+                                setShowStickerTray(false);
+                            }}
+                            onDrag={(event, info) => {
+                                if (info.point.y > window.innerHeight - 100) {
+                                    setDragTrashScale(1.2);
+                                } else {
+                                    setDragTrashScale(1);
+                                }
+                            }}
                             onDragEnd={(event, info) => {
-                                // Accumulate position
-                                updateElement(el.id, {
-                                    x: el.x + info.offset.x,
-                                    y: el.y + info.offset.y
-                                });
+                                setIsDragging(false);
+                                setDragTrashScale(1);
+                                if (info.point.y > window.innerHeight - 100) {
+                                    setElements(prev => prev.filter(item => item.id !== el.id));
+                                    if (isActive) setActiveElementId(null);
+                                } else {
+                                    updateElement(el.id, {
+                                        x: el.x + info.offset.x,
+                                        y: el.y + info.offset.y
+                                    });
+                                }
                             }}
                             className={`story-element ${isActive ? 'active' : ''}`}
                             style={{
@@ -217,16 +316,22 @@ export default function StoryCreate() {
                             {el.type === 'text' && (
                                 <input
                                     type="text"
-                                    className="story-text-input"
+                                    className={`story-text-input ${el.textStyle === 'solid' ? 'solid-bg' : ''}`}
                                     value={el.content}
                                     onChange={(e) => updateElement(el.id, { content: e.target.value })}
                                     autoFocus={isActive}
-                                    style={{ color: el.color }}
+                                    style={{
+                                        color: el.color,
+                                        fontFamily: el.fontFamily,
+                                        backgroundColor: el.textStyle === 'solid' ? el.bgColor : 'transparent',
+                                        padding: el.textStyle === 'solid' ? '8px 16px' : '0',
+                                        borderRadius: el.textStyle === 'solid' ? '12px' : '0'
+                                    }}
                                     placeholder="Type something..."
                                 />
                             )}
                             {el.type === 'sticker' && (
-                                <span className="story-sticker">
+                                <span className="story-sticker" style={{ color: el.color }}>
                                     {el.content}
                                 </span>
                             )}
@@ -234,6 +339,66 @@ export default function StoryCreate() {
                     );
                 })}
             </div>
+
+            {/* Magnetic Trash Zone */}
+            <AnimatePresence>
+                {isDragging && (
+                    <motion.div
+                        className="story-trash-zone"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0, scale: dragTrashScale }}
+                        exit={{ opacity: 0, y: 20 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                    >
+                        <div className="trash-icon">🗑️</div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Sticker Tray Bottom Sheet */}
+            <AnimatePresence>
+                {showStickerTray && (
+                    <motion.div
+                        className="story-sticker-tray"
+                        initial={{ y: '100%' }}
+                        animate={{ y: 0 }}
+                        exit={{ y: '100%' }}
+                        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                    >
+                        <div className="tray-header">
+                            <div className="tray-handle" />
+                            <h3>Stickers</h3>
+                        </div>
+                        <div className="tray-content">
+                            <h4>Eventfy Shapes</h4>
+                            <div className="sticker-grid shapes-grid">
+                                {EVENTFY_SHAPES.map((s, i) => (
+                                    <button
+                                        key={i}
+                                        className="sticker-item"
+                                        style={{ color: s.color }}
+                                        onClick={() => addSticker(s.content, s.color)}
+                                    >
+                                        {s.content}
+                                    </button>
+                                ))}
+                            </div>
+                            <h4>Emojis</h4>
+                            <div className="sticker-grid">
+                                {EMOJIS.map((em, i) => (
+                                    <button
+                                        key={i}
+                                        className="sticker-item"
+                                        onClick={() => addSticker(em)}
+                                    >
+                                        {em}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Bottom Actions (Publish) */}
             <div className="story-bottom-bar">

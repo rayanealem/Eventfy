@@ -382,6 +382,65 @@
     justify-content: center;
 }
 
+/* FORMATTING TOOLBAR */
+.story-format-toolbar {
+    position: absolute;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 101;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    border-radius: 16px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 90%;
+    max-width: 360px;
+}
+
+.format-toggles {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+}
+
+.format-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: #fff;
+    padding: 6px 16px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+    min-width: 44px;
+    min-height: 44px;
+}
+
+.color-picker {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+.color-swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 0;
+    transition: transform 0.2s;
+}
+
+.color-swatch.active {
+    border-color: #fff;
+    transform: scale(1.1);
+}
+
 /* BACKGROUND IMAGE OR ADD PLACEHOLDER */
 .story-add-bg {
     width: 100%;
@@ -451,6 +510,11 @@
     min-width: 100px;
     text-shadow: 0 2px 4px rgba(0,0,0,0.8);
     resize: none;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.story-text-input.solid-bg {
+    text-shadow: none;
 }
 
 .story-text-input::placeholder {
@@ -463,6 +527,119 @@
     line-height: 1;
     display: block;
     filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));
+}
+
+/* MAGNETIC TRASH ZONE */
+.story-trash-zone {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 99;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.trash-icon {
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* STICKER TRAY (BOTTOM SHEET) */
+.story-sticker-tray {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60%;
+    background: rgba(10, 10, 15, 0.8);
+    backdrop-filter: blur(12px);
+    border-top-left-radius: 24px;
+    border-top-right-radius: 24px;
+    z-index: 105;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.tray-header {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tray-handle {
+    width: 40px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    margin-bottom: 12px;
+}
+
+.tray-header h3 {
+    margin: 0;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 16px;
+    color: #fff;
+    font-weight: 700;
+}
+
+.tray-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.tray-content h4 {
+    margin: 0 0 12px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.sticker-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.shapes-grid {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.sticker-item {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    font-size: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    min-height: 64px;
+    min-width: 44px;
+    transition: transform 0.1s, background 0.1s;
+}
+
+.sticker-item:active {
+    transform: scale(0.9);
+    background: rgba(255, 255, 255, 0.1);
 }
 
 /* BOTTOM BAR */
