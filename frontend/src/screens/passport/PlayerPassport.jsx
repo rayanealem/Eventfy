@@ -1,27 +1,45 @@
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '../../context/AuthContext';
+import { api } from '../../lib/api';
 import './PlayerPassport.css';
 
-const SKILLS = [
-    { name: 'STRATEGY & LOGIC', pct: 88, width: '88%' },
-    { name: 'AGILITY & SPEED', pct: 94, width: '94%' },
-    { name: 'ENDURANCE', pct: 72, width: '72%' },
-];
+const LEVEL_THRESHOLDS = [0, 500, 1200, 2500, 4500, 7000, 10000, 14000, 19000, 25000];
 
-const TAGS = ['#LEADERSHIP', '#RISK_MGMT', '#TACTICAL'];
-
-const TIMELINE = [
-    { title: 'Apex Championship', role: 'PARTICIPANT | Q4 2023', cert: true },
-    { title: 'Neon District Protocol', role: 'VOLUNTEER LEAD | Q2 2023', cert: true },
-];
-
-const ACHIEVEMENTS = [
-    { name: 'Last Man Standing', color: '#11d4c4' },
-    { name: 'Team Tactician', color: '#ff5f5f' },
-    { name: 'Hyper Focus', color: '#ffd700' },
-];
+const getLevelInfo = (xp) => {
+    let level = 1, nextThreshold = LEVEL_THRESHOLDS[1], prevThreshold = 0;
+    for (let i = 0; i < LEVEL_THRESHOLDS.length; i++) {
+        if (xp >= LEVEL_THRESHOLDS[i]) {
+            level = i + 1;
+            prevThreshold = LEVEL_THRESHOLDS[i];
+            nextThreshold = LEVEL_THRESHOLDS[i + 1] || Infinity;
+        } else break;
+    }
+    const progress = nextThreshold === Infinity ? 100 : ((xp - prevThreshold) / (nextThreshold - prevThreshold)) * 100;
+    return { level, nextThreshold, progress };
+};
 
 export default function PlayerPassport() {
     const navigate = useNavigate();
+    const { profile } = useAuth();
+
+    const { data: passport, isLoading } = useQuery({
+        queryKey: ['passport', profile?.username],
+        queryFn: () => api('GET', `/users/${profile?.username}/passport`),
+        enabled: !!profile?.username,
+    });
+
+    if (isLoading || !passport) {
+        return <div className="pp-root"><div className="pp-noise" /><div style={{ padding: '24px', color: '#fff', textAlign: 'center' }}>LOADING PASSPORT...</div></div>;
+    }
+
+    const { profile: userProfile, badges = [], events_attended = [], skills = [] } = passport;
+
+    const xp = userProfile?.xp || 0;
+    const { level, nextThreshold, progress } = getLevelInfo(xp);
+    const shape = userProfile?.shape || '○';
+    const shapeColor = userProfile?.shape_color || '#f472b6';
+    const playerNumber = userProfile?.player_number || '0000';
 
     return (
         <div className="pp-root">
@@ -33,7 +51,7 @@ export default function PlayerPassport() {
                     <button className="pp-back" onClick={() => navigate(-1)}>‹</button>
                     <div className="pp-header-title">
                         <span>YOUR</span>
-                        <span>PASSPORT ○</span>
+                        <span style={{ color: shapeColor }}>PASSPORT {shape}</span>
                     </div>
                 </div>
                 <div className="pp-header-actions">
@@ -47,21 +65,32 @@ export default function PlayerPassport() {
                 {/* Red Banner */}
                 <div className="pp-banner">
                     <span className="pp-banner-title">OFFICIAL PARTICIPATION PASSPORT</span>
-                    <span className="pp-banner-sn">SN: 4821-X-99</span>
+                    <span className="pp-banner-sn" style={{ fontFamily: 'DM Mono' }}>SN: {playerNumber}-X-99</span>
                 </div>
 
                 <div className="pp-card-body">
                     {/* Avatar */}
                     <div className="pp-avatar-section">
                         <div className="pp-avatar-wrap">
-                            <div className="pp-avatar-hex">
-                                <img src="https://i.pravatar.cc/112?img=12" alt="" />
+                            <div className="pp-avatar-hex" style={{ borderColor: shapeColor }}>
+                                <img src={userProfile?.avatar_url || `https://i.pravatar.cc/112?u=${userProfile?.id}`} alt="" />
                             </div>
-                            <div className="pp-level-badge">LEVEL 7 GOLD</div>
+                            <div className="pp-level-badge" style={{ backgroundColor: shapeColor }}>LEVEL {level}</div>
                         </div>
                         <div className="pp-player-info">
-                            <span className="pp-player-number">PLAYER #4821</span>
+                            <span className="pp-player-number" style={{ fontFamily: 'DM Mono' }}>PLAYER #{playerNumber}</span>
                             <span className="pp-player-status">Status: Active Participant</span>
+
+                            {/* XP Progress */}
+                            <div style={{ marginTop: '8px', width: '100%', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontFamily: 'DM Mono', color: 'rgba(255,255,255,0.6)' }}>
+                                    <span>{xp.toLocaleString()} XP</span>
+                                    <span>{nextThreshold === Infinity ? 'MAX' : `${nextThreshold.toLocaleString()} XP`}</span>
+                                </div>
+                                <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                                    <div style={{ height: '100%', width: `${progress}%`, background: shapeColor, transition: 'width 1s ease-out' }} />
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -71,22 +100,28 @@ export default function PlayerPassport() {
                             <span className="pp-section-title">VERIFIED SKILLS □</span>
                             <div className="pp-divider" />
                         </div>
-                        <div className="pp-skills-list">
-                            {SKILLS.map((s, i) => (
-                                <div key={i} className="pp-skill-item">
-                                    <div className="pp-skill-head">
-                                        <span className="pp-skill-name">{s.name}</span>
-                                        <span className="pp-skill-pct">{s.pct}% □□□□□□□□□□</span>
+                        {skills.length > 0 ? (
+                            <div className="pp-skills-list">
+                                {skills.map((s, i) => (
+                                    <div key={i} className="pp-skill-item">
+                                        <div className="pp-skill-head">
+                                            <span className="pp-skill-name">{s.skills?.name || 'UNKNOWN SKILL'}</span>
+                                            <span className="pp-skill-pct" style={{ fontFamily: 'DM Mono' }}>100% □□□□□□□□□□</span>
+                                        </div>
+                                        <div className="pp-skill-bar">
+                                            <div className="pp-skill-fill" style={{ width: '100%' }} />
+                                        </div>
                                     </div>
-                                    <div className="pp-skill-bar">
-                                        <div className="pp-skill-fill" style={{ width: s.width }} />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div style={{ padding: '16px', textAlign: 'center', fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontFamily: 'DM Mono', letterSpacing: '1px', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '4px' }}>
+                                NO VERIFIED SKILLS LOGGED
+                            </div>
+                        )}
                         <div className="pp-skill-tags">
-                            {TAGS.map((t, i) => (
-                                <span key={i} className="pp-skill-tag">{t}</span>
+                            {skills.slice(0, 3).map((s, i) => (
+                                <span key={i} className="pp-skill-tag">#{s.skills?.category?.toUpperCase() || 'GENERAL'}</span>
                             ))}
                         </div>
                     </div>
@@ -98,20 +133,26 @@ export default function PlayerPassport() {
                             <div className="pp-divider" />
                         </div>
                         <div className="pp-timeline">
-                            {TIMELINE.map((t, i) => (
+                            {events_attended.length > 0 ? events_attended.map((t, i) => (
                                 <div key={i} className="pp-timeline-item">
                                     <div className="pp-tl-marker">○</div>
                                     <div className="pp-tl-content">
                                         <div className="pp-tl-top">
                                             <div className="pp-tl-info">
-                                                <span className="pp-tl-title">{t.title}</span>
-                                                <span className="pp-tl-role">{t.role}</span>
+                                                <span className="pp-tl-title">{t.events?.title || 'Unknown Event'}</span>
+                                                <span className="pp-tl-role" style={{ fontFamily: 'DM Mono' }}>
+                                                    {t.status.toUpperCase()} | {new Date(t.registered_at).getFullYear()}
+                                                </span>
                                             </div>
-                                            {t.cert && <span className="pp-tl-cert">🛡 CERT ◇</span>}
+                                            {t.checked_in && <span className="pp-tl-cert">🛡 CERT ◇</span>}
                                         </div>
                                     </div>
                                 </div>
-                            ))}
+                            )) : (
+                                <div style={{ padding: '16px', textAlign: 'center', fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontFamily: 'DM Mono', letterSpacing: '1px', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '4px' }}>
+                                    NO EVENT HISTORY FOUND
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -121,16 +162,27 @@ export default function PlayerPassport() {
                             <span className="pp-section-title">ACHIEVEMENTS ◇</span>
                             <div className="pp-divider" />
                         </div>
-                        <div className="pp-achievements">
-                            {ACHIEVEMENTS.map((a, i) => (
-                                <div key={i} className="pp-achievement">
-                                    <div className="pp-ach-hex" style={{ borderColor: a.color, background: `${a.color}10` }}>
-                                        <span style={{ color: a.color }}>◇</span>
-                                    </div>
-                                    <span className="pp-ach-name" style={{ color: a.color }}>{a.name}</span>
-                                </div>
-                            ))}
-                        </div>
+                        {badges.length > 0 ? (
+                            <div className="pp-achievements">
+                                {badges.map((b, i) => {
+                                    const badgeColor = b.badges?.color || '#11d4c4';
+                                    const badgeName = b.badges?.name || 'Achievement';
+                                    const badgeShape = b.badges?.shape || '◇';
+                                    return (
+                                        <div key={i} className="pp-achievement">
+                                            <div className="pp-ach-hex" style={{ borderColor: badgeColor, background: `${badgeColor}10` }}>
+                                                <span style={{ color: badgeColor }}>{badgeShape}</span>
+                                            </div>
+                                            <span className="pp-ach-name" style={{ color: badgeColor }}>{badgeName}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div style={{ padding: '24px', textAlign: 'center', fontSize: '12px', color: 'rgba(255,50,50,0.8)', fontFamily: 'DM Mono', letterSpacing: '1px', border: '1px solid rgba(255,50,50,0.2)', borderRadius: '4px', background: 'rgba(255,50,50,0.05)' }}>
+                                NO ACHIEVEMENTS UNLOCKED
+                            </div>
+                        )}
                     </div>
 
                     {/* Verification */}

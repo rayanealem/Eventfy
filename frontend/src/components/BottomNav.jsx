@@ -42,13 +42,28 @@ export default function BottomNav() {
 
     if (!isCoreRoute) return null;
 
+    // Map backend shape symbols to our SVGIcon component types
+    const getProfileShape = () => {
+        if (!profile || !profile.shape) return 'circle'; // fallback
+        switch (profile.shape) {
+            case '○': return 'circle';
+            case '△': return 'triangle';
+            case '□': return 'square';
+            case '◇': return 'diamond';
+            default: return 'circle';
+        }
+    };
+
+    const profileShape = getProfileShape();
+    const profileColor = profile?.shape_color || '#3b82f6';
+
     const navItems = [
         { path: '/feed', shape: 'circle', activeColor: '#f472b6' },
         { path: '/explore', shape: 'triangle', activeColor: '#fbbf24' },
         isOrg
             ? { path: '/org/dashboard', shape: 'hexagon', activeColor: '#fbbf24' }
             : { path: '/scoreboard', shape: 'square', activeColor: '#2dd4bf' },
-        { path: '/profile/me', shape: 'diamond', activeColor: '#3b82f6' },
+        { path: '/profile/me', shape: profileShape, activeColor: profileColor },
         { path: '/chat', shape: 'chat', activeColor: '#f56e3d', badge: unreadMessagesCount }
     ];
 
