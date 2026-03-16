@@ -232,6 +232,12 @@
     text-shadow: none;
 }
 
+.story-text-input.translucent-bg {
+    background: rgba(255, 255, 255, 0.2) !important;
+    backdrop-filter: blur(10px) !important;
+    text-shadow: none;
+}
+
 .story-text-input::placeholder {
     color: rgba(255,255,255,0.5);
 }
@@ -256,6 +262,41 @@
     background-size: 1px 12px;
     z-index: 50;
     pointer-events: none;
+}
+
+/* CENTER GUIDES & SAFE ZONES */
+.story-horizontal-guide {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 1px;
+    background-image: linear-gradient(to right, #00ffc2 50%, transparent 50%);
+    background-size: 12px 1px;
+    z-index: 50;
+    pointer-events: none;
+}
+
+.story-safe-zone {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    pointer-events: none;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.story-safe-zone-top {
+    top: 0;
+    height: 15%;
+    border-bottom: 2px dashed rgba(255,255,255,0.3);
+}
+
+.story-safe-zone-bottom {
+    bottom: 0;
+    height: 15%;
+    border-top: 2px dashed rgba(255,255,255,0.3);
 }
 
 /* MAGNETIC TRASH ZONE */

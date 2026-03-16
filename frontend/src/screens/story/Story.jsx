@@ -60,6 +60,11 @@ export default function Story() {
     const [pollVotes, setPollVotes] = useState({}); // { pollId: { option: 'A', pctA: 80, pctB: 20 } }
     const [flyingEmojis, setFlyingEmojis] = useState([]);
 
+    // Audio & Insights State
+    const [isMuted, setIsMuted] = useState(true);
+    const audioRef = useRef(null);
+    const [showInsights, setShowInsights] = useState(false);
+
     // Fetch org info
     const { data: org } = useQuery({
         queryKey: ['org', orgId],
@@ -125,6 +130,20 @@ export default function Story() {
             goPrevStory();
         }
     }, [currentFrameIndex, goPrevStory]);
+
+    // Audio Effect
+    useEffect(() => {
+        if (audioRef.current) {
+            if (paused) {
+                audioRef.current.pause();
+            } else {
+                audioRef.current.play().catch(e => {
+                    console.log("Autoplay prevented:", e);
+                    setIsMuted(true);
+                });
+            }
+        }
+    }, [paused, currentFrameIndex, isMuted]);
 
     // Pause/resume on hold
     const handlePauseStart = () => {
@@ -211,6 +230,28 @@ export default function Story() {
 
     const toggleLike = () => {
         setLiked(prev => ({ ...prev, [story.id]: !prev[story.id] }));
+    };
+
+    const isOwner = profile?.id === story.user_id || profile?.managed_orgs?.some(o => o.id === story.org_id);
+
+    // Fetch Analytics if Owner
+    const { data: analytics } = useQuery({
+        queryKey: ['storyAnalytics', story.id],
+        queryFn: async () => {
+            return await api('GET', `/stories/${story.id}/analytics`);
+        },
+        enabled: isOwner && showInsights,
+    });
+
+    const handleDeleteStory = async () => {
+        if (window.confirm("Are you sure you want to delete this story?")) {
+            try {
+                await api('DELETE', `/stories/${story.id}`);
+                navigate('/feed');
+            } catch (e) {
+                console.error("Failed to delete story:", e);
+            }
+        }
     };
 
     return (
@@ -418,17 +459,118 @@ export default function Story() {
                             </p>
                         </div>
                     )}
+
+                    {/* Audio Player for Current Frame */}
+                    {currentFrames[currentFrameIndex]?.audio_url && (
+                        <>
+                            <audio
+                                ref={audioRef}
+                                src={currentFrames[currentFrameIndex].audio_url}
+                                loop
+                                muted={isMuted}
+                                playsInline
+                                autoPlay
+                                style={{ display: 'none' }}
+                            />
+                            <button
+                                className="story-unmute-btn"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsMuted(!isMuted);
+                                }}
+                            >
+                                {isMuted ? '🔇 Tap to Unmute' : '🔊 Mute'}
+                            </button>
+                        </>
+                    )}
                 </div>
 
-                {/* Footer / Reaction Bar */}
-                <StoryFooter
-                    story={story}
-                    liked={liked}
-                    paused={paused}
-                    toggleLike={toggleLike}
-                    handleReaction={handleReaction}
-                    setPaused={setPaused}
-                />
+                {/* Footer / Reaction Bar / Owner Insights */}
+                {isOwner ? (
+                    <div className="story-owner-footer">
+                        <button
+                            className="story-insights-btn"
+                            onClick={() => {
+                                setPaused(true);
+                                setShowInsights(true);
+                            }}
+                        >
+                            👁️ {analytics?.total_views || 0} Views
+                        </button>
+                    </div>
+                ) : (
+                    <StoryFooter
+                        story={story}
+                        liked={liked}
+                        paused={paused}
+                        toggleLike={toggleLike}
+                        handleReaction={handleReaction}
+                        setPaused={setPaused}
+                    />
+                )}
+
+                {/* Insights Bottom Sheet */}
+                <AnimatePresence>
+                    {showInsights && (
+                        <>
+                            <motion.div
+                                className="story-insights-backdrop"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                onClick={() => {
+                                    setShowInsights(false);
+                                    setPaused(false);
+                                }}
+                            />
+                            <motion.div
+                                className="story-insights-sheet"
+                                initial={{ y: '100%' }}
+                                animate={{ y: 0 }}
+                                exit={{ y: '100%' }}
+                                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                            >
+                                <div className="insights-header">
+                                    <div className="insights-handle" />
+                                    <h3>Story Insights</h3>
+                                </div>
+                                <div className="insights-content">
+                                    <div className="insights-stats">
+                                        <div className="stat-box">
+                                            <span className="stat-num">{analytics?.total_views || 0}</span>
+                                            <span className="stat-label">Views</span>
+                                        </div>
+                                        {/* Mock Poll Results if Poll exists in this frame */}
+                                        {currentFrames[currentFrameIndex]?.overlays?.some(el => el.type === 'poll') && (
+                                            <div className="stat-box">
+                                                <span className="stat-num">50 / 50</span>
+                                                <span className="stat-label">Poll Pct</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="viewers-list">
+                                        <h4>Viewers</h4>
+                                        {analytics?.views?.length > 0 ? (
+                                            analytics.views.map((view, idx) => (
+                                                <div key={idx} className="viewer-item">
+                                                    <div className="viewer-avatar">
+                                                        <img src={view.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${view.username}`} alt={view.username} />
+                                                    </div>
+                                                    <span className="viewer-name">@{view.username}</span>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <p className="no-viewers">No views yet.</p>
+                                        )}
+                                    </div>
+                                    <button className="delete-story-btn" onClick={handleDeleteStory}>
+                                        🗑️ Delete Story
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </>
+                    )}
+                </AnimatePresence>
 
                 {/* Flying Emojis Layer */}
                 <AnimatePresence>
