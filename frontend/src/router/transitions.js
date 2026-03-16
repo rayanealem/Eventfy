@@ -43,3 +43,14 @@ export const slideUpTransition = {
     animate: { y: 0, opacity: 1, transition: instaSpring },
     exit: { y: 24, opacity: 0, transition: instaSpring }
 };
+export const slideUpSheet = {
+    initial: { y: '100%', opacity: 1 },
+    animate: { y: 0, opacity: 1, transition: instaSpring },
+    exit: { y: '100%', opacity: 1, transition: instaSpring }
+};
+
+export const tabTransition = {
+    initial: { opacity: 0, scale: 0.98 },
+    animate: { opacity: 1, scale: 1, transition: { duration: 0.15, ease: "easeOut" } },
+    exit: { opacity: 0, scale: 0.98, transition: { duration: 0.1 } }
+};
