@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from config import supabase
 from middleware.auth import get_current_user, require_org
 from utils.xp_engine import award_xp
+from utils.gamification import recalculate_user_shape
 from utils.qr_generator import generate_qr_data_url
 
 router = APIRouter()
@@ -60,6 +61,9 @@ async def scan_qr(event_id: str, body: dict, user=Depends(get_current_user)):
     event = supabase.table("events").select("xp_checkin, checkin_count").eq("id", event_id).single().execute()
     xp_amount = event.data["xp_checkin"] if event.data else 100
     xp_result = award_xp(user["id"], xp_amount, "checkin", event_id)
+
+    # Recalculate user shape after check-in synchronously
+    recalculate_user_shape(user["id"])
 
     if event.data:
         supabase.table("events").update({"checkin_count": event.data["checkin_count"] + 1}).eq("id", event_id).execute()

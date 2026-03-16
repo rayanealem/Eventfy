@@ -98,12 +98,12 @@ async def logout(user=Depends(get_current_user)):
 
 @router.get("/me")
 async def get_me(user=Depends(get_current_user)):
-    """Get current user profile with badges, skills, and managed orgs."""
+    """Get current user profile with badges, skills, and managed orgs. Core gamified state included."""
     # Get profile with badges and skill counts
     profile = (
         supabase.table("profiles")
         .select("""
-            *,
+            id, username, full_name, avatar_url, shape, shape_color, player_number, xp, level, role, onboarding_done,
             user_badges (
                 badge_id,
                 badges ( name, icon_url, shape, color )
@@ -130,6 +130,9 @@ async def get_me(user=Depends(get_current_user)):
         **(profile.data or user),
         "managed_orgs": [m["organizations"] for m in (orgs.data or [])],
     }
+
+    # Extract user badges safely
+    result["badges"] = [b for b in (result.get("user_badges") or []) if b.get("badges")]
 
     # Compute live counts from junction tables
     uid = user["id"]

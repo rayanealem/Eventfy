@@ -10,16 +10,42 @@ router = APIRouter()
 
 
 @router.get("/scoreboard")
-async def get_scoreboard(page: int = 0, page_size: int = 50):
-    """Global leaderboard (paginated)."""
-    profiles = (supabase.table("profiles")
-        .select("id, username, full_name, avatar_url, shape, shape_color, xp, level")
-        .order("xp", desc=True)
-        .range(page * page_size, (page + 1) * page_size - 1).execute())
+async def get_scoreboard(
+    page: int = 0,
+    page_size: int = 50,
+    event_type: str = None,
+    wilaya: str = None,
+):
+    """Global leaderboard (paginated), with optional filters."""
+    query = supabase.table("profiles").select("id, username, full_name, player_number, avatar_url, shape, shape_color, xp, level")
+
+    if wilaya:
+        query = query.eq("wilaya", wilaya)
+
+    # Order by XP descending
+    query = query.order("xp", desc=True)
+
+    profiles = query.execute()
+    data = profiles.data or []
+
+    # If event_type is provided, filter using python since we'd need to join event_registrations + events to see who attended
+    # Alternatively, since shapes are determined by most attended event type, we can filter by the user's primary shape
+    # Sport=○, Science=△, Charity=□, Cultural=◇
+    if event_type:
+        shape_map = {"sport": "○", "science": "△", "charity": "□", "cultural": "◇"}
+        target_shape = shape_map.get(event_type.lower())
+        if target_shape:
+            data = [p for p in data if p.get("shape") == target_shape]
+
+    # Paginate after filtering
+    start_idx = page * page_size
+    end_idx = start_idx + page_size
+    paginated_data = data[start_idx:end_idx]
 
     entries = []
-    for i, p in enumerate(profiles.data or []):
-        entries.append({**p, "rank": page * page_size + i + 1})
+    for i, p in enumerate(paginated_data):
+        entries.append({**p, "rank": start_idx + i + 1})
+
     return {"scoreboard": entries}
 
 
