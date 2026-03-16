@@ -60,8 +60,19 @@ export function GuestGuard({ children }) {
     }
 
     if (user) {
-        const isOrg = profile && ['organizer', 'local_admin', 'global_admin'].includes(profile.role);
-        if (profile && !profile.onboarding_done) {
+        if (!profile) {
+            // Profile is still generating via Supabase trigger. Trap in loading state.
+            return (
+                <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    height: '100vh', background: '#0a0a0a', color: '#00ffc2',
+                }}>
+                    <div>Loading Profile...</div>
+                </div>
+            )
+        }
+        const isOrg = ['organizer', 'local_admin', 'global_admin'].includes(profile.role);
+        if (!profile.onboarding_done) {
             if (isOrg) {
                 return <Navigate to="/org/setup" replace />
             }

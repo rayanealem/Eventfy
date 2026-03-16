@@ -1,10 +1,16 @@
 import { supabase } from './supabase'
 
 // Dynamically determine the backend URL based on how the frontend is accessed
+const isCapacitor = window.Capacitor !== undefined;
 const hostname = window.location.hostname;
-// If accessed via localhost, use 127.0.0.1 to avoid Windows IPv6 DNS resolution bugs
-const defaultApiUrl = hostname === 'localhost' ? 'http://127.0.0.1:8005/v1' : `http://${hostname}:8005/v1`;
-const API_URL = import.meta.env.VITE_API_URL || defaultApiUrl;
+
+// If accessed via Android emulator (Capacitor), fallback to 10.0.2.2.
+// Otherwise, if localhost, use 127.0.0.1 to avoid Windows IPv6 DNS resolution bugs.
+const fallbackApiUrl = isCapacitor
+  ? 'http://10.0.2.2:8005/v1'
+  : (hostname === 'localhost' ? 'http://127.0.0.1:8005/v1' : `http://${hostname}:8005/v1`);
+
+const API_URL = import.meta.env.VITE_API_URL || fallbackApiUrl;
 
 /**
  * API call helper — attaches JWT from current Supabase session.
