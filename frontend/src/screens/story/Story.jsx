@@ -6,7 +6,9 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
 import ProgressBar from '../../components/StoryViewer/ProgressBar';
-import './Story.css';
+import StoryHeader from './components/StoryHeader';
+import StoryFooter from './components/StoryFooter';
+import './StoryViewer.css';
 
 // Fallback stories for when the API isn't available
 const FALLBACK_STORIES = [
@@ -43,15 +45,6 @@ const FALLBACK_STORIES = [
 ];
 
 const STORY_DURATION = 5000; // 5s per story
-
-function timeAgo(dateStr) {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 60) return `${mins}m ago`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
-    return `${Math.floor(hours / 24)}d ago`;
-}
 
 export default function Story() {
     const navigate = useNavigate();
@@ -220,9 +213,6 @@ export default function Story() {
         setLiked(prev => ({ ...prev, [story.id]: !prev[story.id] }));
     };
 
-    const orgName = org?.name?.toUpperCase() || 'ORG';
-    const orgLogo = org?.logo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(orgName)}&size=80&background=1e293b&color=fff`;
-
     return (
         <div className="story-root">
             <div className="story-viewer"
@@ -238,21 +228,14 @@ export default function Story() {
                 />
 
                 {/* Header */}
-                <div className={`story-header ${paused ? 'paused-opacity' : ''}`}>
-                    <div className="story-user">
-                        <div className="story-user-avatar" style={{ borderColor: story.accent || '#13ecec' }}>
-                            <img src={orgLogo} alt={orgName} />
-                        </div>
-                        <div className="story-user-info">
-                            <span className="story-username">{orgName}</span>
-                            <span className="story-time">{timeAgo(story.created_at)}</span>
-                        </div>
-                    </div>
-                    <div className="story-actions">
-                        <span className="story-action" onPointerDown={handlePauseStart} onPointerUp={handlePauseEnd}>⏸</span>
-                        <span className="story-action" onClick={() => navigate(-1)} style={{ cursor: 'pointer' }}>✕</span>
-                    </div>
-                </div>
+                <StoryHeader
+                    org={org}
+                    story={story}
+                    paused={paused}
+                    handlePauseStart={handlePauseStart}
+                    handlePauseEnd={handlePauseEnd}
+                    navigate={navigate}
+                />
 
                 {/* Tappable Content Zone */}
                 <div
@@ -314,6 +297,7 @@ export default function Story() {
                                 top: '50%',
                                 transform: `translate(calc(-50% + ${el.x}px), calc(-50% + ${el.y}px)) scale(${el.scale}) rotate(${el.rotation}deg)`,
                             }}
+                            className={`anim-${el.animationType || 'none'}`}
                         >
                             {el.type === 'text' && (
                                 <div
@@ -328,12 +312,26 @@ export default function Story() {
                                         borderRadius: el.textStyle === 'solid' ? '12px' : '0',
                                         outline: 'none',
                                         border: 'none',
-                                        textAlign: 'center',
-                                        minWidth: '150px'
+                                        textAlign: el.textAlign || 'center',
+                                        width: '100%',
+                                        minWidth: 'max-content'
                                     }}
                                 >
                                     {el.content}
                                 </div>
+                            )}
+                            {el.type === 'photo_sticker' && (
+                                <img
+                                    src={el.content}
+                                    alt="Photo Sticker"
+                                    className={`story-photo-sticker shape-${el.shape || 'square'}`}
+                                    style={{
+                                        width: '150px',
+                                        height: '150px',
+                                        objectFit: 'cover',
+                                        pointerEvents: 'none'
+                                    }}
+                                />
                             )}
                             {el.type === 'sticker' && (
                                 <span
@@ -423,21 +421,14 @@ export default function Story() {
                 </div>
 
                 {/* Footer / Reaction Bar */}
-                <div className={`story-footer ${paused ? 'paused-opacity' : ''}`}>
-                    <div className="story-reply-wrap">
-                        <input
-                            className="story-reply-input"
-                            placeholder="Send a message..."
-                            onFocus={() => setPaused(true)}
-                            onBlur={() => setPaused(false)}
-                        />
-                    </div>
-                    <div className="story-reaction-bar">
-                        <button className="reaction-btn" onClick={() => handleReaction('❤️')}>❤️</button>
-                        <button className="reaction-btn" onClick={() => handleReaction('🔥')}>🔥</button>
-                        <button className="reaction-btn" onClick={() => handleReaction('🚀')}>🚀</button>
-                    </div>
-                </div>
+                <StoryFooter
+                    story={story}
+                    liked={liked}
+                    paused={paused}
+                    toggleLike={toggleLike}
+                    handleReaction={handleReaction}
+                    setPaused={setPaused}
+                />
 
                 {/* Flying Emojis Layer */}
                 <AnimatePresence>

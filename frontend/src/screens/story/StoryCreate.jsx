@@ -5,7 +5,11 @@ import { api } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { instaSpring } from '../../lib/physics';
-import './Story.css';
+import StickerTray from './components/StickerTray';
+import FilterTray from './components/FilterTray';
+import FormatToolbar from './components/FormatToolbar';
+import { downloadStoryImage } from '../../lib/canvasUtils';
+import './StoryCreate.css';
 
 const COLORS = ['#ffffff', '#000000', '#fb5151', '#00ffc2', '#ffd700', '#b484ce'];
 const EVENTFY_SHAPES = [
@@ -37,12 +41,17 @@ export default function StoryCreate() {
     const [highestZIndex, setHighestZIndex] = useState(1);
     const [publishing, setPublishing] = useState(false);
 
+    // WebRTC Live Camera State
+    const videoRef = useRef(null);
+    const [isCameraActive, setIsCameraActive] = useState(false);
+    const [cameraError, setCameraError] = useState(false);
+
     // Premium Features State
     const [isDragging, setIsDragging] = useState(false);
     const [dragTrashScale, setDragTrashScale] = useState(1);
     const [showStickerTray, setShowStickerTray] = useState(false);
     const [showCenterGuide, setShowCenterGuide] = useState(false);
-    
+
     // Draw Engine State
     const [isDrawingMode, setIsDrawingMode] = useState(false);
     const [strokes, setStrokes] = useState([]); // Array of stroke image data URLs for undo
@@ -50,6 +59,8 @@ export default function StoryCreate() {
     const ctxRef = useRef(null);
     const isDrawingRef = useRef(false);
     const [brushColor, setBrushColor] = useState('#ffffff');
+    const [brushType, setBrushType] = useState('normal'); // 'normal', 'neon', 'eraser'
+    const [brushSize, setBrushSize] = useState(6);
 
     // Filter Engine State
     const [showFilters, setShowFilters] = useState(false);
@@ -68,10 +79,71 @@ export default function StoryCreate() {
     // Redirect to feed if user isn't logged in (assuming profile is needed)
     if (!profile) return <Navigate to="/feed" replace />;
 
+    // --- WebRTC Camera ---
+    useEffect(() => {
+        if (!bgImage && !cameraError) {
+            startCamera();
+        }
+        return () => stopCamera(); // Cleanup on unmount or when bgImage is set
+    }, [bgImage, cameraError]);
+
+    const startCamera = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                setIsCameraActive(true);
+            }
+        } catch (err) {
+            console.error('WebRTC Camera failed:', err);
+            setCameraError(true);
+            setIsCameraActive(false);
+        }
+    };
+
+    const stopCamera = () => {
+        if (videoRef.current && videoRef.current.srcObject) {
+            const tracks = videoRef.current.srcObject.getTracks();
+            tracks.forEach(track => track.stop());
+            setIsCameraActive(false);
+        }
+    };
+
+    const captureLiveFrame = () => {
+        if (!videoRef.current) return;
+        const canvas = document.createElement('canvas');
+        canvas.width = videoRef.current.videoWidth;
+        canvas.height = videoRef.current.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob((blob) => {
+            const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+            setIsVideo(false);
+            setVideoDuration(5000);
+            setBgImage(file);
+            setBgImagePreview(URL.createObjectURL(file));
+            stopCamera();
+        }, 'image/jpeg', 0.9);
+    };
+
     // --- Actions ---
 
     const handleCancel = () => {
         navigate(-1);
+    };
+
+    const handleDownload = () => {
+        const prevActive = activeElementId;
+        setActiveElementId(null);
+        setShowCenterGuide(false);
+
+        downloadStoryImage(
+            canvasRef.current,
+            'eventfy_story.png',
+            null, // hideUI callback not strictly needed if we just null out state above
+            () => { setActiveElementId(prevActive); } // restoreUI
+        );
     };
 
     const handleBgImageSelect = (e) => {
@@ -147,9 +219,29 @@ export default function StoryCreate() {
     const startDrawing = (e) => {
         if (!isDrawingMode || !ctxRef.current) return;
         const { offsetX, offsetY } = getPointerPos(e);
-        ctxRef.current.strokeStyle = brushColor;
-        ctxRef.current.beginPath();
-        ctxRef.current.moveTo(offsetX, offsetY);
+
+        const ctx = ctxRef.current;
+        ctx.lineWidth = brushSize;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        if (brushType === 'normal') {
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.strokeStyle = brushColor;
+            ctx.shadowBlur = 0;
+        } else if (brushType === 'neon') {
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.strokeStyle = '#ffffff';
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = brushColor;
+        } else if (brushType === 'eraser') {
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.strokeStyle = 'rgba(0,0,0,1)';
+            ctx.shadowBlur = 0;
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(offsetX, offsetY);
         isDrawingRef.current = true;
     };
 
@@ -201,11 +293,14 @@ export default function StoryCreate() {
     };
 
     const handleCanvasClick = (e) => {
-        if (e.target === canvasRef.current || e.target.classList.contains('story-canvas-bg')) {
+        if (e.target === canvasRef.current || e.target.classList.contains('story-canvas-bg') || e.target.classList.contains('story-draw-canvas')) {
             setActiveElementId(null);
             setShowStickerTray(false);
+            document.activeElement?.blur();
         }
     };
+
+    const isEditing = activeElementId !== null || isDragging;
 
     const addText = () => {
         const newZ = highestZIndex + 1;
@@ -218,6 +313,8 @@ export default function StoryCreate() {
             fontFamily: 'Space Grotesk',
             textStyle: 'plain',
             bgColor: 'transparent',
+            textAlign: 'center',
+            animationType: 'none',
             x: 0,
             y: 0,
             scale: 1,
@@ -270,7 +367,7 @@ export default function StoryCreate() {
     const addSmartSticker = (type) => {
         const newZ = highestZIndex + 1;
         setHighestZIndex(newZ);
-        
+
         let content = '';
         if (type === 'mention') content = '@username';
         if (type === 'location') content = 'City, Country';
@@ -290,6 +387,33 @@ export default function StoryCreate() {
         setElements(prev => [...prev, newSticker]);
         setActiveElementId(newSticker.id);
         setShowStickerTray(false);
+    };
+
+    const addPhotoSticker = (url) => {
+        const newZ = highestZIndex + 1;
+        setHighestZIndex(newZ);
+        const newPhoto = {
+            id: `photo_${Date.now()}`,
+            type: 'photo_sticker',
+            content: url, // Local blob URL or remote URL
+            shape: 'square',
+            x: 0,
+            y: 0,
+            scale: 1,
+            rotation: 0,
+            zIndex: newZ,
+        };
+        setElements(prev => [...prev, newPhoto]);
+        setActiveElementId(newPhoto.id);
+        setShowStickerTray(false);
+    };
+
+    const cyclePhotoShape = (id, currentShape) => {
+        const shapes = ['square', 'rounded', 'circle', 'star'];
+        const currentIdx = shapes.indexOf(currentShape || 'square');
+        const nextIdx = (currentIdx + 1) % shapes.length;
+        updateElement(id, { shape: shapes[nextIdx] });
+        triggerHaptic();
     };
 
     const toggleStickerTray = () => {
@@ -352,7 +476,7 @@ export default function StoryCreate() {
             // Create the parent story
             const storyRes = await api('POST', `/stories`, {
                 org_id: profile.managed_orgs?.[0]?.id || profile.id, // Fallback if managed_orgs not available
-                type: 'announcement', 
+                type: 'announcement',
                 badge: '',
                 title: 'Story',
                 body: '',
@@ -387,82 +511,68 @@ export default function StoryCreate() {
 
     return (
         <div className="story-create-root">
-            {/* Top Toolbar */}
-            <div className="story-toolbar">
-                <button className="toolbar-btn cancel-btn" onClick={handleCancel}>✕</button>
-                {isDrawingMode ? (
-                    <div className="toolbar-actions">
-                        <button className="toolbar-btn" onClick={handleUndo}>↩️</button>
-                        <button className="toolbar-btn" onClick={toggleDrawingMode}>Done</button>
-                    </div>
-                ) : (
-                    <div className="toolbar-actions">
-                        <button className="toolbar-btn" onClick={toggleDrawingMode}>🖌️</button>
-                        <button className="toolbar-btn" onClick={toggleFilters}>✨</button>
-                        <button className="toolbar-btn" onClick={addPoll}>📊</button>
-                        <button className="toolbar-btn" onClick={addText}>Aa</button>
-                        <button className="toolbar-btn" onClick={toggleStickerTray}>🔥</button>
-                    </div>
-                )}
-            </div>
-
-            {/* Formatting Toolbar (For active text OR drawing mode) */}
+            {/* Top Toolbar (Auto-Hides when editing) */}
             <AnimatePresence>
-                {((activeElement && activeElement.type === 'text') || isDrawingMode) && !isDragging && (
-                    <motion.div 
-                        className="story-format-toolbar"
+                {!isEditing && (
+                    <motion.div
+                        className="story-toolbar"
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
                     >
-                        {!isDrawingMode && (
-                            <div className="format-toggles">
-                                <button 
-                                    className="format-btn"
-                                    onClick={() => updateElement(activeElement.id, { 
-                                        fontFamily: activeElement.fontFamily === 'Space Grotesk' ? 'Bebas Neue' : 'Space Grotesk' 
-                                    })}
-                                >
-                                    {activeElement.fontFamily === 'Space Grotesk' ? 'Aa' : 'AA'}
-                                </button>
-                                <button 
-                                    className="format-btn"
-                                    onClick={() => updateElement(activeElement.id, { 
-                                        textStyle: activeElement.textStyle === 'plain' ? 'solid' : 'plain' 
-                                    })}
-                                >
-                                    {activeElement.textStyle === 'plain' ? 'A' : 'A*'}
-                                </button>
+                        <div className="toolbar-actions">
+                            <button className="toolbar-btn cancel-btn" onClick={handleCancel}>✕</button>
+                        </div>
+                        {isDrawingMode ? (
+                            <div className="toolbar-actions">
+                                <button className="toolbar-btn" onClick={handleUndo}>↩️</button>
+                                <button
+                                    className="toolbar-btn"
+                                    style={{ border: brushType === 'normal' ? '2px solid white' : 'none', borderRadius: '50%', width: 32, height: 32 }}
+                                    onClick={() => setBrushType('normal')}
+                                >🖊️</button>
+                                <button
+                                    className="toolbar-btn"
+                                    style={{ border: brushType === 'neon' ? '2px solid white' : 'none', borderRadius: '50%', width: 32, height: 32 }}
+                                    onClick={() => setBrushType('neon')}
+                                >✨</button>
+                                <button
+                                    className="toolbar-btn"
+                                    style={{ border: brushType === 'eraser' ? '2px solid white' : 'none', borderRadius: '50%', width: 32, height: 32 }}
+                                    onClick={() => setBrushType('eraser')}
+                                >🧼</button>
+                                <button className="toolbar-btn" onClick={toggleDrawingMode} style={{ marginLeft: 16 }}>Done</button>
+                            </div>
+                        ) : (
+                            <div className="toolbar-actions">
+                                <button className="toolbar-btn" onClick={handleDownload} title="Download">⬇️</button>
+                                <button className="toolbar-btn" onClick={toggleDrawingMode}>🖌️</button>
+                                <button className="toolbar-btn" onClick={toggleFilters}>✨</button>
+                                <button className="toolbar-btn" onClick={addPoll}>📊</button>
+                                <button className="toolbar-btn" onClick={addText}>Aa</button>
+                                <button className="toolbar-btn" onClick={toggleStickerTray}>🔥</button>
                             </div>
                         )}
-                        <div className="color-picker">
-                            {COLORS.map(c => (
-                                <button 
-                                    key={c}
-                                    className={`color-swatch ${isDrawingMode ? (brushColor === c ? 'active' : '') : (activeElement?.textStyle === 'solid' ? (activeElement.bgColor === c ? 'active' : '') : (activeElement?.color === c ? 'active' : ''))}`}
-                                    style={{ backgroundColor: c }}
-                                    onClick={() => {
-                                        if (isDrawingMode) {
-                                            setBrushColor(c);
-                                            if (ctxRef.current) ctxRef.current.strokeStyle = c;
-                                        } else if (activeElement) {
-                                            if (activeElement.textStyle === 'solid') {
-                                                updateElement(activeElement.id, { bgColor: c, color: getContrastColor(c) });
-                                            } else {
-                                                updateElement(activeElement.id, { color: c });
-                                            }
-                                        }
-                                    }}
-                                />
-                            ))}
-                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
+            {/* Formatting Toolbar (For active text OR drawing mode) */}
+            <FormatToolbar
+                activeElement={activeElement}
+                isDrawingMode={isDrawingMode}
+                isDragging={isDragging}
+                updateElement={updateElement}
+                COLORS={COLORS}
+                brushColor={brushColor}
+                setBrushColor={setBrushColor}
+                ctxRef={ctxRef}
+                getContrastColor={getContrastColor}
+            />
+
             {/* Canvas */}
-            <div 
-                className="story-canvas" 
+            <div
+                className="story-canvas"
                 ref={canvasRef}
                 onClick={handleCanvasClick}
             >
@@ -470,33 +580,49 @@ export default function StoryCreate() {
                 {showCenterGuide && <div className="story-center-guide" />}
 
                 {!bgImagePreview ? (
-                    <label className="story-add-bg">
-                        <div className="add-bg-label">+ ADD BACKGROUND</div>
-                        <input 
-                            type="file" 
-                            accept="image/*,video/mp4,video/webm" 
-                            onChange={handleBgImageSelect} 
-                            style={{ display: 'none' }} 
-                        />
-                    </label>
+                    isCameraActive ? (
+                        <>
+                            <video
+                                ref={videoRef}
+                                autoPlay
+                                playsInline
+                                muted
+                                className="story-canvas-bg"
+                                style={{ objectFit: 'cover' }}
+                            />
+                            <button className="shutter-btn" onClick={captureLiveFrame}>
+                                <div className="shutter-inner" />
+                            </button>
+                        </>
+                    ) : (
+                        <label className="story-add-bg">
+                            <div className="add-bg-label">+ ADD BACKGROUND</div>
+                            <input
+                                type="file"
+                                accept="image/*,video/mp4,video/webm"
+                                onChange={handleBgImageSelect}
+                                style={{ display: 'none' }}
+                            />
+                        </label>
+                    )
                 ) : (
                     <>
                         {isVideo ? (
-                            <video 
-                                src={bgImagePreview} 
-                                className="story-canvas-bg" 
+                            <video
+                                src={bgImagePreview}
+                                className="story-canvas-bg"
                                 style={{ filter: activeFilter }}
-                                autoPlay 
-                                loop 
-                                muted 
+                                autoPlay
+                                loop
+                                muted
                                 playsInline
                             />
                         ) : (
-                            <img 
-                                src={bgImagePreview} 
-                                className="story-canvas-bg" 
+                            <img
+                                src={bgImagePreview}
+                                className="story-canvas-bg"
                                 style={{ filter: activeFilter }}
-                                alt="Background" 
+                                alt="Background"
                             />
                         )}
                         {/* Drawing Canvas Overlay */}
@@ -562,17 +688,18 @@ export default function StoryCreate() {
                                         triggerHaptic();
                                     }
 
-                                    updateElement(el.id, { 
-                                        x: finalX, 
-                                        y: el.y + info.offset.y 
+                                    // Direct addition without calc()
+                                    updateElement(el.id, {
+                                        x: finalX === 0 ? 0 : el.x + info.offset.x,
+                                        y: el.y + info.offset.y
                                     });
                                 }
                             }}
                             className={`story-element ${isActive ? 'active' : ''}`}
                             style={{
                                 zIndex: el.zIndex,
-                                x: `calc(-50% + ${el.x}px)`,
-                                y: `calc(-50% + ${el.y}px)`,
+                                x: el.x,
+                                y: el.y,
                                 scale: el.scale,
                                 rotate: el.rotation,
                             }}
@@ -582,19 +709,25 @@ export default function StoryCreate() {
                                 bringToFront(el.id);
                             }}
                         >
+                            <div className={`story-element-anchor-content anim-${el.animationType || 'none'}`}>
                             {el.type === 'text' && (
-                                <input
-                                    type="text"
+                                <textarea
                                     className={`story-text-input ${el.textStyle === 'solid' ? 'solid-bg' : ''}`}
                                     value={el.content}
                                     onChange={(e) => updateElement(el.id, { content: e.target.value })}
                                     autoFocus={isActive}
-                                    style={{ 
+                                    style={{
                                         color: el.color,
                                         fontFamily: el.fontFamily,
                                         backgroundColor: el.textStyle === 'solid' ? el.bgColor : 'transparent',
                                         padding: el.textStyle === 'solid' ? '8px 16px' : '0',
-                                        borderRadius: el.textStyle === 'solid' ? '12px' : '0'
+                                        borderRadius: el.textStyle === 'solid' ? '12px' : '0',
+                                        textAlign: el.textAlign || 'center',
+                                        pointerEvents: isDragging ? 'none' : 'auto',
+                                        userSelect: isDragging ? 'none' : 'auto',
+                                        width: `${Math.max(el.content.length, 5)}ch`, // rudimentary width matching
+                                        height: 'auto',
+                                        minHeight: '1.2em'
                                     }}
                                     placeholder="Type something..."
                                 />
@@ -614,46 +747,71 @@ export default function StoryCreate() {
                                         value={el.content}
                                         onChange={(e) => updateElement(el.id, { content: e.target.value })}
                                         autoFocus={isActive}
-                                        style={{ 
-                                            background: 'transparent', 
-                                            border: 'none', 
-                                            outline: 'none', 
+                                        style={{
+                                            background: 'transparent',
+                                            border: 'none',
+                                            outline: 'none',
                                             color: 'inherit',
                                             fontFamily: 'inherit',
                                             fontSize: 'inherit',
                                             fontWeight: 'inherit',
-                                            width: `${Math.max(el.content.length, 5)}ch` // Auto-grow basic approximation
+                                            width: `${Math.max(el.content.length, 5)}ch`, // Auto-grow basic approximation
+                                            pointerEvents: isDragging ? 'none' : 'auto',
+                                            userSelect: isDragging ? 'none' : 'auto'
                                         }}
                                     />
                                 </div>
                             )}
+                            {el.type === 'photo_sticker' && (
+                                <img
+                                    src={el.content}
+                                    alt="Sticker"
+                                    className={`story-photo-sticker shape-${el.shape || 'square'}`}
+                                    onClick={(e) => {
+                                        if (isActive && !isDragging) {
+                                            e.stopPropagation();
+                                            cyclePhotoShape(el.id, el.shape);
+                                        }
+                                    }}
+                                    style={{
+                                        width: '150px',
+                                        height: '150px',
+                                        objectFit: 'cover',
+                                        pointerEvents: isDragging ? 'none' : 'auto',
+                                    }}
+                                />
+                            )}
                             {el.type === 'poll' && (
-                                <div className="story-poll-widget">
-                                    <input 
-                                        type="text" 
+                                <div className="story-poll-widget" style={{ pointerEvents: isDragging ? 'none' : 'auto', userSelect: isDragging ? 'none' : 'auto' }}>
+                                    <input
+                                        type="text"
                                         className="story-poll-question"
-                                        value={el.content.question} 
+                                        value={el.content.question}
                                         onChange={(e) => updateElement(el.id, { content: { ...el.content, question: e.target.value } })}
                                         placeholder="Ask a question..."
+                                        style={{ pointerEvents: isDragging ? 'none' : 'auto', userSelect: isDragging ? 'none' : 'auto' }}
                                     />
                                     <div className="story-poll-options">
                                         <div className="story-poll-option">
-                                            <input 
-                                                type="text" 
-                                                value={el.content.optA} 
+                                            <input
+                                                type="text"
+                                                value={el.content.optA}
                                                 onChange={(e) => updateElement(el.id, { content: { ...el.content, optA: e.target.value } })}
+                                                style={{ pointerEvents: isDragging ? 'none' : 'auto', userSelect: isDragging ? 'none' : 'auto' }}
                                             />
                                         </div>
                                         <div className="story-poll-option">
-                                            <input 
-                                                type="text" 
-                                                value={el.content.optB} 
+                                            <input
+                                                type="text"
+                                                value={el.content.optB}
                                                 onChange={(e) => updateElement(el.id, { content: { ...el.content, optB: e.target.value } })}
+                                                style={{ pointerEvents: isDragging ? 'none' : 'auto', userSelect: isDragging ? 'none' : 'auto' }}
                                             />
                                         </div>
                                     </div>
                                 </div>
                             )}
+                            </div>
                         </motion.div>
                     );
                 })}
@@ -662,7 +820,7 @@ export default function StoryCreate() {
             {/* Magnetic Trash Zone */}
             <AnimatePresence>
                 {isDragging && (
-                    <motion.div 
+                    <motion.div
                         className="story-trash-zone"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0, scale: dragTrashScale }}
@@ -675,98 +833,79 @@ export default function StoryCreate() {
             </AnimatePresence>
 
             {/* Sticker Tray Bottom Sheet */}
-            <AnimatePresence>
-                {showStickerTray && (
-                    <motion.div 
-                        className="story-sticker-tray"
-                        initial={{ y: '100%' }}
-                        animate={{ y: 0 }}
-                        exit={{ y: '100%' }}
-                        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                    >
-                        <div className="tray-header">
-                            <div className="tray-handle" />
-                            <h3>Stickers</h3>
-                        </div>
-                        <div className="tray-content">
-                            <h4>Smart Stickers</h4>
-                            <div className="smart-stickers-grid">
-                                <button className="smart-sticker-btn" onClick={() => addSmartSticker('mention')}>@ Mention</button>
-                                <button className="smart-sticker-btn" onClick={() => addSmartSticker('location')}>📍 Location</button>
-                                <button className="smart-sticker-btn" onClick={() => addSmartSticker('link')}>🔗 Link</button>
-                            </div>
+            <StickerTray
+                showStickerTray={showStickerTray}
+                addSmartSticker={addSmartSticker}
+                addSticker={addSticker}
+                addPhotoSticker={addPhotoSticker}
+                EVENTFY_SHAPES={EVENTFY_SHAPES}
+                EMOJIS={EMOJIS}
+            />
 
-                            <h4>Eventfy Shapes</h4>
-                            <div className="sticker-grid shapes-grid">
-                                {EVENTFY_SHAPES.map((s, i) => (
-                                    <button 
-                                        key={i} 
-                                        className="sticker-item" 
-                                        style={{ color: s.color }}
-                                        onClick={() => addSticker(s.content, s.color)}
-                                    >
-                                        {s.content}
-                                    </button>
-                                ))}
-                            </div>
-                            <h4>Emojis</h4>
-                            <div className="sticker-grid">
-                                {EMOJIS.map((em, i) => (
-                                    <button 
-                                        key={i} 
-                                        className="sticker-item"
-                                        onClick={() => addSticker(em)}
-                                    >
-                                        {em}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
+            {/* Precision Scale Slider (Or Brush Size Slider) */}
+            <AnimatePresence>
+                {(activeElementId !== null || isDrawingMode) && !isDragging && (
+                    <motion.div
+                        className="story-scale-slider-wrap"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                    >
+                        {isDrawingMode ? (
+                            <input
+                                type="range"
+                                min="2"
+                                max="30"
+                                step="1"
+                                value={brushSize}
+                                onChange={(e) => setBrushSize(parseInt(e.target.value))}
+                                className="story-scale-slider"
+                                orient="vertical"
+                            />
+                        ) : (
+                            <input
+                                type="range"
+                                min="0.5"
+                                max="4.0"
+                                step="0.1"
+                                value={activeElement ? activeElement.scale : 1}
+                                onChange={(e) => updateElement(activeElementId, { scale: parseFloat(e.target.value) })}
+                                className="story-scale-slider"
+                                orient="vertical"
+                            />
+                        )}
                     </motion.div>
                 )}
             </AnimatePresence>
 
             {/* Filter Tray */}
+            <FilterTray
+                showFilters={showFilters}
+                activeFilter={activeFilter}
+                setActiveFilter={setActiveFilter}
+                FILTERS={FILTERS}
+                bgImagePreview={bgImagePreview}
+            />
+
+            {/* Bottom Actions (Publish) (Auto-Hides when editing) */}
             <AnimatePresence>
-                {showFilters && (
-                    <motion.div 
-                        className="story-filter-tray"
+                {!isEditing && !isDrawingMode && !showFilters && (
+                    <motion.div
+                        className="story-bottom-bar"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 20 }}
                     >
-                        <div className="filter-scroll">
-                            {FILTERS.map(f => (
-                                <div 
-                                    key={f.name}
-                                    className={`filter-item ${activeFilter === f.css ? 'active' : ''}`}
-                                    onClick={() => setActiveFilter(f.css)}
-                                >
-                                    <div 
-                                        className="filter-preview" 
-                                        style={{ 
-                                            backgroundImage: `url(${bgImagePreview})`,
-                                            filter: f.css
-                                        }} 
-                                    />
-                                    <span>{f.name}</span>
-                                </div>
-                            ))}
-                        </div>
+                        <button
+                            className="publish-btn"
+                            onClick={handlePublish}
+                            disabled={!bgImage || publishing}
+                        >
+                            {publishing ? 'PUBLISHING...' : 'PUBLISH'}
+                        </button>
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            {/* Bottom Actions (Publish) */}
-            <div className="story-bottom-bar">
-                <button 
-                    className="publish-btn" 
-                    onClick={handlePublish} 
-                    disabled={!bgImage || publishing}
-                >
-                    {publishing ? 'PUBLISHING...' : 'PUBLISH'}
-                </button>
-            </div>
         </div>
     );
 }

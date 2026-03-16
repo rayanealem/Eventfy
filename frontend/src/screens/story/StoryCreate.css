@@ -1,403 +1,6 @@
-/* STORY VIEWER/CREATE — EVENTFY THEMED */
+/* ===== STORY CREATE ROOT (NEW DRAG-AND-DROP CANVAS) ===== */
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;700&display=swap');
 
-.story-root {
-    position: relative;
-    width: 100%;
-    height: 100vh;
-    background: #000;
-    max-width: 430px;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-/* VIEWER */
-.story-viewer {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    background: linear-gradient(180deg, #0a0a1a 0%, #1a0a2e 50%, #0a0a1a 100%);
-}
-
-/* HEADER */
-.story-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px;
-    position: relative;
-    z-index: 10;
-    transition: opacity 0.3s ease;
-}
-
-.story-header.paused-opacity {
-    opacity: 0.5;
-}
-
-.story-user {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.story-user-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 2px solid;
-    overflow: hidden;
-    flex-shrink: 0;
-}
-
-.story-user-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.story-user-info {
-    display: flex;
-    flex-direction: column;
-}
-
-.story-username {
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700;
-    font-size: 14px;
-    color: #fff;
-    line-height: 20px;
-}
-
-.story-time {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    color: rgba(255, 255, 255, .5);
-    line-height: 15px;
-}
-
-.story-actions {
-    display: flex;
-    gap: 16px;
-}
-
-.story-action {
-    font-size: 18px;
-    color: rgba(255, 255, 255, .7);
-    cursor: pointer;
-}
-
-/* CONTENT */
-.story-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    padding: 0 32px;
-    cursor: pointer;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-}
-
-.story-bg-gradient {
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(ellipse at center, rgba(19, 236, 236, .08) 0%, transparent 70%);
-}
-
-.story-center-content {
-    position: relative;
-    z-index: 2;
-    text-align: center;
-}
-
-.story-event-badge {
-    font-family: 'DM Mono', monospace;
-    font-weight: 500;
-    font-size: 10px;
-    color: #ff4d4d;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    display: inline-block;
-    margin-bottom: 16px;
-}
-
-.story-event-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 48px;
-    color: #fff;
-    letter-spacing: 4px;
-    line-height: 52px;
-    margin: 0 0 16px;
-    font-weight: 400;
-}
-
-.story-event-sub {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 14px;
-    color: rgba(255, 255, 255, .6);
-    line-height: 22px;
-    margin: 0;
-}
-
-.story-counter {
-    position: absolute;
-    bottom: 16px;
-    right: 16px;
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.4);
-    background: rgba(0, 0, 0, 0.3);
-    padding: 4px 10px;
-    border-radius: 12px;
-}
-
-/* FOOTER */
-.story-footer {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 16px;
-    position: relative;
-    z-index: 10;
-}
-
-.story-reply-wrap {
-    flex: 1;
-}
-
-.story-reply-input {
-    width: 100%;
-    padding: 12px 16px;
-    border: 1px solid rgba(255, 255, 255, .2);
-    border-radius: 9999px;
-    background: rgba(255, 255, 255, .05);
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 14px;
-    color: #fff;
-    box-sizing: border-box;
-}
-
-.story-reply-input::placeholder {
-    color: rgba(255, 255, 255, .4);
-}
-
-.story-footer-actions {
-    display: flex;
-    gap: 12px;
-}
-
-.story-react,
-.story-share {
-    font-size: 22px;
-    color: rgba(255, 255, 255, .7);
-    cursor: pointer;
-}
-
-/* STORY BAR */
-.story-bar {
-    position: absolute;
-    bottom: 80px;
-    left: 0;
-    right: 0;
-    display: flex;
-    gap: 12px;
-    padding: 0 16px;
-    overflow-x: auto;
-    z-index: 10;
-}
-
-.story-create {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    flex-shrink: 0;
-}
-
-.story-create-icon {
-    width: 48px;
-    height: 48px;
-    border: 2px dashed rgba(255, 255, 255, .3);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    color: rgba(255, 255, 255, .5);
-}
-
-.story-create-label {
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700;
-    font-size: 8px;
-    color: rgba(255, 255, 255, .5);
-    text-transform: uppercase;
-    letter-spacing: .4px;
-}
-
-.story-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    flex-shrink: 0;
-}
-
-.story-item-ring {
-    width: 48px;
-    height: 48px;
-    border: 2px solid;
-    border-radius: 50%;
-    padding: 2px;
-    overflow: hidden;
-}
-
-.story-item-ring.viewed {
-    opacity: .5;
-}
-
-.story-item-ring img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 50%;
-}
-
-.story-item-name {
-    font-family: 'DM Mono', monospace;
-    font-size: 8px;
-    color: rgba(255, 255, 255, .5);
-    text-transform: uppercase;
-    max-width: 56px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-/* ===== STORY CREATE ROOT (NEW DRAG-AND-DROP CANVAS) ===== */
-/* POLL WIDGET */
-.story-poll-widget {
-    background: #fff;
-    border-radius: 16px;
-    padding: 16px;
-    width: 240px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    cursor: default;
-}
-
-.story-poll-question {
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700;
-    font-size: 16px;
-    color: #000;
-    text-align: center;
-    border: none;
-    outline: none;
-    background: transparent;
-    resize: none;
-    width: 100%;
-}
-
-.story-poll-options {
-    display: flex;
-    gap: 8px;
-}
-
-.story-poll-option {
-    flex: 1;
-    background: #f1f5f9;
-    border-radius: 99px;
-    padding: 12px 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    overflow: hidden;
-    cursor: pointer;
-    transition: transform 0.1s;
-}
-.story-poll-option:active {
-    transform: scale(0.95);
-}
-
-.story-poll-option input {
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700;
-    font-size: 14px;
-    color: #000;
-    text-align: center;
-    border: none;
-    outline: none;
-    background: transparent;
-    width: 100%;
-    z-index: 2;
-}
-
-.poll-option-text {
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700;
-    font-size: 14px;
-    color: #000;
-    z-index: 2;
-}
-
-.poll-pct {
-    font-family: 'DM Mono', monospace;
-    font-size: 12px;
-    color: #000;
-    z-index: 2;
-    margin-left: 8px;
-}
-
-.story-poll-fill {
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    background: #2dd4bf;
-    z-index: 1;
-    transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.story-poll-option.voted .story-poll-fill {
-    background: #f56e3d; /* Highlight chosen option */
-}
-
-/* SMART STICKERS (VIEWER) */
-.story-smart-sticker {
-    display: inline-flex;
-    align-items: center;
-    padding: 8px 16px;
-    border-radius: 12px;
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700;
-    font-size: 24px;
-    color: #fff;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    backdrop-filter: blur(8px);
-    cursor: pointer;
-    transition: transform 0.1s;
-    white-space: nowrap;
-}
-
-.story-smart-sticker:active {
-    transform: scale(0.95);
-}
-
-.story-smart-mention { background: linear-gradient(135deg, #fb5151 0%, #ff8a8a 100%); }
-.story-smart-location { background: linear-gradient(135deg, #00ffc2 0%, #00b388 100%); color: #000; }
-.story-smart-link { background: rgba(255, 255, 255, 0.9); color: #000; padding: 12px 24px; border-radius: 24px;}
-
-
-/* ===== STORY CREATE ROOT (NEW DRAG-AND-DROP CANVAS) ===== */
 .story-create-root {
     position: relative;
     width: 100%;
@@ -580,10 +183,9 @@
 /* ELEMENTS (LAYERS) */
 .story-element {
     position: absolute;
-    /* Center it initially */
+    /* Absolute anchor for 0,0 center coordinates */
     left: 50%;
     top: 50%;
-    transform: translate(-50%, -50%); /* Base transform, framer-motion overrides this */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -592,15 +194,22 @@
     touch-action: none;
 }
 
+.story-element-anchor-content {
+    /* Always pull the content back by 50% to center it exactly on the anchor point */
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .story-element:active {
     cursor: grabbing;
 }
 
-.story-element.active {
+.story-element.active .story-element-anchor-content {
     border: 2px dashed #00ffc2;
     border-radius: 8px;
-    padding: 4px; /* Give some breathing room for the border */
-    /* Adjust margin negatively so layout doesn't shift, or just rely on padding */
+    padding: 4px;
 }
 
 /* TEXT ELEMENT */
@@ -850,38 +459,48 @@
     transform: scale(1.05);
 }
 
-/* REACTION BAR (VIEWER) */
-.story-reaction-bar {
-    display: flex;
-    gap: 8px;
-}
-
-.reaction-btn {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
-    width: 44px;
-    height: 44px;
+/* PRECISION SCALE SLIDER */
+.story-scale-slider-wrap {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 200px;
+    z-index: 102;
     display: flex;
     align-items: center;
-    justify-content: center;
-    font-size: 20px;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    border-radius: 20px;
+    padding: 16px 0;
+}
+
+.story-scale-slider {
+    /* CSS trick to make a horizontal range slider vertical */
+    appearance: slider-vertical;
+    writing-mode: bt-lr; /* IE */
+    -webkit-appearance: slider-vertical; /* Webkit */
+    width: 24px;
+    height: 160px;
+    background: transparent;
+    outline: none;
+}
+
+.story-scale-slider::-webkit-slider-runnable-track {
+    width: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+}
+
+.story-scale-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 16px;
+    width: 16px;
+    border-radius: 50%;
+    background: #fff;
     cursor: pointer;
-    transition: transform 0.1s, background 0.2s;
-}
-
-.reaction-btn:active {
-    transform: scale(0.9);
-    background: rgba(255, 255, 255, 0.2);
-}
-
-.flying-emoji {
-    position: absolute;
-    bottom: 80px;
-    font-size: 40px;
-    pointer-events: none;
-    z-index: 1000;
-    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+    margin-top: -6px; /* align with track */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 /* BOTTOM BAR (CREATOR) */
@@ -924,3 +543,171 @@
 .publish-btn:active:not(:disabled) {
     transform: scale(0.97);
 }
+
+/* POLL WIDGET (CREATOR) - Viewer shared styles in StoryViewer.css */
+.story-poll-widget {
+    background: #fff;
+    border-radius: 16px;
+    padding: 16px;
+    width: 240px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    cursor: default;
+}
+
+.story-poll-question {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    color: #000;
+    text-align: center;
+    border: none;
+    outline: none;
+    background: transparent;
+    resize: none;
+    width: 100%;
+}
+
+.story-poll-options {
+    display: flex;
+    gap: 8px;
+}
+
+.story-poll-option {
+    flex: 1;
+    background: #f1f5f9;
+    border-radius: 99px;
+    padding: 12px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+.story-poll-option:active {
+    transform: scale(0.95);
+}
+
+.story-poll-option input {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: #000;
+    text-align: center;
+    border: none;
+    outline: none;
+    background: transparent;
+    width: 100%;
+    z-index: 2;
+}
+
+/* PHOTO STICKER SHAPES */
+.story-photo-sticker {
+    transition: clip-path 0.3s ease, border-radius 0.3s ease;
+}
+
+.story-photo-sticker.shape-square {
+    border-radius: 8px;
+}
+
+.story-photo-sticker.shape-rounded {
+    border-radius: 24px;
+}
+
+.story-photo-sticker.shape-circle {
+    border-radius: 50%;
+}
+
+.story-photo-sticker.shape-star {
+    border-radius: 0;
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+
+/* TEXT ANIMATIONS (CREATOR PREVIEW) */
+.anim-pulse {
+    animation: pulse 1.5s infinite;
+}
+
+.anim-wobble {
+    animation: wobble 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+@keyframes wobble {
+    0% { transform: rotate(0deg); }
+    25% { transform: rotate(-5deg); }
+    50% { transform: rotate(5deg); }
+    75% { transform: rotate(-5deg); }
+    100% { transform: rotate(0deg); }
+}
+
+.photo-sticker-btn {
+    background: linear-gradient(135deg, #13ecec 0%, #0a9d9d 100%) !important;
+    border-color: #13ecec !important;
+    color: #000 !important;
+}
+
+/* SHUTTER BUTTON */
+.shutter-btn {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: transparent;
+    border: 4px solid #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+    z-index: 100;
+}
+
+.shutter-inner {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.1s;
+}
+
+.shutter-btn:active .shutter-inner {
+    transform: scale(0.9);
+}
+
+/* SMART STICKERS (CREATOR) - Viewer shared styles in StoryViewer.css */
+.story-smart-sticker {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 24px;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    backdrop-filter: blur(8px);
+    cursor: pointer;
+    transition: transform 0.1s;
+    white-space: nowrap;
+}
+
+.story-smart-sticker:active {
+    transform: scale(0.95);
+}
+
+.story-smart-mention { background: linear-gradient(135deg, #fb5151 0%, #ff8a8a 100%); }
+.story-smart-location { background: linear-gradient(135deg, #00ffc2 0%, #00b388 100%); color: #000; }
+.story-smart-link { background: rgba(255, 255, 255, 0.9); color: #000; padding: 12px 24px; border-radius: 24px;}
