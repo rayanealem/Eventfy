@@ -154,12 +154,30 @@ export default function Explore() {
                 {/* Filter Pills — hidden when search is active */}
                 {!isSearchActive && (
                     <div className="explore-filters">
-                        {FILTERS.map((f, i) => (
-                            <button key={i} className={`explore-pill ${activeFilter === f.label ? 'active' : ''}`} onClick={() => setActiveFilter(f.label)}>
-                                <span className="pill-shape">{f.shape}</span>
-                                <span className="pill-label">{f.label}</span>
-                            </button>
-                        ))}
+                        {FILTERS.map((f, i) => {
+                            const isActive = activeFilter === f.label;
+                            return (
+                                <motion.button
+                                    whileTap={{ scale: 0.85 }}
+                                    key={i}
+                                    className={`explore-pill ${isActive ? 'active' : ''}`}
+                                    onClick={() => setActiveFilter(f.label)}
+                                    style={{ position: 'relative', overflow: 'hidden' }}
+                                >
+                                    {isActive && (
+                                        <motion.div
+                                            layoutId="exploreFilterIndicator"
+                                            style={{ position: 'absolute', inset: 0, background: '#f56e3d', zIndex: -1 }}
+                                            transition={{ type: "spring", stiffness: 400, damping: 35, mass: 0.8 }}
+                                        />
+                                    )}
+                                    <span style={{ position: 'relative', zIndex: 1, display: 'flex', gap: '6px', alignItems: 'center', color: isActive ? '#000' : 'inherit' }}>
+                                        <span className="pill-shape" style={{ color: isActive ? '#000' : '#f56e3d' }}>{f.shape}</span>
+                                        <span className="pill-label">{f.label}</span>
+                                    </span>
+                                </motion.button>
+                            );
+                        })}
                     </div>
                 )}
             </header>

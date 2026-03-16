@@ -365,10 +365,24 @@ export default function EventDetail() {
 
             {/* Tabs */}
             <div className="event-tabs" style={{ overflowX: 'auto', whiteSpace: 'nowrap', justifyContent: 'flex-start', WebkitOverflowScrolling: 'touch' }}>
-                <motion.button whileTap={{ scale: 0.95 }} className={`event-tab ${activeTab === 'INFO' ? 'active' : ''}`} onClick={() => setActiveTab('INFO')}>INFO</motion.button>
-                <motion.button whileTap={{ scale: 0.95 }} className={`event-tab ${activeTab === 'COMMUNITY' ? 'active' : ''}`} onClick={() => setActiveTab('COMMUNITY')}>COMMUNITY</motion.button>
-                <motion.button whileTap={{ scale: 0.95 }} className={`event-tab ${activeTab === 'VOLUNTEERS' ? 'active' : ''}`} onClick={() => setActiveTab('VOLUNTEERS')}>VOLUNTEERS</motion.button>
-                <motion.button whileTap={{ scale: 0.95 }} className={`event-tab ${activeTab === 'SPONSORS' ? 'active' : ''}`} onClick={() => setActiveTab('SPONSORS')}>SPONSORS</motion.button>
+                {['INFO', 'COMMUNITY', 'VOLUNTEERS', 'SPONSORS'].map(tab => (
+                    <motion.button
+                        key={tab}
+                        whileTap={{ scale: 0.85 }}
+                        className={`event-tab ${activeTab === tab ? 'active' : ''}`}
+                        onClick={() => setActiveTab(tab)}
+                        style={{ position: 'relative' }}
+                    >
+                        {activeTab === tab && (
+                            <motion.div
+                                layoutId="eventTabIndicator"
+                                style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '2px', background: '#f56e3d' }}
+                                transition={{ type: "spring", stiffness: 400, damping: 35, mass: 0.8 }}
+                            />
+                        )}
+                        <span style={{ position: 'relative', zIndex: 1 }}>{tab}</span>
+                    </motion.button>
+                ))}
             </div>
 
             {/* Content */}
