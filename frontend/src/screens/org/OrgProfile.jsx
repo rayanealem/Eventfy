@@ -163,7 +163,22 @@ export default function OrgProfile() {
             {/* Tabs */}
             <div className="orgp-tabs">
                 {TABS.map((t) => (
-                    <button key={t} className={`orgp-tab ${activeTab === t ? 'active' : ''}`} onClick={() => setActiveTab(t)}>{t}</button>
+                    <motion.button
+                        whileTap={{ scale: 0.85 }}
+                        key={t}
+                        className={`orgp-tab ${activeTab === t ? 'active' : ''}`}
+                        onClick={() => setActiveTab(t)}
+                        style={{ position: 'relative' }}
+                    >
+                        {activeTab === t && (
+                            <motion.div
+                                layoutId="orgTabIndicator"
+                                style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '2px', background: 'var(--color-coral)' }}
+                                transition={{ type: "spring", stiffness: 400, damping: 35, mass: 0.8 }}
+                            />
+                        )}
+                        <span style={{ position: 'relative', zIndex: 1 }}>{t}</span>
+                    </motion.button>
                 ))}
             </div>
 

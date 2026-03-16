@@ -91,16 +91,16 @@ export default function OnboardingStep2() {
                     <div className="obs-symbol-section">
                         <span className="obs-sub-label">Select Your Symbol</span>
                         <div className="obs-symbols">
-                            <button className={`obs-sym ${shape === 'circle' ? 'active' : ''}`} onClick={() => setShape('circle')}>○</button>
-                            <button className={`obs-sym ${shape === 'triangle' ? 'active' : ''}`} onClick={() => setShape('triangle')}>△</button>
-                            <button className={`obs-sym ${shape === 'square' ? 'active' : ''}`} onClick={() => setShape('square')}>□</button>
-                            <button className={`obs-sym ${shape === 'diamond' ? 'active' : ''}`} onClick={() => setShape('diamond')}>◇</button>
+                            <motion.button whileTap={{ scale: 0.85 }} className={`obs-sym ${shape === 'circle' ? 'active' : ''}`} onClick={() => setShape('circle')}>○</motion.button>
+                            <motion.button whileTap={{ scale: 0.85 }} className={`obs-sym ${shape === 'triangle' ? 'active' : ''}`} onClick={() => setShape('triangle')}>△</motion.button>
+                            <motion.button whileTap={{ scale: 0.85 }} className={`obs-sym ${shape === 'square' ? 'active' : ''}`} onClick={() => setShape('square')}>□</motion.button>
+                            <motion.button whileTap={{ scale: 0.85 }} className={`obs-sym ${shape === 'diamond' ? 'active' : ''}`} onClick={() => setShape('diamond')}>◇</motion.button>
                         </div>
                         <div className="obs-colors">
-                            <div className={`obs-color ${color === '#13ecec' ? 'active' : ''}`} style={{ background: '#13ecec' }} onClick={() => setColor('#13ecec')} />
-                            <div className={`obs-color ${color === '#ff4d4d' ? 'active' : ''}`} style={{ background: '#ff4d4d' }} onClick={() => setColor('#ff4d4d')} />
-                            <div className={`obs-color ${color === '#fc0' ? 'active' : ''}`} style={{ background: '#fc0' }} onClick={() => setColor('#fc0')} />
-                            <div className={`obs-color ${color === '#fff' ? 'active' : ''}`} style={{ background: '#fff' }} onClick={() => setColor('#fff')} />
+                            <motion.div whileTap={{ scale: 0.85 }} className={`obs-color ${color === '#13ecec' ? 'active' : ''}`} style={{ background: '#13ecec' }} onClick={() => setColor('#13ecec')} />
+                            <motion.div whileTap={{ scale: 0.85 }} className={`obs-color ${color === '#ff4d4d' ? 'active' : ''}`} style={{ background: '#ff4d4d' }} onClick={() => setColor('#ff4d4d')} />
+                            <motion.div whileTap={{ scale: 0.85 }} className={`obs-color ${color === '#fc0' ? 'active' : ''}`} style={{ background: '#fc0' }} onClick={() => setColor('#fc0')} />
+                            <motion.div whileTap={{ scale: 0.85 }} className={`obs-color ${color === '#fff' ? 'active' : ''}`} style={{ background: '#fff' }} onClick={() => setColor('#fff')} />
                         </div>
                     </div>
 

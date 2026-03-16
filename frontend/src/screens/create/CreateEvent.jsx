@@ -610,12 +610,41 @@ export default function CreateEvent() {
                                 </div>
                                 <div className="ce-badge-shapes">
                                     {['○', '△', '□', '◇'].map(s => (
-                                        <button key={s} className={`ce-shape-btn ${badgeShape === s ? 'active' : ''}`} onClick={() => setBadgeShape(s)}>{s}</button>
+                                        <motion.button
+                                            whileTap={{ scale: 0.85 }}
+                                            key={s}
+                                            className={`ce-shape-btn ${badgeShape === s ? 'active' : ''}`}
+                                            onClick={() => setBadgeShape(s)}
+                                            style={{ position: 'relative', overflow: 'hidden' }}
+                                        >
+                                            {badgeShape === s && (
+                                                <motion.div
+                                                    layoutId="createEventActiveShape"
+                                                    style={{ position: 'absolute', inset: 0, background: 'rgba(255, 255, 255, 0.1)', zIndex: -1, borderRadius: '8px' }}
+                                                    transition={{ type: "spring", stiffness: 400, damping: 35, mass: 0.8 }}
+                                                />
+                                            )}
+                                            <span style={{ position: 'relative', zIndex: 1 }}>{s}</span>
+                                        </motion.button>
                                     ))}
                                 </div>
                                 <div className="ce-badge-colors">
                                     {['#f45c25', '#22d3ee', '#9333ea', '#475569'].map(c => (
-                                        <div key={c} className={`ce-color-swatch ${badgeColor === c ? 'active' : ''}`} style={{ background: c }} onClick={() => setBadgeColor(c)} />
+                                        <motion.div
+                                            whileTap={{ scale: 0.85 }}
+                                            key={c}
+                                            className={`ce-color-swatch ${badgeColor === c ? 'active' : ''}`}
+                                            style={{ background: c, position: 'relative' }}
+                                            onClick={() => setBadgeColor(c)}
+                                        >
+                                            {badgeColor === c && (
+                                                <motion.div
+                                                    layoutId="createEventActiveColor"
+                                                    style={{ position: 'absolute', inset: -4, border: '2px solid white', borderRadius: '50%', zIndex: 1 }}
+                                                    transition={{ type: "spring", stiffness: 400, damping: 35, mass: 0.8 }}
+                                                />
+                                            )}
+                                        </motion.div>
                                     ))}
                                 </div>
                                 <div className="ce-field" style={{ marginTop: '12px' }}>
