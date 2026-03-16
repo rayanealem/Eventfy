@@ -40,6 +40,7 @@ export default function StoryCreate() {
     const [activeElementId, setActiveElementId] = useState(null);
     const [highestZIndex, setHighestZIndex] = useState(1);
     const [publishing, setPublishing] = useState(false);
+    const [audioFile, setAudioFile] = useState(null);
 
     // WebRTC Live Camera State
     const videoRef = useRef(null);
@@ -51,6 +52,8 @@ export default function StoryCreate() {
     const [dragTrashScale, setDragTrashScale] = useState(1);
     const [showStickerTray, setShowStickerTray] = useState(false);
     const [showCenterGuide, setShowCenterGuide] = useState(false);
+    const [horizontalCenterGuide, setHorizontalCenterGuide] = useState(false);
+    const [safeZoneWarning, setSafeZoneWarning] = useState(false);
 
     // Draw Engine State
     const [isDrawingMode, setIsDrawingMode] = useState(false);
@@ -75,6 +78,7 @@ export default function StoryCreate() {
     ];
 
     const canvasRef = useRef(null);
+    const audioInputRef = useRef(null);
 
     // Redirect to feed if user isn't logged in (assuming profile is needed)
     if (!profile) return <Navigate to="/feed" replace />;
@@ -144,6 +148,30 @@ export default function StoryCreate() {
             null, // hideUI callback not strictly needed if we just null out state above
             () => { setActiveElementId(prevActive); } // restoreUI
         );
+    };
+
+    const handleAudioSelect = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            // Validate Audio
+            if (file.size > 5 * 1024 * 1024) { // 5MB
+                alert("Audio exceeds 5MB maximum size limit.");
+                return;
+            }
+
+            const tempAudio = document.createElement('audio');
+            tempAudio.preload = 'metadata';
+            tempAudio.onloadedmetadata = function() {
+                window.URL.revokeObjectURL(tempAudio.src);
+                if (tempAudio.duration > 15) {
+                    alert("Audio exceeds 15 seconds maximum duration limit.");
+                } else {
+                    setAudioFile(file);
+                    triggerHaptic();
+                }
+            }
+            tempAudio.src = URL.createObjectURL(file);
+        }
     };
 
     const handleBgImageSelect = (e) => {
@@ -486,13 +514,34 @@ export default function StoryCreate() {
 
             const storyId = storyRes.id;
 
+            let audioUrl = null;
+            if (audioFile) {
+                const audioExt = audioFile.name.split('.').pop();
+                const audioFileName = `audio_${Date.now()}-${Math.random().toString(36).substring(7)}.${audioExt}`;
+                const audioFilePath = `uploads/${audioFileName}`;
+
+                const { data: audioUploadData, error: audioUploadError } = await supabase.storage
+                    .from('stories')
+                    .upload(audioFilePath, audioFile);
+
+                if (!audioUploadError) {
+                    const { data: { publicUrl: audioPublicUrl } } = supabase.storage
+                        .from('stories')
+                        .getPublicUrl(audioFilePath);
+                    audioUrl = audioPublicUrl;
+                } else {
+                    console.error('Audio Upload Error:', audioUploadError);
+                }
+            }
+
             // Prepare the frames payload
             const payload = {
                 media_url: publicUrl,
                 media_type: isVideo ? 'video' : 'image',
                 duration_ms: videoDuration,
                 overlays: finalElements,
-                filter_css: activeFilter
+                filter_css: activeFilter,
+                audio_url: audioUrl
             };
 
             await api('POST', `/stories/${storyId}/frames`, payload);
@@ -548,6 +597,13 @@ export default function StoryCreate() {
                                 <button className="toolbar-btn" onClick={handleDownload} title="Download">⬇️</button>
                                 <button className="toolbar-btn" onClick={toggleDrawingMode}>🖌️</button>
                                 <button className="toolbar-btn" onClick={toggleFilters}>✨</button>
+                                <button
+                                    className="toolbar-btn"
+                                    onClick={() => audioInputRef.current?.click()}
+                                    style={{ color: audioFile ? '#00ffc2' : 'white' }}
+                                >
+                                    🎵
+                                </button>
                                 <button className="toolbar-btn" onClick={addPoll}>📊</button>
                                 <button className="toolbar-btn" onClick={addText}>Aa</button>
                                 <button className="toolbar-btn" onClick={toggleStickerTray}>🔥</button>
@@ -556,6 +612,15 @@ export default function StoryCreate() {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Hidden Audio Input */}
+            <input
+                type="file"
+                ref={audioInputRef}
+                accept="audio/*"
+                onChange={handleAudioSelect}
+                style={{ display: 'none' }}
+            />
 
             {/* Formatting Toolbar (For active text OR drawing mode) */}
             <FormatToolbar
@@ -576,8 +641,29 @@ export default function StoryCreate() {
                 ref={canvasRef}
                 onClick={handleCanvasClick}
             >
-                {/* Center Guide */}
+                {/* Safe Zones (Only visible when dragging) */}
+                <AnimatePresence>
+                    {isDragging && (
+                        <>
+                            <motion.div
+                                className="story-safe-zone story-safe-zone-top"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1, backgroundColor: safeZoneWarning ? 'rgba(255, 0, 0, 0.2)' : 'transparent', borderBottomColor: safeZoneWarning ? '#ff3b30' : 'rgba(255,255,255,0.3)' }}
+                                exit={{ opacity: 0 }}
+                            />
+                            <motion.div
+                                className="story-safe-zone story-safe-zone-bottom"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1, backgroundColor: safeZoneWarning ? 'rgba(255, 0, 0, 0.2)' : 'transparent', borderTopColor: safeZoneWarning ? '#ff3b30' : 'rgba(255,255,255,0.3)' }}
+                                exit={{ opacity: 0 }}
+                            />
+                        </>
+                    )}
+                </AnimatePresence>
+
+                {/* Center Guides */}
                 {showCenterGuide && <div className="story-center-guide" />}
+                {horizontalCenterGuide && <div className="story-horizontal-guide" />}
 
                 {!bgImagePreview ? (
                     isCameraActive ? (
@@ -660,6 +746,19 @@ export default function StoryCreate() {
                                     setDragTrashScale(1);
                                 }
 
+                                // Safe Zone Warning logic
+                                const canvasRect = canvasRef.current.getBoundingClientRect();
+                                // We need relative Y within the canvas
+                                // info.point is relative to the viewport
+                                const relativeY = info.point.y - canvasRect.top;
+                                const canvasHeight = canvasRect.height;
+
+                                if (relativeY < canvasHeight * 0.15 || relativeY > canvasHeight * 0.85) {
+                                    setSafeZoneWarning(true);
+                                } else {
+                                    setSafeZoneWarning(false);
+                                }
+
                                 // Center Guide snapping logic
                                 const newX = el.x + info.offset.x;
                                 if (Math.abs(newX) < 5) {
@@ -670,28 +769,50 @@ export default function StoryCreate() {
                                 } else {
                                     setShowCenterGuide(false);
                                 }
+
+                                const newY = el.y + info.offset.y;
+                                if (Math.abs(newY) < 5) {
+                                    if (!horizontalCenterGuide) {
+                                        setHorizontalCenterGuide(true);
+                                        triggerHaptic();
+                                    }
+                                } else {
+                                    setHorizontalCenterGuide(false);
+                                }
                             }}
                             onDragEnd={(event, info) => {
                                 setIsDragging(false);
                                 setDragTrashScale(1);
                                 setShowCenterGuide(false);
+                                setHorizontalCenterGuide(false);
+                                setSafeZoneWarning(false);
 
                                 if (info.point.y > window.innerHeight - 100) {
                                     setElements(prev => prev.filter(item => item.id !== el.id));
                                     triggerHaptic();
                                     if (isActive) setActiveElementId(null);
                                 } else {
-                                    // Hard Snap to Center
+                                    // True Magnetic Center Snapping
                                     let finalX = el.x + info.offset.x;
+                                    let finalY = el.y + info.offset.y;
+
+                                    let snapped = false;
                                     if (Math.abs(finalX) < 5) {
                                         finalX = 0;
+                                        snapped = true;
+                                    }
+                                    if (Math.abs(finalY) < 5) {
+                                        finalY = 0;
+                                        snapped = true;
+                                    }
+
+                                    if (snapped) {
                                         triggerHaptic();
                                     }
 
-                                    // Direct addition without calc()
                                     updateElement(el.id, {
-                                        x: finalX === 0 ? 0 : el.x + info.offset.x,
-                                        y: el.y + info.offset.y
+                                        x: finalX,
+                                        y: finalY
                                     });
                                 }
                             }}
@@ -712,7 +833,7 @@ export default function StoryCreate() {
                             <div className={`story-element-anchor-content anim-${el.animationType || 'none'}`}>
                             {el.type === 'text' && (
                                 <textarea
-                                    className={`story-text-input ${el.textStyle === 'solid' ? 'solid-bg' : ''}`}
+                                    className={`story-text-input ${el.textStyle === 'solid' ? 'solid-bg' : ''} ${el.textStyle === 'translucent' ? 'translucent-bg' : ''}`}
                                     value={el.content}
                                     onChange={(e) => updateElement(el.id, { content: e.target.value })}
                                     autoFocus={isActive}
@@ -720,8 +841,8 @@ export default function StoryCreate() {
                                         color: el.color,
                                         fontFamily: el.fontFamily,
                                         backgroundColor: el.textStyle === 'solid' ? el.bgColor : 'transparent',
-                                        padding: el.textStyle === 'solid' ? '8px 16px' : '0',
-                                        borderRadius: el.textStyle === 'solid' ? '12px' : '0',
+                                        padding: el.textStyle !== 'plain' ? '8px 16px' : '0',
+                                        borderRadius: el.textStyle !== 'plain' ? '12px' : '0',
                                         textAlign: el.textAlign || 'center',
                                         pointerEvents: isDragging ? 'none' : 'auto',
                                         userSelect: isDragging ? 'none' : 'auto',

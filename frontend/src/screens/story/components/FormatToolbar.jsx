@@ -32,11 +32,14 @@ export default function FormatToolbar({
                             </button>
                             <button
                                 className="format-btn"
-                                onClick={() => updateElement(activeElement.id, {
-                                    textStyle: activeElement.textStyle === 'plain' ? 'solid' : 'plain'
-                                })}
+                                onClick={() => {
+                                    const styles = ['plain', 'solid', 'translucent'];
+                                    const currentIdx = styles.indexOf(activeElement.textStyle || 'plain');
+                                    const nextIdx = (currentIdx + 1) % styles.length;
+                                    updateElement(activeElement.id, { textStyle: styles[nextIdx] });
+                                }}
                             >
-                                {activeElement.textStyle === 'plain' ? 'A' : 'A*'}
+                                {activeElement.textStyle === 'plain' ? 'A' : activeElement.textStyle === 'solid' ? 'A*' : 'A°'}
                             </button>
                             <button
                                 className="format-btn"
@@ -75,6 +78,9 @@ export default function FormatToolbar({
                                     } else if (activeElement) {
                                         if (activeElement.textStyle === 'solid') {
                                             updateElement(activeElement.id, { bgColor: c, color: getContrastColor(c) });
+                                        } else if (activeElement.textStyle === 'translucent') {
+                                            // Keep translucent bg, change text color
+                                            updateElement(activeElement.id, { color: c });
                                         } else {
                                             updateElement(activeElement.id, { color: c });
                                         }
