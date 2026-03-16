@@ -41,33 +41,49 @@ export default function DiscordLayout() {
             <nav className="server-sidebar">
 
                 {/* Home Button (DMs) */}
-                <div
+                <motion.div
+                    whileTap={{ scale: 0.85 }}
                     className={`server-icon-wrap ${isHome ? 'active' : ''}`}
                     onClick={() => handleServerClick('me')}
+                    style={{ position: 'relative' }}
                 >
-                    <div className="nav-pill"></div>
+                    {isHome && (
+                        <motion.div
+                            layoutId="discordServerPill"
+                            style={{ position: 'absolute', left: '-12px', top: '50%', transform: 'translateY(-50%)', width: '4px', height: '24px', background: '#fff', borderRadius: '0 4px 4px 0' }}
+                            transition={{ type: "spring", stiffness: 400, damping: 35 }}
+                        />
+                    )}
                     <button className="server-btn" style={{ background: isHome ? 'var(--discord-brand)' : undefined, color: isHome ? '#fff' : undefined }}>
                         <div style={{ fontWeight: 900, fontSize: '24px', fontStyle: 'italic', letterSpacing: '-1px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>E</div>
                     </button>
-                </div>
+                </motion.div>
 
                 <div className="server-separator" />
 
                 {/* Event Servers */}
                 {eventChats.map((chat) => (
-                    <div
+                    <motion.div
+                        whileTap={{ scale: 0.85 }}
                         key={chat.event_id}
                         className={`server-icon-wrap ${eventId === chat.event_id ? 'active' : ''}`}
                         onClick={() => handleServerClick(chat.event_id)}
+                        style={{ position: 'relative' }}
                     >
-                        <div className="nav-pill"></div>
+                        {eventId === chat.event_id && (
+                            <motion.div
+                                layoutId="discordServerPill"
+                                style={{ position: 'absolute', left: '-12px', top: '50%', transform: 'translateY(-50%)', width: '4px', height: '24px', background: '#fff', borderRadius: '0 4px 4px 0' }}
+                                transition={{ type: "spring", stiffness: 400, damping: 35 }}
+                            />
+                        )}
                         <button className="server-btn">
                             <img
                                 src={chat.cover_url || chat.org_logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(chat.event_title || 'E')}&background=1e293b&color=fff`}
                                 alt={chat.event_title}
                             />
                         </button>
-                    </div>
+                    </motion.div>
                 ))}
             </nav>
 

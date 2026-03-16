@@ -94,6 +94,7 @@ export default function BottomNav() {
                             }}
                         >
                             <motion.div
+                                whileTap={{ scale: 0.85 }}
                                 animate={{ scale: isActive ? [1, 1.2, 1] : 1 }}
                                 transition={{ duration: 0.2, type: 'spring', stiffness: 300, damping: 20 }}
                                 style={{ position: 'relative' }}

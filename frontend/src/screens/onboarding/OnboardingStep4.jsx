@@ -114,9 +114,9 @@ export default function OnboardingStep4() {
                     <div className="obs-field">
                         <span className="obs-field-label">Radar Radius</span>
                         <div className="obs-radar">
-                            <button className={`obs-radar-btn ${radius === '10KM' ? 'active' : ''}`} onClick={() => setRadius('10KM')}>10KM</button>
-                            <button className={`obs-radar-btn ${radius === '25KM' ? 'active' : ''}`} onClick={() => setRadius('25KM')}>25KM</button>
-                            <button className={`obs-radar-btn ${radius === '50KM' ? 'active' : ''}`} onClick={() => setRadius('50KM')}>50KM</button>
+                            <motion.button whileTap={{ scale: 0.85 }} className={`obs-radar-btn ${radius === '10KM' ? 'active' : ''}`} onClick={() => setRadius('10KM')}>10KM</motion.button>
+                            <motion.button whileTap={{ scale: 0.85 }} className={`obs-radar-btn ${radius === '25KM' ? 'active' : ''}`} onClick={() => setRadius('25KM')}>25KM</motion.button>
+                            <motion.button whileTap={{ scale: 0.85 }} className={`obs-radar-btn ${radius === '50KM' ? 'active' : ''}`} onClick={() => setRadius('50KM')}>50KM</motion.button>
                         </div>
                     </div>
 

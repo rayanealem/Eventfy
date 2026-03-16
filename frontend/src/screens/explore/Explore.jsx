@@ -154,12 +154,30 @@ export default function Explore() {
                 {/* Filter Pills — hidden when search is active */}
                 {!isSearchActive && (
                     <div className="explore-filters">
-                        {FILTERS.map((f, i) => (
-                            <button key={i} className={`explore-pill ${activeFilter === f.label ? 'active' : ''}`} onClick={() => setActiveFilter(f.label)}>
-                                <span className="pill-shape">{f.shape}</span>
-                                <span className="pill-label">{f.label}</span>
-                            </button>
-                        ))}
+                        {FILTERS.map((f, i) => {
+                            const isActive = activeFilter === f.label;
+                            return (
+                                <motion.button
+                                    whileTap={{ scale: 0.85 }}
+                                    key={i}
+                                    className={`explore-pill ${isActive ? 'active' : ''}`}
+                                    onClick={() => setActiveFilter(f.label)}
+                                    style={{ position: 'relative', overflow: 'hidden' }}
+                                >
+                                    {isActive && (
+                                        <motion.div
+                                            layoutId="exploreFilterIndicator"
+                                            style={{ position: 'absolute', inset: 0, background: '#f56e3d', zIndex: -1 }}
+                                            transition={{ type: "spring", stiffness: 400, damping: 35, mass: 0.8 }}
+                                        />
+                                    )}
+                                    <span style={{ position: 'relative', zIndex: 1, display: 'flex', gap: '6px', alignItems: 'center', color: isActive ? '#000' : 'inherit' }}>
+                                        <span className="pill-shape" style={{ color: isActive ? '#000' : '#f56e3d' }}>{f.shape}</span>
+                                        <span className="pill-label">{f.label}</span>
+                                    </span>
+                                </motion.button>
+                            );
+                        })}
                     </div>
                 )}
             </header>
@@ -197,7 +215,7 @@ export default function Explore() {
                                 <div key={`evt-${i}`} className="explore-search-result" onClick={() => navigate(`/event/${event.id}`)}
                                     style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     <div style={{ width: '40px', height: '40px', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', overflow: 'hidden', flexShrink: 0 }}>
-                                        <img src={event.cover_url || FALLBACK_IMAGES[i % 4]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Event" />
+                                        <motion.img layoutId={"event-image-" + event.id} src={event.cover_url || FALLBACK_IMAGES[i % 4]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Event" />
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
                                         <span style={{ color: '#f1f5f9', fontFamily: 'Space Grotesk', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.title}</span>
@@ -326,7 +344,7 @@ export default function Explore() {
                                                 onClick={() => navigate(`/event/${event.id}`)}
                                                 style={{ position: 'relative', width: '100%', paddingBottom: isTall ? '133%' : '100%', cursor: 'pointer', overflow: 'hidden', background: '#1a1d2e' }}
                                             >
-                                                <img src={event.cover_url || FALLBACK_IMAGES[(i * 2) % FALLBACK_IMAGES.length]} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} alt={event.title} />
+                                                <motion.img layoutId={"event-image-" + event.id} src={event.cover_url || FALLBACK_IMAGES[(i * 2) % FALLBACK_IMAGES.length]} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} alt={event.title} />
                                                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 50%)' }} />
 
                                                 <div style={{ position: 'absolute', top: '8px', right: '8px' }}>
@@ -358,7 +376,7 @@ export default function Explore() {
                                                 onClick={() => navigate(`/event/${event.id}`)}
                                                 style={{ position: 'relative', width: '100%', paddingBottom: isTall ? '133%' : '100%', cursor: 'pointer', overflow: 'hidden', background: '#1a1d2e' }}
                                             >
-                                                <img src={event.cover_url || FALLBACK_IMAGES[(i * 2 + 1) % FALLBACK_IMAGES.length]} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} alt={event.title} />
+                                                <motion.img layoutId={"event-image-" + event.id} src={event.cover_url || FALLBACK_IMAGES[(i * 2 + 1) % FALLBACK_IMAGES.length]} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} alt={event.title} />
                                                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 50%)' }} />
 
                                                 <div style={{ position: 'absolute', top: '8px', right: '8px' }}>

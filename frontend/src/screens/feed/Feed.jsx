@@ -508,14 +508,24 @@ export default function Feed() {
                     const isActive = activeFilter === fp.key;
                     const typeColor = TYPE_CONFIG[fp.key]?.color || '#f56e3d';
                     return (
-                        <button
+                        <motion.button
+                            whileTap={{ scale: 0.85 }}
                             key={fp.key}
                             className={`feed-filter-pill ${isActive ? 'active' : ''}`}
                             onClick={() => setActiveFilter(fp.key)}
-                            style={isActive ? { background: typeColor, borderColor: typeColor, color: '#000' } : undefined}
+                            style={{ position: 'relative', overflow: 'hidden', color: isActive ? '#000' : 'inherit', border: '1px solid ' + (isActive ? 'transparent' : 'rgba(255,255,255,0.1)') }}
                         >
-                            {fp.label} {fp.shape}
-                        </button>
+                            {isActive && (
+                                <motion.div
+                                    layoutId="feedFilterIndicator"
+                                    style={{ position: 'absolute', inset: 0, background: typeColor, zIndex: -1 }}
+                                    transition={{ type: "spring", stiffness: 400, damping: 35, mass: 0.8 }}
+                                />
+                            )}
+                            <span style={{ position: 'relative', zIndex: 1, display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                {fp.label} <span style={{ color: isActive ? '#000' : typeColor }}>{fp.shape}</span>
+                            </span>
+                        </motion.button>
                     );
                 })}
             </div>
@@ -558,7 +568,7 @@ export default function Feed() {
                             >
                                 {/* Image area — clickable to event detail */}
                                 <div className="feed-card-image" onClick={() => navigate(`/event/${event.id}`)} style={{ cursor: 'pointer' }}>
-                                    <img src={event.cover_url || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&h=400&fit=crop'} alt={event.title} />
+                                    <motion.img layoutId={"event-image-" + event.id} src={event.cover_url || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&h=400&fit=crop'} alt={event.title} />
                                     <div className="feed-card-gradient" />
                                     <div
                                         className="feed-card-type"
