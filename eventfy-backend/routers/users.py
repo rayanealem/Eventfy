@@ -188,7 +188,7 @@ async def get_user_passport(username: str):
     """Get full passport data — events, badges, certs, skills."""
     profile = (
         supabase.table("profiles")
-        .select("*")
+        .select("id, username, full_name, avatar_url, shape, shape_color, player_number, xp, level, bio, wilaya, city")
         .eq("username", username)
         .single()
         .execute()

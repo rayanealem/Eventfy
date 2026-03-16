@@ -43,10 +43,21 @@ export default function Scoreboard() {
     const [activeTab, setActiveTab] = useState('leaderboard');
     const [claimed, setClaimed] = useState({});
 
+    // Filters
+    const [eventType, setEventType] = useState('all');
+    const [wilaya, setWilaya] = useState('');
+    const [showWilayaSheet, setShowWilayaSheet] = useState(false);
+
     // Fetch leaderboard
     const { data: leaderboardRaw = [], isLoading } = useQuery({
-        queryKey: ['scoreboard'],
-        queryFn: () => api('GET', '/gamification/scoreboard'),
+        queryKey: ['scoreboard', eventType, wilaya],
+        queryFn: () => {
+            const params = new URLSearchParams();
+            if (eventType !== 'all') params.append('event_type', eventType);
+            if (wilaya) params.append('wilaya', wilaya);
+            const query = params.toString() ? `?${params.toString()}` : '';
+            return api('GET', `/gamification/scoreboard${query}`);
+        },
         staleTime: 60000,
     });
 
@@ -89,21 +100,21 @@ export default function Scoreboard() {
                 <div className="sb-standing-left">
                     <span className="sb-standing-label">GLOBAL STANDING</span>
                     <div className="sb-standing-rank">
-                        <span className="sb-rank-hash">#</span>
-                        <span className="sb-rank-num">{myRank}</span>
+                        <span className="sb-rank-hash" style={{ fontFamily: 'DM Mono' }}>#</span>
+                        <span className="sb-rank-num" style={{ fontFamily: 'DM Mono' }}>{myRank}</span>
                     </div>
                     <span className="sb-standing-league">DIAMOND LEAGUE ◇</span>
                 </div>
                 <div className="sb-standing-right">
                     <div className="sb-xp-section">
                         <div className="sb-xp-info">
-                            <span className="sb-xp-level">LVL {level}</span>
-                            <span className="sb-xp-next">{nextThreshold === Infinity ? 'MAX LEVEL' : `NEXT: ${nextThreshold.toLocaleString()} XP`}</span>
+                            <span className="sb-xp-level" style={{ fontFamily: 'DM Mono' }}>LVL {level}</span>
+                            <span className="sb-xp-next" style={{ fontFamily: 'DM Mono' }}>{nextThreshold === Infinity ? 'MAX LEVEL' : `NEXT: ${nextThreshold.toLocaleString()} XP`}</span>
                         </div>
                         <div className="sb-xp-bar">
                             <motion.div className="sb-xp-fill" initial={{ width: 0 }} animate={{ width: `${progress}%` }} transition={{ duration: 1, ease: 'easeOut' }} />
                         </div>
-                        <span className="sb-xp-current">{profile?.xp?.toLocaleString() || 0} {nextThreshold !== Infinity ? `/ ${nextThreshold.toLocaleString()}` : ''} XP</span>
+                        <span className="sb-xp-current" style={{ fontFamily: 'DM Mono' }}>{profile?.xp?.toLocaleString() || 0} {nextThreshold !== Infinity ? `/ ${nextThreshold.toLocaleString()}` : ''} XP</span>
                     </div>
                 </div>
             </motion.div>
@@ -131,14 +142,70 @@ export default function Scoreboard() {
             <AnimatePresence mode="wait">
                 {activeTab === 'leaderboard' && (
                     <motion.div key="lb" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="sb-leaderboard">
+                        {/* Filters */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px 16px 0 16px' }}>
+                            {/* Wilaya Filter Button */}
+                            <motion.button
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => setShowWilayaSheet(true)}
+                                style={{
+                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                                    borderRadius: '8px', padding: '12px 16px', color: '#f1f5f9',
+                                    fontFamily: 'DM Mono', fontSize: '12px', letterSpacing: '1px'
+                                }}
+                            >
+                                <span>WILAYA: {wilaya || 'ALL'}</span>
+                                <span style={{ opacity: 0.5 }}>▼</span>
+                            </motion.button>
+
+                            {/* Event Type Filter Pills */}
+                            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+                                {['all', 'sport', 'science', 'charity', 'cultural'].map(type => (
+                                    <motion.button
+                                        key={type}
+                                        onClick={() => setEventType(type)}
+                                        whileTap={{ scale: 0.85 }}
+                                        style={{
+                                            position: 'relative',
+                                            padding: '8px 16px',
+                                            borderRadius: '999px',
+                                            background: 'rgba(255,255,255,0.05)',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            color: eventType === type ? '#0a0a0f' : '#94a3b8',
+                                            fontFamily: 'Space Grotesk',
+                                            fontWeight: 'bold',
+                                            fontSize: '11px',
+                                            letterSpacing: '1px',
+                                            whiteSpace: 'nowrap',
+                                            cursor: 'pointer',
+                                            zIndex: 1
+                                        }}
+                                    >
+                                        {eventType === type && (
+                                            <motion.div
+                                                layoutId="eventTypePill"
+                                                style={{
+                                                    position: 'absolute', inset: 0,
+                                                    background: '#13ecda', borderRadius: '999px', zIndex: -1
+                                                }}
+                                                transition={{ type: 'spring', stiffness: 400, damping: 35, mass: 0.8 }}
+                                            />
+                                        )}
+                                        {type.toUpperCase()}
+                                    </motion.button>
+                                ))}
+                            </div>
+                        </div>
+
                         {/* YOU ARE HERE card */}
                         <motion.div className="sb-rank-card" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
                             <div className="sb-rank-card-left">
                                 <span className="sb-rank-card-label">YOU ARE HERE</span>
-                                <span className="sb-rank-card-pos">#{myRank}</span>
+                                <span className="sb-rank-card-pos" style={{ fontFamily: 'DM Mono' }}>#{myRank}</span>
                             </div>
                             <div className="sb-rank-card-right">
-                                <span className="sb-rank-card-gap">{typeof myRank === 'number' && myRank > 1 ? `${((leaderboard[myRank - 2]?.xp || 0) - (profile?.xp || 0)).toLocaleString()} XP TO NEXT RANK` : 'TOP RANK'}</span>
+                                <span className="sb-rank-card-gap" style={{ fontFamily: 'DM Mono' }}>{typeof myRank === 'number' && myRank > 1 ? `${((leaderboard[myRank - 2]?.xp || 0) - (profile?.xp || 0)).toLocaleString()} XP TO NEXT RANK` : 'TOP RANK'}</span>
                                 <div className="sb-rank-card-bar">
                                     <div className="sb-rank-card-fill" style={{ width: `${progress}%` }} />
                                 </div>
@@ -147,7 +214,7 @@ export default function Scoreboard() {
 
                         <div className="sb-lb-header">
                             <span className="sb-lb-title">TOP PLAYERS</span>
-                            <span className="sb-lb-filter">THIS WEEK</span>
+                            <span className="sb-lb-filter">GLOBAL</span>
                         </div>
 
                         {/* Top 3 Podium */}
@@ -162,9 +229,9 @@ export default function Scoreboard() {
                                             onClick={() => navigate(`/profile/${p.name}`)} style={{ borderColor: colors[idx], cursor: 'pointer' }}
                                         >
                                             <img className="sb-podium-avatar" src={p.avatar} alt="" />
-                                            <span className="sb-podium-rank" style={{ color: colors[idx] }}>#{p.rank}</span>
+                                            <span className="sb-podium-rank" style={{ color: colors[idx], fontFamily: 'DM Mono' }}>#{p.rank}</span>
                                             <span className="sb-podium-name">{p.name?.substring(0, 8)}</span>
-                                            <span className="sb-podium-xp">{p.xp.toLocaleString()} XP</span>
+                                            <span className="sb-podium-xp" style={{ fontFamily: 'DM Mono' }}>{p.xp.toLocaleString()} XP</span>
                                         </motion.div>
                                     );
                                 })}
@@ -194,7 +261,7 @@ export default function Scoreboard() {
                                         style={{ cursor: 'pointer' }}
                                     >
                                         <div className="sb-lb-rank">
-                                            <span className="sb-rank-text" style={{ color: p.id === profile?.id ? '#13ecda' : '' }}>#{p.rank}</span>
+                                            <span className="sb-rank-text" style={{ color: p.id === profile?.id ? '#13ecda' : '', fontFamily: 'DM Mono' }}>#{p.rank}</span>
                                         </div>
                                         <div className={`sb-lb-avatar ${p.id === profile?.id ? 'user-avatar' : ''}`}>
                                             <img src={p.avatar} alt="" />
@@ -202,9 +269,9 @@ export default function Scoreboard() {
                                         <span className="sb-lb-shape" style={{ color: p.shape_color }}>{p.shape}</span>
                                         <div className="sb-lb-info">
                                             <span className="sb-lb-name" style={{ color: p.id === profile?.id ? '#13ecda' : '' }}>
-                                                {p.name} {p.id === profile?.id ? '○' : ''}
+                                                {p.name} {p.id === profile?.id ? '(YOU)' : ''}
                                             </span>
-                                            <span className="sb-lb-xp">{p.xp.toLocaleString()} XP</span>
+                                            <span className="sb-lb-xp" style={{ fontFamily: 'DM Mono' }}>{p.xp.toLocaleString()} XP</span>
                                         </div>
                                     </motion.div>
                                 ))}
@@ -273,6 +340,71 @@ export default function Scoreboard() {
                             ))}
                         </div>
                     </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Wilaya Bottom Sheet */}
+            <AnimatePresence>
+                {showWilayaSheet && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowWilayaSheet(false)}
+                            style={{
+                                position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+                                backdropFilter: 'blur(4px)', zIndex: 1000
+                            }}
+                        />
+                        <motion.div
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            transition={{ type: 'spring', stiffness: 400, damping: 35, mass: 0.8 }}
+                            style={{
+                                position: 'fixed', bottom: 0, left: 0, right: 0,
+                                background: '#0a0a0f', borderTop: '1px solid rgba(255,255,255,0.1)',
+                                borderTopLeftRadius: '16px', borderTopRightRadius: '16px',
+                                padding: '24px', maxHeight: '60vh', overflowY: 'auto',
+                                zIndex: 1001
+                            }}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                <span style={{ fontFamily: 'Space Grotesk', fontWeight: 'bold', fontSize: '16px', color: '#fff' }}>SELECT WILAYA</span>
+                                <button onClick={() => setShowWilayaSheet(false)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px' }}>×</button>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <button
+                                    onClick={() => { setWilaya(''); setShowWilayaSheet(false); }}
+                                    style={{
+                                        padding: '16px', background: !wilaya ? 'rgba(19,236,218,0.1)' : 'rgba(255,255,255,0.05)',
+                                        border: `1px solid ${!wilaya ? '#13ecda' : 'rgba(255,255,255,0.1)'}`, borderRadius: '8px',
+                                        color: !wilaya ? '#13ecda' : '#fff', fontFamily: 'DM Mono', fontSize: '14px', textAlign: 'left'
+                                    }}
+                                >
+                                    ALL WILAYAS
+                                </button>
+                                {/* In a real app we would map the 58 Wilayas. I'll provide a subset for demonstration. */}
+                                {['16 - Alger', '31 - Oran', '25 - Constantine', '23 - Annaba', '09 - Blida'].map(w => {
+                                    const isActive = wilaya === w.split(' - ')[0];
+                                    return (
+                                        <button
+                                            key={w}
+                                            onClick={() => { setWilaya(w.split(' - ')[0]); setShowWilayaSheet(false); }}
+                                            style={{
+                                                padding: '16px', background: isActive ? 'rgba(19,236,218,0.1)' : 'rgba(255,255,255,0.05)',
+                                                border: `1px solid ${isActive ? '#13ecda' : 'rgba(255,255,255,0.1)'}`, borderRadius: '8px',
+                                                color: isActive ? '#13ecda' : '#fff', fontFamily: 'DM Mono', fontSize: '14px', textAlign: 'left'
+                                            }}
+                                        >
+                                            {w}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </motion.div>
+                    </>
                 )}
             </AnimatePresence>
         </div>

@@ -2,6 +2,7 @@
 
 from config import supabase
 from datetime import datetime
+from utils.gamification import check_and_award_badges
 
 LEVEL_THRESHOLDS = [
     0,      # Level 1
@@ -110,8 +111,8 @@ def award_xp(user_id: str, amount: int, reason: str, event_id: str = None) -> di
             "data": {"new_level": new_level, "title": get_level_title(new_level)},
         }).execute()
 
-    # 5. Check badge criteria (simplified — check count-based badges)
-    badges_unlocked = _check_badge_criteria(user_id, reason, event_id)
+    # 5. Check badge criteria (delegated to gamification module)
+    badges_unlocked = check_and_award_badges(user_id, reason, event_id)
 
     return {
         "new_xp": new_xp,
@@ -119,65 +120,3 @@ def award_xp(user_id: str, amount: int, reason: str, event_id: str = None) -> di
         "leveled_up": leveled_up,
         "badges_unlocked": badges_unlocked,
     }
-
-
-def _check_badge_criteria(user_id: str, reason: str, event_id: str = None) -> list:
-    """Check and award any badges the user has now unlocked."""
-    unlocked = []
-
-    # Count-based badge checks
-    if reason == "checkin":
-        # Check total check-ins
-        checkins = (
-            supabase.table("event_registrations")
-            .select("id", count="exact")
-            .eq("user_id", user_id)
-            .eq("checked_in", True)
-            .execute()
-        )
-        count = checkins.count or 0
-
-        badge_map = {
-            1: "First Check-In",
-            5: "Regular Attendee",
-            10: "Event Enthusiast",
-            25: "Event Veteran",
-            50: "Event Legend",
-        }
-
-        for threshold, badge_name in badge_map.items():
-            if count >= threshold:
-                # Check if badge exists and not already earned
-                badge = (
-                    supabase.table("badges")
-                    .select("id")
-                    .eq("name", badge_name)
-                    .single()
-                    .execute()
-                )
-                if badge.data:
-                    existing = (
-                        supabase.table("user_badges")
-                        .select("user_id")
-                        .eq("user_id", user_id)
-                        .eq("badge_id", badge.data["id"])
-                        .execute()
-                    )
-                    if not existing.data:
-                        supabase.table("user_badges").insert({
-                            "user_id": user_id,
-                            "badge_id": badge.data["id"],
-                            "event_id": event_id,
-                        }).execute()
-
-                        supabase.table("notifications").insert({
-                            "user_id": user_id,
-                            "type": "badge_earned",
-                            "title": "Badge Unlocked! 🏅",
-                            "body": f'You earned the "{badge_name}" badge!',
-                            "data": {"badge_id": badge.data["id"], "badge_name": badge_name},
-                        }).execute()
-
-                        unlocked.append(badge_name)
-
-    return unlocked

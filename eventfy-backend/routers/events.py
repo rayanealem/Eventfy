@@ -443,6 +443,9 @@ async def register_for_event(
         "registration_count": event.data["registration_count"] + 1,
     }).eq("id", event_id).execute()
 
+    # Award base XP for every registration
+    award_xp(user["id"], 10, "event_registration", event_id)
+
     # Check first event registration badge
     all_regs = (
         supabase.table("event_registrations")
@@ -571,6 +574,9 @@ async def comment_on_event(event_id: str, body: CommentCreate, user=Depends(get_
     supabase.table("events").update({
         "comment_count": (event.data.get("comment_count") or 0) + 1,
     }).eq("id", event_id).execute()
+
+    # Award +2 XP for commenting
+    award_xp(user["id"], 2, "event_comment", event_id)
 
     return comment.data[0] if comment.data else {"commented": True}
 
