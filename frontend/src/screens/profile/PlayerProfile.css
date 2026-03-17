@@ -7,9 +7,10 @@
     width: 100%;
     min-height: 100vh;
     background: black;
-    max-width: 430px;
+    max-width: 100%;
     margin: 0 auto;
-    padding-bottom: 96px;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
     overflow: hidden;
 }
 

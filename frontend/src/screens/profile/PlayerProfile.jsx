@@ -330,9 +330,10 @@ export default function PlayerProfile() {
             {/* ===== Tab Bar ===== */}
             <div style={{ display: 'flex', borderTop: '1px solid rgba(255,255,255,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)', position: 'relative', zIndex: 1 }}>
                 {TABS.map(tab => (
-                    <button
+                    <motion.button
                         key={tab.key}
-                        onClick={() => setActiveTab(tab.key)}
+                        whileTap={{ scale: 0.85 }}
+                        onClick={() => { haptic(); setActiveTab(tab.key); }}
                         style={{
                             flex: 1,
                             display: 'flex',
@@ -342,24 +343,38 @@ export default function PlayerProfile() {
                             padding: '14px 0',
                             background: 'none',
                             border: 'none',
-                            borderBottom: activeTab === tab.key ? '2px solid #f1f5f9' : '2px solid transparent',
                             color: activeTab === tab.key ? '#f1f5f9' : '#64748b',
                             fontFamily: 'Space Grotesk',
                             fontWeight: 'bold',
                             fontSize: '11px',
                             letterSpacing: '1px',
                             cursor: 'pointer',
-                            transition: 'all 0.2s',
+                            transition: 'color 0.2s',
+                            position: 'relative'
                         }}
                     >
+                        {activeTab === tab.key && (
+                            <motion.div
+                                layoutId="active-tab-indicator"
+                                transition={{ type: 'spring', stiffness: 400, damping: 35, mass: 0.8 }}
+                                style={{
+                                    position: 'absolute',
+                                    bottom: -1,
+                                    left: 0,
+                                    right: 0,
+                                    height: '2px',
+                                    background: '#f1f5f9',
+                                }}
+                            />
+                        )}
                         <span style={{ fontSize: '14px' }}>{tab.icon}</span>
                         {tab.label}
-                    </button>
+                    </motion.button>
                 ))}
             </div>
 
             {/* ===== Tab Content ===== */}
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="popLayout">
                 {activeTab === 'events' && (
                     <motion.div key="events" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                         {passportEvents.length === 0 ? (
@@ -379,9 +394,10 @@ export default function PlayerProfile() {
                                             key={entry.id || i}
                                             initial={{ opacity: 0, scale: 0.95 }}
                                             whileInView={{ opacity: 1, scale: 1 }}
+                                            whileTap={{ scale: 0.95 }}
                                             viewport={{ once: true }}
-                                            onClick={() => entry.event_id && navigate(`/event/${entry.event_id}`)}
-                                            style={{ position: 'relative', paddingBottom: '100%', cursor: 'pointer', overflow: 'hidden', background: '#1a1d2e' }}
+                                            onClick={() => { haptic(); entry.event_id && navigate(`/event/${entry.event_id}`) }}
+                                            style={{ position: 'relative', aspectRatio: '1/1', cursor: 'pointer', overflow: 'hidden', background: '#1a1d2e' }}
                                         >
                                             <img src={coverUrl} alt={entry.title || 'Event'} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                                             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 40%)' }} />
@@ -425,7 +441,9 @@ export default function PlayerProfile() {
                                         key={badge.id || i}
                                         initial={{ opacity: 0, scale: 0.8 }}
                                         animate={{ opacity: 1, scale: 1 }}
-                                        transition={{ delay: i * 0.08 }}
+                                        whileTap={{ scale: 0.85 }}
+                                        onClick={() => haptic()}
+                                        transition={{ delay: i * 0.08, type: 'spring', stiffness: 400, damping: 35 }}
                                         style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px 8px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}
                                     >
                                         <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(255,45,120,0.2), rgba(19,236,200,0.2))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
@@ -597,9 +615,10 @@ function SavedEventsTab({ isOwnProfile, navigate }) {
                         key={event.id || i}
                         initial={{ opacity: 0, scale: 0.95 }}
                         whileInView={{ opacity: 1, scale: 1 }}
+                        whileTap={{ scale: 0.95 }}
                         viewport={{ once: true }}
-                        onClick={() => navigate(`/event/${event.id}`)}
-                        style={{ position: 'relative', paddingBottom: '100%', cursor: 'pointer', overflow: 'hidden', background: '#1a1d2e' }}
+                        onClick={() => { haptic(); navigate(`/event/${event.id}`) }}
+                        style={{ position: 'relative', aspectRatio: '1/1', cursor: 'pointer', overflow: 'hidden', background: '#1a1d2e' }}
                     >
                         <img src={coverUrl} alt={event.title || 'Event'} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 40%)' }} />

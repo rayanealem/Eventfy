@@ -68,6 +68,14 @@ export default function OrgRegisterAuth() {
             });
 
             if (refreshProfile) await refreshProfile();
+
+            // Re-fetch session directly here so the routing logic updates immediately
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                // Ensure the context catches the update, though the refreshProfile might have done this already
+                await refreshProfile();
+            }
+
             setIsPending(true);
             setTimeout(() => {
                 navigate('/org/setup');
