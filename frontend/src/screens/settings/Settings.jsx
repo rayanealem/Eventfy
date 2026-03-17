@@ -59,6 +59,8 @@ export default function Settings() {
                                 key={i}
                                 className="settings-row clickable"
                                 whileHover={{ background: 'rgba(255,255,255,0.02)' }}
+                                whileTap={{ scale: 0.98, opacity: 0.8 }}
+                                transition={{ type: 'spring', stiffness: 400, damping: 35 }}
                                 onClick={() => i === 0 ? navigate('/profile/edit') : null}
                             >
                                 <div className="settings-row-left">
@@ -110,13 +112,28 @@ export default function Settings() {
                     <div className="settings-group no-border">
                         <div className="privacy-pills">
                             {['PUBLIC', 'FOLLOWERS', 'PRIVATE'].map((pill) => (
-                                <button
+                                <motion.button
+                                    whileTap={{ scale: 0.85 }}
                                     key={pill}
                                     className={`privacy-pill ${privacy === pill ? 'active' : ''}`}
                                     onClick={() => setPrivacy(pill)}
+                                    style={{ position: 'relative' }}
                                 >
-                                    {pill} {pill === 'PUBLIC' ? '○' : pill === 'FOLLOWERS' ? '△' : '□'}
-                                </button>
+                                    {privacy === pill && (
+                                        <motion.div
+                                            layoutId="privacy-active"
+                                            style={{
+                                                position: 'absolute',
+                                                inset: 0,
+                                                background: 'rgba(0, 229, 204, 0.1)',
+                                                border: '1px solid #00e5cc',
+                                                boxShadow: '0 0 10px rgba(0, 229, 204, 0.2)',
+                                            }}
+                                            transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+                                        />
+                                    )}
+                                    <span style={{ position: 'relative', zIndex: 1 }}>{pill} {pill === 'PUBLIC' ? '○' : pill === 'FOLLOWERS' ? '△' : '□'}</span>
+                                </motion.button>
                             ))}
                         </div>
                         <div className="settings-toggle-row">

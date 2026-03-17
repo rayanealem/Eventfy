@@ -146,10 +146,19 @@ export default function OrgSetup() {
                 <div className="orgset-progress">
                     {STEPS.map((s, i) => (
                         <div key={i} className="orgset-prog-item">
-                            <div className={`orgset-prog-icon ${step >= s.id ? 'active' : ''}`}>
+                            <motion.div initial={{ scale: 0.8 }} animate={{ scale: step >= s.id ? 1 : 0.8, color: step >= s.id ? '#f56e3d' : '#f1f5f9', opacity: step >= s.id ? 1 : 0.4 }} className="orgset-prog-icon">
                                 <span>{s.icon}</span>
-                            </div>
-                            {i < STEPS.length - 1 && <div className={`orgset-prog-line ${step > s.id ? 'active' : ''}`} />}
+                            </motion.div>
+                            {i < STEPS.length - 1 && (
+                                <div className="orgset-prog-line">
+                                    <motion.div
+                                        initial={{ scaleX: 0 }}
+                                        animate={{ scaleX: step > s.id ? 1 : 0 }}
+                                        style={{ originX: 0, width: '100%', height: '100%', background: 'rgba(245, 110, 61, 0.4)' }}
+                                        transition={{ duration: 0.3 }}
+                                    />
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>
@@ -301,9 +310,10 @@ export default function OrgSetup() {
                                 <span className="orgset-mult-name">VOLUNTEER MULTIPLIER</span>
                                 <span className="orgset-mult-desc">Boost XP for support roles</span>
                             </div>
-                            <div className="orgset-mult-toggle">
-                                <button className="orgset-mult-btn active">2×</button>
-                                <button className="orgset-mult-btn">3×</button>
+                            <div className="orgset-mult-toggle" style={{ position: 'relative' }}>
+                                <motion.div layoutId="mult-active" style={{ position: 'absolute', top: 4, bottom: 4, width: '50%', background: '#f56e3d', left: 4 }} transition={{ type: 'spring', stiffness: 400, damping: 35 }} />
+                                <motion.button whileTap={{ scale: 0.85 }} className="orgset-mult-btn active" style={{ position: 'relative', zIndex: 1, color: 'white' }}>2×</motion.button>
+                                <motion.button whileTap={{ scale: 0.85 }} className="orgset-mult-btn" style={{ position: 'relative', zIndex: 1 }}>3×</motion.button>
                             </div>
                         </div>
                         <button className="btn btn-teal" onClick={() => setStep(5)} style={{ marginTop: 24, alignSelf: 'flex-end' }}>
@@ -321,7 +331,7 @@ export default function OrgSetup() {
                         <span className="orgset-label">CATEGORIES ⬡</span>
                         <div className="orgset-cat-row">
                             {CATEGORIES.map((c, i) => (
-                                <button key={i} className={`orgset-cat-btn ${c.label === 'TECH' ? 'active' : ''}`}>{c.label}</button>
+                                <motion.button whileTap={{ scale: 0.85 }} key={i} className={`orgset-cat-btn ${c.label === 'TECH' ? 'active' : ''}`}>{c.label}</motion.button>
                             ))}
                         </div>
                         <div className="orgset-toggle-list">

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
@@ -204,13 +205,14 @@ export default function EditProfile() {
                     ) : (
                         <div className="edp-skills">
                             {skillsLoaded.map((s) => (
-                                <button
+                                <motion.button
+                                    whileTap={{ scale: 0.85 }}
                                     key={s.id}
                                     className={`edp-skill ${activeSkills.includes(s.id) ? 'active' : ''}`}
                                     onClick={() => toggleSkill(s.id)}
                                 >
                                     {s.name}
-                                </button>
+                                </motion.button>
                             ))}
                         </div>
                     )}
@@ -221,13 +223,14 @@ export default function EditProfile() {
                     <label className="edp-label">YOUR SYMBOL</label>
                     <div className="edp-symbols">
                         {SHAPES.map((shape) => (
-                            <button
+                            <motion.button
+                                whileTap={{ scale: 0.85 }}
                                 key={shape}
                                 className={`edp-sym-btn ${form.shape === shape ? 'active' : ''}`}
                                 onClick={() => setForm(f => ({ ...f, shape }))}
                             >
                                 {shape}
-                            </button>
+                            </motion.button>
                         ))}
                     </div>
                 </section>
@@ -237,7 +240,8 @@ export default function EditProfile() {
                     <label className="edp-label">ACCENT COLOR</label>
                     <div className="edp-colors">
                         {COLORS.map((color) => (
-                            <div
+                            <motion.div
+                                whileTap={{ scale: 0.85 }}
                                 key={color}
                                 className={`edp-color ${form.shape_color === color ? 'active' : ''}`}
                                 style={{ background: color }}
@@ -248,9 +252,9 @@ export default function EditProfile() {
                 </section>
 
                 {/* Save Button */}
-                <button className="edp-save-btn" onClick={handleSave} disabled={saving}>
+                <motion.button whileTap={{ scale: 0.95 }} transition={{ type: 'spring', stiffness: 400, damping: 35 }} className="edp-save-btn" onClick={handleSave} disabled={saving}>
                     {saving ? 'SAVING...' : saved ? 'SAVED ✓' : 'SAVE CHANGES △'}
-                </button>
+                </motion.button>
             </div>
         </div>
     );

@@ -28,11 +28,13 @@ export function AuthGuard({ children }) {
 
     if (user && profile && !profile.onboarding_done) {
         if (['organizer', 'local_admin', 'global_admin'].includes(profile.role)) {
-            if (!location.pathname.startsWith('/org/setup')) {
+            if (!location.pathname.startsWith('/org/setup') && !location.pathname.startsWith('/auth/org/register')) {
                 return <Navigate to="/org/setup" replace />
             }
         } else {
-            if (!location.pathname.startsWith('/onboarding')) {
+            if (!location.pathname.startsWith('/onboarding') && !location.pathname.startsWith('/auth/participant/register') && !location.pathname.startsWith('/auth/org/register')) {
+                // When recently registered as Org but role context is slightly lagging,
+                // don't kick them into simple user onboarding if they are coming from org register.
                 return <Navigate to="/onboarding/1" replace />
             }
         }
@@ -65,7 +67,9 @@ export function GuestGuard({ children }) {
             if (isOrg) {
                 return <Navigate to="/org/setup" replace />
             }
-            return <Navigate to="/onboarding/1" replace />
+            if (!location.pathname.startsWith('/auth/participant/register') && !location.pathname.startsWith('/auth/org/register')) {
+                 return <Navigate to="/onboarding/1" replace />
+            }
         }
         if (isOrg) {
             return <Navigate to="/org/dashboard" replace />

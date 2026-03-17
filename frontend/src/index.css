@@ -167,16 +167,14 @@ img {
 
 /* --- App Shell --- */
 .app-shell {
-  max-width: 430px;
+  width: 100%;
+  max-width: 100%;
   margin: 0 auto;
   height: 100vh;
   position: relative;
   overflow-y: auto;
   overflow-x: hidden;
   background: var(--color-bg);
-  border-left: 1px solid var(--color-border-subtle);
-  border-right: 1px solid var(--color-border-subtle);
-  box-shadow: var(--shadow-card);
   scrollbar-width: none;
   /* Firefox */
 }
@@ -313,8 +311,8 @@ img {
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: 430px;
-  height: 72px;
+  max-width: 100%;
+  height: calc(72px + env(safe-area-inset-bottom));
   background: rgba(10, 10, 15, 0.95);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);

@@ -9,11 +9,11 @@
     width: 100%;
     min-height: 100vh;
     background: #000000;
-    max-width: 448px;
+    max-width: 100%;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
-    padding-bottom: 80px;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
 }
 
 .settings-noise {
@@ -30,7 +30,7 @@
 .settings-header {
     display: flex;
     align-items: center;
-    padding: 40px 24px 25px 24px;
+    padding: calc(40px + env(safe-area-inset-top)) 24px 25px 24px;
     border-bottom: 1px solid #1a1d2e;
     position: relative;
     z-index: 2;
@@ -146,6 +146,10 @@
     transition: all 0.25s;
     margin-right: 8px;
 }
+.toggle:active {
+    transform: scale(0.85);
+    transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
 
 .toggle.on {
     background: #00e5cc;
@@ -225,9 +229,7 @@
 }
 
 .privacy-pill.active {
-    border-color: #00e5cc;
     color: #00e5cc;
-    box-shadow: 0 0 10px rgba(0, 229, 204, 0.2);
 }
 
 .privacy-pill:hover:not(.active) {
@@ -311,6 +313,11 @@
 
 .logout-btn:hover {
     background: rgba(255, 127, 80, 0.08);
+}
+
+.logout-btn:active {
+    transform: scale(0.95);
+    transition: transform 0.1s;
 }
 
 .logout-x {
