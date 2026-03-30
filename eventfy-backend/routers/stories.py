@@ -70,9 +70,54 @@ async def add_frame(story_id: str, body: dict, user=Depends(get_current_user)):
     return frame.data[0] if frame.data else {}
 
 
+@router.get("/me")
+async def my_stories(user=Depends(get_current_user)):
+    """Fetch current user's active stories (personal + org)."""
+    now = datetime.utcnow().isoformat()
+
+    # Personal stories
+    personal = (supabase.table("stories")
+        .select("*, story_frames(*)")
+        .eq("user_id", user["id"])
+        .gt("expires_at", now)
+        .order("created_at", desc=True).execute())
+
+    # Org stories (if user manages orgs)
+    members = supabase.table("org_members").select("org_id").eq("user_id", user["id"]).execute()
+    org_ids = [m["org_id"] for m in (members.data or [])]
+    org_stories = []
+    if org_ids:
+        org_data = (supabase.table("stories")
+            .select("*, story_frames(*), organizations(name, logo_url, slug)")
+            .in_("org_id", org_ids)
+            .gt("expires_at", now)
+            .order("created_at", desc=True).execute())
+        org_stories = org_data.data or []
+
+    return {
+        "personal": personal.data or [],
+        "org": org_stories,
+        "total": len(personal.data or []) + len(org_stories)
+    }
+
+
 @router.delete("/{story_id}")
-async def delete_story(story_id: str, user=Depends(require_org)):
-    """Delete a story."""
+async def delete_story(story_id: str, user=Depends(get_current_user)):
+    """Delete a story (owner or org admin)."""
+    # Verify ownership
+    story = supabase.table("stories").select("*").eq("id", story_id).single().execute()
+    if not story.data:
+        raise HTTPException(404, "Story not found")
+
+    is_owner = story.data.get("user_id") == user["id"]
+    is_org_admin = False
+    if story.data.get("org_id"):
+        member = supabase.table("org_members").select("role").eq("org_id", story.data["org_id"]).eq("user_id", user["id"]).execute()
+        is_org_admin = bool(member.data)
+
+    if not is_owner and not is_org_admin:
+        raise HTTPException(403, "Not authorized to delete this story")
+
     supabase.table("stories").delete().eq("id", story_id).execute()
     return {"message": "Story deleted"}
 
@@ -117,10 +162,18 @@ async def record_view(story_id: str, user=Depends(get_current_user)):
 
 
 @router.get("/{story_id}/analytics")
-async def story_analytics(story_id: str, user=Depends(require_org)):
-    """Get story view analytics."""
+async def story_analytics(story_id: str, user=Depends(get_current_user)):
+    """Get story view analytics (available to the story owner)."""
     views = (supabase.table("story_views")
         .select("*, profiles(username, full_name, avatar_url)")
         .eq("story_id", story_id).execute())
+    reactions = (supabase.table("story_reactions")
+        .select("*, profiles(username, avatar_url)")
+        .eq("story_id", story_id).execute())
     story = supabase.table("stories").select("view_count").eq("id", story_id).single().execute()
-    return {"views": views.data or [], "total_views": story.data["view_count"] if story.data else 0}
+    return {
+        "views": views.data or [],
+        "reactions": reactions.data or [],
+        "total_views": story.data["view_count"] if story.data else 0,
+        "total_reactions": len(reactions.data) if reactions.data else 0,
+    }

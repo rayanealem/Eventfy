@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Eventfy</string>
+    <string name="title_activity_main">Eventfy</string>
+    <string name="package_name">com.eventfy.app</string>
+    <string name="custom_url_scheme">com.eventfy.app</string>
+</resources>

@@ -1,9 +1,21 @@
 import { supabase } from './supabase'
+import { Capacitor } from '@capacitor/core'
 
 // Dynamically determine the backend URL based on how the frontend is accessed
+const isNative = Capacitor.isNativePlatform();
 const hostname = window.location.hostname;
-// If accessed via localhost, use 127.0.0.1 to avoid Windows IPv6 DNS resolution bugs
-const defaultApiUrl = hostname === 'localhost' ? 'http://127.0.0.1:8005/v1' : `http://${hostname}:8005/v1`;
+
+let defaultApiUrl;
+if (isNative) {
+    // On native (Android/iOS), use localhost which adb reverse maps to the PC.
+    // Run: adb reverse tcp:8000 tcp:8000
+    defaultApiUrl = 'http://localhost:8000/v1';
+} else if (hostname === 'localhost') {
+    // Browser dev: use 127.0.0.1 to avoid Windows IPv6 DNS resolution bugs
+    defaultApiUrl = 'http://127.0.0.1:8000/v1';
+} else {
+    defaultApiUrl = `http://${hostname}:8000/v1`;
+}
 const API_URL = import.meta.env.VITE_API_URL || defaultApiUrl;
 
 /**

@@ -35,7 +35,7 @@ import AdminPanel from './screens/admin/AdminPanel';
 import Business from './screens/business/Business';
 import OrgSetup from './screens/orgsetup/OrgSetup';
 import EditProfile from './screens/editprofile/EditProfile';
-import Story from './screens/story/Story';
+import StoryViewer from './screens/story/StoryViewer';
 import StoryCreate from './screens/story/StoryCreate';
 
 // Onboarding
@@ -79,13 +79,13 @@ const router = createBrowserRouter([
             { path: 'event/:id/register', element: <AuthGuard><EventRegister /></AuthGuard> },
             { path: 'event/:id/teams', element: <AuthGuard><TeamLobby /></AuthGuard> },
 
-            // Profile
+            // Profile (static routes MUST come before dynamic :param routes)
             { path: 'profile/me', element: <AuthGuard><PlayerProfile /></AuthGuard> },
             { path: 'profile/edit', element: <AuthGuard><EditProfile /></AuthGuard> },
             { path: 'profile/:username', element: <AuthGuard><PlayerProfile /></AuthGuard> },
             { path: 'org/dashboard', element: <OrgGuard><OrgDashboard /></OrgGuard> },
-            { path: 'org/:orgId', element: <AuthGuard><OrgProfile /></AuthGuard> },
             { path: 'org/setup', element: <AuthGuard><OrgSetup /></AuthGuard> },
+            { path: 'org/:orgId', element: <AuthGuard><OrgProfile /></AuthGuard> },
             { path: 'passport/:username', element: <AuthGuard><PlayerPassport /></AuthGuard> },
 
             // Gamification
@@ -95,7 +95,7 @@ const router = createBrowserRouter([
             { path: 'chat', element: <AuthGuard><DiscordLayout /></AuthGuard> },
             { path: 'chat/:eventId', element: <AuthGuard><DiscordLayout /></AuthGuard> },
             { path: 'stories/create', element: <AuthGuard><StoryCreate /></AuthGuard> },
-            { path: 'stories/:orgId', element: <AuthGuard><Story /></AuthGuard> },
+            { path: 'stories/:orgId', element: <AuthGuard><StoryViewer /></AuthGuard> },
             { path: 'notifications', element: <AuthGuard><Notifications /></AuthGuard> },
 
             // QR — single route, mode auto-detected by role

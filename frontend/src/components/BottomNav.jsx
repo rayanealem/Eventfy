@@ -77,7 +77,6 @@ export default function BottomNav() {
                     left: '50%',
                     transform: 'translateX(-50%)',
                     width: '100%',
-                    maxWidth: '430px',
                     height: '72px',
                     background: 'rgba(10, 10, 15, 0.95)',
                     backdropFilter: 'blur(10px)',
@@ -87,7 +86,7 @@ export default function BottomNav() {
                     alignItems: 'center',
                     justifyContent: 'space-around',
                     paddingBottom: 'env(safe-area-inset-bottom)',
-                    zIndex: 99999 // Absolute maximum z-index
+                    zIndex: 99999
                 }}
             >
                 {navItems.map(({ path, shape, activeColor, badge }) => {

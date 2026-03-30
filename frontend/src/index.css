@@ -50,6 +50,9 @@
 
   /* Bottom Nav Height */
   --nav-height: 72px;
+
+  /* App frame width: full on native/mobile, 430px on desktop */
+  --app-max-width: 430px;
 }
 
 /* --- Reset & Base --- */
@@ -72,6 +75,16 @@ body {
   background: var(--color-bg);
   color: var(--color-text-primary);
   min-height: 100vh;
+  /* Native safe-area insets for status bar, notch, gesture bar */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* When the soft keyboard is open, shrink bottom padding */
+body.keyboard-open {
+  padding-bottom: 0;
 }
 
 #root {
@@ -167,7 +180,7 @@ img {
 
 /* --- App Shell --- */
 .app-shell {
-  max-width: 430px;
+  max-width: var(--app-max-width);
   margin: 0 auto;
   height: 100vh;
   position: relative;
@@ -179,6 +192,23 @@ img {
   box-shadow: var(--shadow-card);
   scrollbar-width: none;
   /* Firefox */
+}
+
+/* Fullscreen variant: no scroll, fill container */
+.app-shell--fullscreen {
+  overflow: hidden;
+}
+
+/* On native Capacitor or small screens, use full width */
+@media (max-width: 480px) {
+  :root {
+    --app-max-width: 100%;
+  }
+  .app-shell {
+    border-left: none;
+    border-right: none;
+    box-shadow: none;
+  }
 }
 
 .app-shell::after, .feed-root::after {
@@ -313,7 +343,7 @@ img {
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: 430px;
+  max-width: var(--app-max-width);
   height: 72px;
   background: rgba(10, 10, 15, 0.95);
   backdrop-filter: blur(10px);

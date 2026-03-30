@@ -220,10 +220,15 @@ export default function Feed() {
     async function checkPersonalStories() {
         if (!profile) return;
         try {
-            // Check if user has active stories using the profile endpoint
-            const data = await api('GET', `/profile/${profile.id}`);
-            const hasStories = data?.stories && data.stories.length > 0;
-            setHasActiveStory(hasStories);
+            // Fetch directly from supabase
+            const { data, error } = await supabase
+                .from('stories')
+                .select('id')
+                .eq('user_id', profile.id)
+                .gt('expires_at', new Date().toISOString());
+                
+            if (error) throw error;
+            setHasActiveStory(data && data.length > 0);
         } catch (e) {
             console.error('Failed to check personal stories', e);
             setHasActiveStory(false);
@@ -428,15 +433,14 @@ export default function Feed() {
                 </div>
             </header>
 
-            {/* Story Row — followed orgs */}
+            {/* Story Row — Instagram-style */}
             <div className="feed-stories">
-                {/* "Your Story" Bubble */}
+                {/* "Your Story" Bubble — Instagram-style */}
                 <div
                     className="feed-story"
                     onClick={() => hasActiveStory ? navigate(`/stories/${profile.id}`) : navigate('/stories/create')}
-                    style={{ cursor: 'pointer', position: 'relative' }}
                 >
-                    <div className={`feed-story-ring ${hasActiveStory ? 'gradient' : 'dashed'}`} style={!hasActiveStory ? { borderColor: '#f472b6' } : {}}>
+                    <div className={`feed-story-ring ${hasActiveStory ? 'gradient' : 'dashed'}`}>
                         <div className="feed-story-avatar-inner">
                             <img
                                 src={profile?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.username || 'U')}&size=80&background=1e293b&color=fff`}
@@ -447,38 +451,39 @@ export default function Feed() {
                     {!hasActiveStory && (
                         <div style={{
                             position: 'absolute',
-                            bottom: 16,
-                            right: 0,
-                            background: '#f472b6',
+                            bottom: 18,
+                            right: -2,
+                            background: 'linear-gradient(135deg, #13ecec 0%, #a855f7 100%)',
                             borderRadius: '50%',
-                            width: 16,
-                            height: 16,
+                            width: 22,
+                            height: 22,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            border: '2px solid #000'
+                            border: '3px solid #0a0a0f',
+                            boxShadow: '0 2px 8px rgba(19, 236, 236, 0.3)'
                         }}>
-                            <svg width="8" height="8" viewBox="0 0 14 14" fill="none">
-                                <line x1="7" y1="1" x2="7" y2="13" stroke="#000" strokeWidth="3" strokeLinecap="round" />
-                                <line x1="1" y1="7" x2="13" y2="7" stroke="#000" strokeWidth="3" strokeLinecap="round" />
+                            <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
+                                <line x1="7" y1="2" x2="7" y2="12" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
+                                <line x1="2" y1="7" x2="12" y2="7" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
                             </svg>
                         </div>
                     )}
-                    <span className="feed-story-name" style={{ color: hasActiveStory ? '#f1f5f9' : '#f472b6' }}>
-                        {hasActiveStory ? 'YOUR STORY' : 'ADD STORY'}
+                    <span className="feed-story-name" style={{ color: hasActiveStory ? '#13ecec' : 'rgba(255,255,255,0.5)' }}>
+                        {hasActiveStory ? 'YOUR STORY' : 'ADD'}
                     </span>
                 </div>
 
-                {followedOrgs.map((org, idx) => {
+                {followedOrgs.map((org) => {
                     const isSeen = seenStories.has(org.id);
                     return (
-                        <div key={org.id} className="feed-story" onClick={() => { setSeenStories(prev => new Set([...prev, org.id])); navigate(`/stories/${org.id}`); }} style={{ cursor: 'pointer' }}>
+                        <div key={org.id} className="feed-story" onClick={() => { setSeenStories(prev => new Set([...prev, org.id])); navigate(`/stories/${org.id}`); }}>
                             <div className={`feed-story-ring ${isSeen ? 'seen' : 'gradient'}`}>
                                 <div className="feed-story-avatar-inner">
                                     <img src={org.logo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(org.name)}&size=80&background=1e293b&color=fff`} alt={org.name} />
                                 </div>
                             </div>
-                            <span className="feed-story-name" style={{ color: isSeen ? '#64748b' : '#f1f5f9' }}>{org.name?.toUpperCase()?.substring(0, 8)}</span>
+                            <span className="feed-story-name" style={{ color: isSeen ? 'rgba(255,255,255,0.3)' : '#f1f5f9' }}>{org.name?.toUpperCase()?.substring(0, 8)}</span>
                         </div>
                     )
                 })}

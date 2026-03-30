@@ -8,7 +8,7 @@ import './Auth.css';
 
 export default function OrgRegisterAuth() {
     const navigate = useNavigate();
-    const { refreshProfile } = useAuth();
+    const { refreshProfile, setRegistering } = useAuth();
     const [isPending, setIsPending] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -38,6 +38,9 @@ export default function OrgRegisterAuth() {
         setLoading(true);
         setError('');
         try {
+            // Block auto-redirect during registration
+            setRegistering(true);
+
             // 1. Create Supabase auth user (trigger auto-creates profile)
             const { data, error: authError } = await supabase.auth.signUp({
                 email: form.email,
@@ -53,6 +56,7 @@ export default function OrgRegisterAuth() {
 
             // Check if email confirmation is required
             if (data.user && !data.session) {
+                setRegistering(false);
                 setError('Check your email to confirm your account before proceeding.');
                 setLoading(false);
                 return;
@@ -67,12 +71,15 @@ export default function OrgRegisterAuth() {
                 registration_number: form.taxId || null,
             });
 
+            // 3. Now refresh profile (will have organizer role)
+            setRegistering(false);
             if (refreshProfile) await refreshProfile();
             setIsPending(true);
             setTimeout(() => {
                 navigate('/org/setup');
             }, 3000);
         } catch (err) {
+            setRegistering(false);
             setError(err.message || 'Registration failed');
         } finally {
             setLoading(false);

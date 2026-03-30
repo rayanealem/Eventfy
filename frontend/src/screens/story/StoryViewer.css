@@ -1,5 +1,5 @@
 /* STORY VIEWER — EVENTFY THEMED */
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;700&display=swap');
+@import './story-shared.css';
 
 .story-root {
     position: relative;
@@ -274,66 +274,6 @@
     white-space: nowrap;
 }
 
-/* TEXT ANIMATIONS */
-.anim-pulse {
-    animation: pulse 1.5s infinite;
-}
-
-.anim-wobble {
-    animation: wobble 2s infinite;
-}
-
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
-}
-
-@keyframes wobble {
-    0% { transform: rotate(0deg); }
-    25% { transform: rotate(-5deg); }
-    50% { transform: rotate(5deg); }
-    75% { transform: rotate(-5deg); }
-    100% { transform: rotate(0deg); }
-}
-
-/* PHOTO STICKER SHAPES (SHARED) */
-.story-photo-sticker {
-    transition: clip-path 0.3s ease, border-radius 0.3s ease;
-}
-.story-photo-sticker.shape-square { border-radius: 8px; }
-.story-photo-sticker.shape-rounded { border-radius: 24px; }
-.story-photo-sticker.shape-circle { border-radius: 50%; }
-.story-photo-sticker.shape-star {
-    border-radius: 0;
-    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
-}
-
-/* SMART STICKERS (VIEWER) */
-.story-smart-sticker {
-    display: inline-flex;
-    align-items: center;
-    padding: 8px 16px;
-    border-radius: 12px;
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700;
-    font-size: 24px;
-    color: #fff;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    backdrop-filter: blur(8px);
-    cursor: pointer;
-    transition: transform 0.1s;
-    white-space: nowrap;
-}
-
-.story-smart-sticker:active {
-    transform: scale(0.95);
-}
-
-.story-smart-mention { background: linear-gradient(135deg, #fb5151 0%, #ff8a8a 100%); }
-.story-smart-location { background: linear-gradient(135deg, #00ffc2 0%, #00b388 100%); color: #000; }
-.story-smart-link { background: rgba(255, 255, 255, 0.9); color: #000; padding: 12px 24px; border-radius: 24px;}
-
 /* REACTION BAR (VIEWER) */
 .story-reaction-bar {
     display: flex;
@@ -366,97 +306,6 @@
     pointer-events: none;
     z-index: 1000;
     filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
-}
-
-/* POLL WIDGET (VIEWER - Some shared with Creator) */
-.story-poll-widget {
-    background: #fff;
-    border-radius: 16px;
-    padding: 16px;
-    width: 240px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    cursor: default;
-}
-
-.story-poll-question {
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700;
-    font-size: 16px;
-    color: #000;
-    text-align: center;
-    border: none;
-    outline: none;
-    background: transparent;
-    resize: none;
-    width: 100%;
-}
-
-.story-poll-options {
-    display: flex;
-    gap: 8px;
-}
-
-.story-poll-option {
-    flex: 1;
-    background: #f1f5f9;
-    border-radius: 99px;
-    padding: 12px 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    overflow: hidden;
-    cursor: pointer;
-    transition: transform 0.1s;
-}
-.story-poll-option:active {
-    transform: scale(0.95);
-}
-
-.story-poll-option input {
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700;
-    font-size: 14px;
-    color: #000;
-    text-align: center;
-    border: none;
-    outline: none;
-    background: transparent;
-    width: 100%;
-    z-index: 2;
-}
-
-.poll-option-text {
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700;
-    font-size: 14px;
-    color: #000;
-    z-index: 2;
-}
-
-.poll-pct {
-    font-family: 'DM Mono', monospace;
-    font-size: 12px;
-    color: #000;
-    z-index: 2;
-    margin-left: 8px;
-}
-
-.story-poll-fill {
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    background: #2dd4bf;
-    z-index: 1;
-    transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.story-poll-option.voted .story-poll-fill {
-    background: #f56e3d; /* Highlight chosen option */
 }
 
 /* AUDIO ENGINE */
@@ -623,6 +472,24 @@
     font-family: 'Space Grotesk', sans-serif;
     font-size: 16px;
     font-weight: 500;
+    flex: 1;
+}
+
+.viewer-action {
+    margin-left: auto;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+}
+
+.reaction-emoji {
+    font-size: 22px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.view-icon {
+    font-size: 16px;
+    opacity: 0.5;
 }
 
 .no-viewers {

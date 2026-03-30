@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { api } from '../lib/api'
 
@@ -7,7 +7,8 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null)
     const [profile, setProfile] = useState(null)
-    const [loading, setLoading] = useState(false)
+    const [loading, setLoading] = useState(true)
+    const registeringRef = useRef(false)
 
     useEffect(() => {
         // Get current session on mount
@@ -22,7 +23,10 @@ export function AuthProvider({ children }) {
             async (_event, session) => {
                 setUser(session?.user ?? null)
                 if (session?.user) {
-                    fetchProfile(session.user.id)
+                    // Skip auto-fetch during multi-step registration
+                    if (!registeringRef.current) {
+                        fetchProfile(session.user.id)
+                    }
                 } else {
                     setProfile(null)
                     setLoading(false)
@@ -58,6 +62,12 @@ export function AuthProvider({ children }) {
         if (user) await fetchProfile(user.id)
     }
 
+    // Suppress auto-redirect during multi-step registration
+    function setRegistering(val) {
+        registeringRef.current = val
+        if (val) setLoading(true)
+    }
+
     return (
         <AuthContext.Provider value={{
             user,
@@ -66,6 +76,7 @@ export function AuthProvider({ children }) {
             supabase,
             signOut,
             refreshProfile,
+            setRegistering,
         }}>
             {children}
         </AuthContext.Provider>
