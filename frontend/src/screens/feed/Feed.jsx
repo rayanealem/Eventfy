@@ -433,14 +433,14 @@ export default function Feed() {
                 </div>
             </header>
 
-            {/* Story Row — Instagram-style */}
+            {/* Story Row — Instagram-grade */}
             <div className="feed-stories">
-                {/* "Your Story" Bubble — Instagram-style */}
+                {/* "Your Story" Bubble */}
                 <div
                     className="feed-story"
                     onClick={() => hasActiveStory ? navigate(`/stories/${profile.id}`) : navigate('/stories/create')}
                 >
-                    <div className={`feed-story-ring ${hasActiveStory ? 'gradient' : 'dashed'}`}>
+                    <div className={`feed-story-ring ${hasActiveStory ? 'gradient' : 'no-ring'}`}>
                         <div className="feed-story-avatar-inner">
                             <img
                                 src={profile?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.username || 'U')}&size=80&background=1e293b&color=fff`}
@@ -449,41 +449,29 @@ export default function Feed() {
                         </div>
                     </div>
                     {!hasActiveStory && (
-                        <div style={{
-                            position: 'absolute',
-                            bottom: 18,
-                            right: -2,
-                            background: 'linear-gradient(135deg, #13ecec 0%, #a855f7 100%)',
-                            borderRadius: '50%',
-                            width: 22,
-                            height: 22,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            border: '3px solid #0a0a0f',
-                            boxShadow: '0 2px 8px rgba(19, 236, 236, 0.3)'
-                        }}>
+                        <div className="feed-story-add-badge">
                             <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
                                 <line x1="7" y1="2" x2="7" y2="12" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
                                 <line x1="2" y1="7" x2="12" y2="7" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
                             </svg>
                         </div>
                     )}
-                    <span className="feed-story-name" style={{ color: hasActiveStory ? '#13ecec' : 'rgba(255,255,255,0.5)' }}>
-                        {hasActiveStory ? 'YOUR STORY' : 'ADD'}
+                    <span className={`feed-story-name ${hasActiveStory ? '' : 'feed-story-name--muted'}`}>
+                        {hasActiveStory ? 'Your story' : 'Your story'}
                     </span>
                 </div>
 
                 {followedOrgs.map((org) => {
                     const isSeen = seenStories.has(org.id);
+                    const displayName = org.name?.length > 10 ? org.name.substring(0, 10) : org.name;
                     return (
-                        <div key={org.id} className="feed-story" onClick={() => { setSeenStories(prev => new Set([...prev, org.id])); navigate(`/stories/${org.id}`); }}>
+                        <div key={org.id} className="feed-story" onClick={() => { setSeenStories(prev => new Set([...prev, org.id])); navigate(`/stories/${org.id}`, { state: { storyTray: followedOrgs.map(o => ({ id: o.id, name: o.name, avatar: o.logo_url })), initialGroupIndex: followedOrgs.indexOf(org) } }); }}>
                             <div className={`feed-story-ring ${isSeen ? 'seen' : 'gradient'}`}>
                                 <div className="feed-story-avatar-inner">
                                     <img src={org.logo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(org.name)}&size=80&background=1e293b&color=fff`} alt={org.name} />
                                 </div>
                             </div>
-                            <span className="feed-story-name" style={{ color: isSeen ? 'rgba(255,255,255,0.3)' : '#f1f5f9' }}>{org.name?.toUpperCase()?.substring(0, 8)}</span>
+                            <span className={`feed-story-name ${isSeen ? 'feed-story-name--seen' : ''}`}>{displayName}</span>
                         </div>
                     )
                 })}

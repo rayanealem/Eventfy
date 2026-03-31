@@ -2,91 +2,111 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../../context/AuthContext';
 import { api } from '../../../lib/api';
 import { supabase } from '../../../lib/supabase';
-import { FALLBACK_STORIES } from '../constants';
 
 /**
- * useStoryData — Fetches org info, stories (org → user fallback → hardcoded fallback),
- * and owner analytics. Centralizes all story data fetching.
+ * useStoryData — Fetches story data for the viewer.
+ *
+ * Two modes:
+ * 1. Single-user mode (orgId param) — fetches stories for one user/org
+ * 2. Tray mode (storyTray param) — uses pre-fetched grouped story data
  */
 export default function useStoryData(orgId) {
     const { profile } = useAuth();
 
-    // Fetch org info
-    const { data: org } = useQuery({
-        queryKey: ['org', orgId],
+    // Fetch org/user info for the header
+    const { data: ownerInfo } = useQuery({
+        queryKey: ['storyOwner', orgId],
         queryFn: async () => {
+            // Try as org first
             try {
-                return await api('GET', `/organizations/${orgId}`);
-            } catch {
-                return { name: 'EVENTFY ORG', logo_url: null };
-            }
+                const org = await api('GET', `/organizations/${orgId}`);
+                if (org && org.name) return { type: 'org', name: org.name, avatar: org.logo_url, id: orgId };
+            } catch {}
+
+            // Try as user profile
+            try {
+                const { data: userProfile } = await supabase
+                    .from('profiles')
+                    .select('id, username, full_name, avatar_url')
+                    .eq('id', orgId)
+                    .single();
+                if (userProfile) {
+                    return {
+                        type: 'user',
+                        name: userProfile.full_name || userProfile.username || 'User',
+                        avatar: userProfile.avatar_url,
+                        id: orgId,
+                    };
+                }
+            } catch {}
+
+            return { type: 'unknown', name: 'EVENTFY', avatar: null, id: orgId };
         },
         enabled: !!orgId,
+        staleTime: 60000,
     });
 
-    // Fetch stories (org stories first, fallback to personal user stories)
-    const { data: stories = FALLBACK_STORIES } = useQuery({
-        queryKey: ['stories', orgId],
+    // Fetch stories with frames
+    const { data: stories = [], isLoading } = useQuery({
+        queryKey: ['viewerStories', orgId],
         queryFn: async () => {
+            const now = new Date().toISOString();
+
+            // Try org stories
             try {
-                // Try fetching as organization stories first via Supabase directly
                 const { data: orgData } = await supabase
                     .from('stories')
-                    .select('*, story_frames(*), organizations(id, name, slug, logo_url)')
+                    .select('*, story_frames(*)')
                     .eq('org_id', orgId)
-                    .gt('expires_at', new Date().toISOString())
+                    .gt('expires_at', now)
                     .order('created_at', { ascending: true });
                 if (orgData && orgData.length > 0) return orgData;
-            } catch { }
+            } catch {}
 
+            // Try user stories
             try {
-                // Fallback: fetch personal user stories via Supabase directly
                 const { data: userData } = await supabase
                     .from('stories')
-                    .select('*, story_frames(*), profiles(username, full_name, avatar_url, shape, shape_color)')
+                    .select('*, story_frames(*)')
                     .eq('user_id', orgId)
-                    .gt('expires_at', new Date().toISOString())
+                    .gt('expires_at', now)
                     .order('created_at', { ascending: true });
+                if (userData && userData.length > 0) return userData;
+            } catch {}
 
-                if (userData && userData.length > 0) {
-                    // Normalize user stories to match the org-story shape for the UI
-                    return userData.map(s => ({
-                        ...s,
-                        organizations: {
-                            id: s.user_id,
-                            name: s.profiles?.full_name || s.profiles?.username || 'User',
-                            logo_url: s.profiles?.avatar_url,
-                            slug: s.profiles?.username
-                        }
-                    }));
-                }
-            } catch { }
-
-            return FALLBACK_STORIES;
+            return [];
         },
         enabled: !!orgId,
     });
 
-    // Analytics query (only fetched when enabled by the consumer)
-    const fetchAnalytics = (storyId, enabled) => useQuery({
-        queryKey: ['storyAnalytics', storyId],
-        queryFn: async () => {
-            return await api('GET', `/stories/${storyId}/analytics`);
-        },
-        enabled,
+    // Build frames list: flatten all story frames in order
+    const allFrames = stories.flatMap(story => {
+        const frames = story.story_frames || [];
+        return frames.map(f => ({ ...f, _storyId: story.id, _story: story }));
     });
 
     // Check if the current user is the story owner
     const isOwner = (story) => {
-        return profile?.id === story?.user_id ||
-            profile?.managed_orgs?.some(o => o.id === story?.org_id);
+        if (!story || !profile) return false;
+        return profile.id === story.user_id ||
+            profile.id === orgId ||
+            profile.managed_orgs?.some(o => o.id === story.org_id);
+    };
+
+    // Record a view
+    const recordView = async (storyId) => {
+        try {
+            await api('POST', `/stories/${storyId}/view`);
+        } catch {}
     };
 
     return {
-        org,
+        ownerInfo,
         stories,
+        allFrames,
+        isLoading,
         profile,
         isOwner,
-        fetchAnalytics,
+        recordView,
     };
 }

@@ -1,21 +1,25 @@
-import React from 'react';
+import { useRef, useEffect } from 'react';
 import './ProgressBar.css';
 
-export default function ProgressBar({ totalSegments, activeSegmentIndex, paused, duration = 5000, onComplete }) {
+/**
+ * ProgressBar — JS-driven segmented progress bar (Instagram-style).
+ * Uses controlled width instead of CSS animation for reliable pause/resume.
+ */
+export default function ProgressBar({ totalSegments, activeSegmentIndex, progress, paused }) {
     return (
-        <div className={`story-progress-container ${paused ? 'paused-opacity' : ''}`}>
+        <div className={`story-progress-container ${paused ? 'dimmed' : ''}`}>
             {Array.from({ length: totalSegments }).map((_, i) => (
-                <div key={i} className="story-prog-bar">
+                <div key={i} className="story-prog-segment">
                     <div
                         className="story-prog-fill"
                         style={{
-                            width: i < activeSegmentIndex ? '100%' : '0%',
-                            animation: i === activeSegmentIndex
-                                ? `fillProgress ${duration}ms linear forwards`
-                                : 'none',
-                            animationPlayState: paused ? 'paused' : 'running'
+                            width: i < activeSegmentIndex
+                                ? '100%'
+                                : i === activeSegmentIndex
+                                    ? `${progress * 100}%`
+                                    : '0%',
+                            transition: i === activeSegmentIndex ? 'none' : 'width 0.1s linear',
                         }}
-                        onAnimationEnd={i === activeSegmentIndex ? onComplete : undefined}
                     />
                 </div>
             ))}

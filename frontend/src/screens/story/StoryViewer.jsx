@@ -1,13 +1,16 @@
-import { useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useMemo, useCallback } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 
 // Hooks
+import useStoryData from './hooks/useStoryData';
 import useStoryNavigation from './hooks/useStoryNavigation';
 import useStoryInteractions from './hooks/useStoryInteractions';
-import useStoryData from './hooks/useStoryData';
+import useStoryTray from './hooks/useStoryTray';
+import useSwipeToDismiss from './hooks/useSwipeToDismiss';
 
 // Components
 import ProgressBar from './components/ProgressBar';
@@ -15,167 +18,217 @@ import StoryHeader from './components/StoryHeader';
 import StoryFooter from './components/StoryFooter';
 import StoryMediaLayer from './components/StoryMediaLayer';
 import StoryOverlayLayer from './components/StoryOverlayLayer';
-import InsightsSheet from './components/InsightsSheet';
 import FlyingEmojis from './components/FlyingEmojis';
+import InsightsSheet from './components/InsightsSheet';
 
 import './StoryViewer.css';
 
 /**
- * StoryViewer — Slim orchestrator for viewing stories.
- * All logic lives in hooks, all rendering in sub-components.
+ * StoryViewer — Full-screen, Instagram-grade story viewing experience.
+ *
+ * Features:
+ * - Story tray navigation (swipe between users, 3D cube transition)
+ * - Physics-based swipe-to-dismiss (scale + opacity + border radius)
+ * - JS-driven progress bar with precise pause/resume
+ * - Tap zones: left 30% = prev, right 70% = next
+ * - Hold to pause with dimmed UI
+ * - Crossfade transitions between frames
+ * - Owner mode: seen-by viewers, insights sheet, delete
+ * - Reply + emoji reactions for viewers
  */
 export default function StoryViewer() {
     const { orgId } = useParams();
-    const { org, stories, profile, isOwner } = useStoryData(orgId);
+    const navigate = useNavigate();
+    const location = useLocation();
+    const { profile } = useAuth();
 
-    const nav = useStoryNavigation(stories);
-    const interactions = useStoryInteractions(nav.story, nav.setPaused);
+    // ─── Story Tray (multi-user navigation) ──────────────────────────────────
+    const storyTrayData = location.state?.storyTray || null;
+    const initialGroupIndex = location.state?.initialGroupIndex || 0;
+    const tray = useStoryTray(storyTrayData, initialGroupIndex);
 
-    const ownerMode = isOwner(nav.story);
+    // In tray mode, the current orgId comes from the tray; otherwise from URL
+    const currentOrgId = tray.currentGroup?.id || orgId;
 
-    // Fetch analytics only for owner
-    const { data: analytics } = useQuery({
-        queryKey: ['storyAnalytics', nav.story?.id],
-        queryFn: () => api('GET', `/stories/${nav.story.id}/analytics`),
-        enabled: ownerMode && interactions.showInsights,
+    // ─── Data ───────────────────────────────────────────────────────────────
+    const { ownerInfo, stories, allFrames, isLoading, isOwner, recordView } = useStoryData(currentOrgId);
+
+    // ─── Navigation ─────────────────────────────────────────────────────────
+    const nav = useStoryNavigation(allFrames, recordView, {
+        onGroupComplete: storyTrayData ? tray.onGroupComplete : undefined,
+        onGroupPrev: storyTrayData ? tray.goToPrevGroup : undefined,
     });
 
-    // Audio management
-    useEffect(() => {
-        if (interactions.audioRef.current) {
-            if (nav.paused) {
-                interactions.audioRef.current.pause();
-            } else {
-                interactions.audioRef.current.play().catch(() => {});
-            }
-        }
-    }, [nav.paused, nav.currentFrameIndex, interactions.isMuted]);
+    // ─── Interactions ───────────────────────────────────────────────────────
+    const interactions = useStoryInteractions(nav.currentStory, nav.setPaused);
 
-    // Legacy text content (for stories without overlays/frames)
-    const renderLegacyContent = () => {
-        if (nav.currentFrame?.overlays?.length) return null;
+    // ─── Swipe-to-dismiss ───────────────────────────────────────────────────
+    const handleDismiss = () => navigate(-1);
+    const dismiss = useSwipeToDismiss(handleDismiss);
+
+    // ─── Audio mute state ───────────────────────────────────────────────────
+    const [isMuted, setIsMuted] = useState(true);
+    const toggleMute = useCallback(() => setIsMuted(prev => !prev), []);
+    const currentIsVideo = nav.currentFrame?.media_type === 'video';
+
+    // ─── Analytics (for owner mode) ─────────────────────────────────────────
+    const isOwnerOfCurrent = nav.currentStory ? isOwner(nav.currentStory) : false;
+
+    const { data: analytics } = useQuery({
+        queryKey: ['storyAnalytics', nav.currentStory?.id],
+        queryFn: () => api('GET', `/stories/${nav.currentStory.id}/analytics`),
+        enabled: isOwnerOfCurrent && !!nav.currentStory?.id,
+        staleTime: 30000,
+    });
+
+    // ─── Loading State ──────────────────────────────────────────────────────
+    if (isLoading) {
         return (
-            <div className="story-center-content">
-                <span className="story-event-badge">{nav.story.badge || '📢 UPDATE'}</span>
-                <h2 className="story-event-title">
-                    {nav.story.title?.split('\n').map((line, i) => (
-                        <span key={i}>{line}{i < nav.story.title.split('\n').length - 1 && <br />}</span>
-                    ))}
-                </h2>
-                <p className="story-event-sub">
-                    {nav.story.body?.split('\n').map((line, i) => (
-                        <span key={i}>{line}{i < nav.story.body.split('\n').length - 1 && <br />}</span>
-                    ))}
-                </p>
+            <div className="story-viewer-root">
+                <div className="story-viewer-loading">
+                    <div className="story-viewer-shimmer">
+                        <div className="shimmer-bar shimmer-bar-top" />
+                        <div className="shimmer-bar shimmer-bar-avatar" />
+                        <div className="shimmer-bar shimmer-bar-name" />
+                    </div>
+                </div>
             </div>
         );
-    };
+    }
+
+    // ─── Empty State ────────────────────────────────────────────────────────
+    if (allFrames.length === 0) {
+        return (
+            <div className="story-viewer-root">
+                <div className="story-viewer-empty">
+                    <span className="story-viewer-empty-icon">○</span>
+                    <h3>No stories yet</h3>
+                    <p>Stories will appear here when shared</p>
+                    <button className="story-viewer-back-btn" onClick={() => navigate(-1)}>
+                        Go Back
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    // ─── 3D Cube Transition Classes ─────────────────────────────────────────
+    const cubeClass = tray.cubeDirection
+        ? `story-cube-transitioning story-cube-${tray.cubeDirection}`
+        : '';
 
     return (
-        <div className="story-root">
-            <div
-                className="story-viewer"
-                style={{ background: nav.story.bg || 'linear-gradient(180deg, #0a0a1a 0%, #1a0a2e 50%, #0a0a1a 100%)' }}
+        <div className="story-viewer-root">
+            {/* Physics dismiss wrapper — scales down as you drag */}
+            <motion.div
+                className={`story-viewer-dismiss-wrap ${cubeClass}`}
+                style={{
+                    y: dismiss.y,
+                    scale: dismiss.scale,
+                    opacity: dismiss.opacity,
+                    borderRadius: dismiss.borderRadius,
+                    willChange: 'transform',
+                }}
+                drag="y"
+                dragConstraints={{ top: 0, bottom: 300 }}
+                dragElastic={0.2}
+                onDragStart={dismiss.handleDragStart}
+                onDrag={dismiss.handleDrag}
+                onDragEnd={dismiss.handleDragEnd}
             >
-                {/* Segmented Progress Bar */}
-                <ProgressBar
-                    totalSegments={nav.totalFrames}
-                    activeSegmentIndex={nav.currentFrameIndex}
-                    paused={nav.paused}
-                    duration={nav.currentDuration}
-                    onComplete={nav.nextFrame}
-                />
-
-                {/* Header */}
-                <StoryHeader
-                    org={org}
-                    story={nav.story}
-                    paused={nav.paused}
-                    handlePauseStart={nav.handlePauseStart}
-                    handlePauseEnd={nav.handlePauseEnd}
-                    navigate={nav.navigate}
-                />
-
-                {/* Tappable Content Zone */}
+                {/* Tap / gesture container */}
                 <div
-                    className="story-content"
+                    className="story-viewer-stage"
                     onClick={nav.handleTap}
-                    onTouchStart={nav.handleSwipeStart}
-                    onTouchEnd={nav.handleSwipeEnd}
                     onPointerDown={nav.handlePauseStart}
                     onPointerUp={nav.handlePauseEnd}
-                    style={{ position: 'relative', overflow: 'hidden' }}
+                    onPointerLeave={nav.handlePauseEnd}
+                    onTouchStart={nav.handleSwipeStart}
+                    onTouchEnd={nav.handleSwipeEnd}
                 >
-                    {/* Background Media */}
-                    <StoryMediaLayer currentFrame={nav.currentFrame} />
-
-                    {/* Interactive Overlays */}
-                    <StoryOverlayLayer
-                        currentFrame={nav.currentFrame}
-                        pollVotes={interactions.pollVotes}
-                        handlePollVote={(pollId, option) =>
-                            interactions.handlePollVote(pollId, option, nav.currentFrames, nav.currentFrameIndex)
-                        }
+                    {/* Progress bar */}
+                    <ProgressBar
+                        totalSegments={nav.totalFrames}
+                        activeSegmentIndex={nav.currentFrameIndex}
+                        progress={nav.progress}
+                        paused={nav.paused}
                     />
 
-                    {/* Legacy Text Content */}
-                    {renderLegacyContent()}
+                    {/* Header */}
+                    <StoryHeader
+                        ownerInfo={ownerInfo}
+                        story={nav.currentStory}
+                        paused={nav.paused}
+                        onClose={handleDismiss}
+                        isMuted={isMuted}
+                        onToggleMute={toggleMute}
+                        isVideo={currentIsVideo}
+                    />
 
-                    {/* Audio Player */}
-                    {nav.currentFrame?.audio_url && (
+                    {/* Media Layer with blurred background plate */}
+                    <StoryMediaLayer
+                        currentFrame={nav.currentFrame}
+                        frameIndex={nav.currentFrameIndex}
+                        isMuted={isMuted}
+                    />
+
+                    {/* Overlay Layer (text, stickers, polls, interactive) */}
+                    <StoryOverlayLayer
+                        frame={nav.currentFrame}
+                        pollVotes={interactions.pollVotes}
+                        onPollVote={interactions.handlePollVote}
+                    />
+
+                    {/* Flying Emoji Reactions */}
+                    <FlyingEmojis flyingEmojis={interactions.flyingEmojis} />
+
+                    {/* Paused dimming overlay */}
+                    {nav.paused && !interactions.showInsights && (
+                        <div className="story-viewer-pause-overlay" />
+                    )}
+
+                    {/* Tray navigation hint arrows */}
+                    {storyTrayData && tray.totalGroups > 1 && (
                         <>
-                            <audio
-                                ref={interactions.audioRef}
-                                src={nav.currentFrame.audio_url}
-                                loop
-                                muted={interactions.isMuted}
-                                playsInline
-                                autoPlay
-                                style={{ display: 'none' }}
-                            />
-                            <button
-                                className="story-unmute-btn"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    interactions.toggleMute();
-                                }}
-                            >
-                                {interactions.isMuted ? '🔇 Tap to Unmute' : '🔊 Mute'}
-                            </button>
+                            {tray.prevGroup && (
+                                <div className="story-tray-hint story-tray-hint-left">
+                                    <div className="tray-hint-avatar">
+                                        <img src={tray.prevGroup.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(tray.prevGroup.name || '?')}&size=32&background=1e293b&color=fff`} alt="" />
+                                    </div>
+                                </div>
+                            )}
+                            {tray.nextGroup && (
+                                <div className="story-tray-hint story-tray-hint-right">
+                                    <div className="tray-hint-avatar">
+                                        <img src={tray.nextGroup.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(tray.nextGroup.name || '?')}&size=32&background=1e293b&color=fff`} alt="" />
+                                    </div>
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
+            </motion.div>
 
-                {/* Footer / Owner Insights */}
-                {ownerMode ? (
-                    <div className="story-owner-footer">
-                        <button className="story-insights-btn" onClick={interactions.openInsights}>
-                            👁️ {analytics?.total_views || 0} Views
-                        </button>
-                    </div>
-                ) : (
-                    <StoryFooter
-                        story={nav.story}
-                        liked={interactions.liked}
-                        paused={nav.paused}
-                        toggleLike={interactions.toggleLike}
-                        handleReaction={interactions.handleReaction}
-                        setPaused={nav.setPaused}
-                    />
-                )}
+            {/* Footer */}
+            <StoryFooter
+                isOwner={isOwnerOfCurrent}
+                paused={nav.paused}
+                analytics={analytics}
+                replyText={interactions.replyText}
+                setReplyText={interactions.setReplyText}
+                sendReply={interactions.sendReply}
+                handleReaction={interactions.handleReaction}
+                openInsights={interactions.openInsights}
+            />
 
-                {/* Insights Bottom Sheet */}
-                <InsightsSheet
-                    showInsights={interactions.showInsights}
-                    analytics={analytics}
-                    currentFrame={nav.currentFrame}
-                    onClose={interactions.closeInsights}
-                    onDelete={() => interactions.handleDeleteStory(nav.navigate)}
-                />
-
-                {/* Flying Emojis */}
-                <FlyingEmojis flyingEmojis={interactions.flyingEmojis} />
-            </div>
+            {/* Insights Sheet (owner only) */}
+            <InsightsSheet
+                showInsights={interactions.showInsights}
+                analytics={analytics}
+                currentFrame={nav.currentFrame}
+                onClose={interactions.closeInsights}
+                onDelete={() => interactions.handleDeleteStory(navigate)}
+            />
         </div>
     );
 }

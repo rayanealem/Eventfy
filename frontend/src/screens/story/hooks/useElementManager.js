@@ -1,9 +1,10 @@
 import { useState, useCallback } from 'react';
-import { PHOTO_SHAPES } from '../constants';
+import { PHOTO_SHAPES, SLIDER_EMOJIS } from '../constants';
 
 /**
  * useElementManager — Manages draggable overlay elements on the story canvas.
- * Handles add/update/delete for text, stickers, polls, smart stickers, photo stickers.
+ * Handles add/update/delete for text, stickers, polls, smart stickers, photo stickers,
+ * quiz, question, emoji slider, and countdown stickers.
  * Also manages z-index layering, drag state, center-snap guides, and safe zones.
  */
 export default function useElementManager() {
@@ -64,6 +65,8 @@ export default function useElementManager() {
             bgColor: 'transparent',
             textAlign: 'center',
             animationType: 'none',
+            textShadow: '0 2px 8px rgba(0,0,0,0.6)',
+            gradientBg: null,
             x: 0, y: 0, scale: 1, rotation: 0, zIndex: z,
         };
         setElements(prev => [...prev, newText]);
@@ -95,6 +98,81 @@ export default function useElementManager() {
         };
         setElements(prev => [...prev, newPoll]);
         setActiveElementId(newPoll.id);
+        setShowStickerTray(false);
+    }, [nextZ]);
+
+    // ─── NEW: Quiz Sticker ──────────────────────────────────────────────────
+    const addQuiz = useCallback(() => {
+        const z = nextZ();
+        const newQuiz = {
+            id: `quiz_${Date.now()}`,
+            type: 'quiz',
+            content: {
+                question: 'Quiz time!',
+                options: ['Option A', 'Option B', 'Option C', 'Option D'],
+                correctIndex: 0,
+            },
+            color: '#a855f7',
+            x: 0, y: 0, scale: 1, rotation: 0, zIndex: z,
+        };
+        setElements(prev => [...prev, newQuiz]);
+        setActiveElementId(newQuiz.id);
+        setShowStickerTray(false);
+    }, [nextZ]);
+
+    // ─── NEW: Question/AMA Sticker ──────────────────────────────────────────
+    const addQuestion = useCallback(() => {
+        const z = nextZ();
+        const newQuestion = {
+            id: `question_${Date.now()}`,
+            type: 'question',
+            content: {
+                prompt: 'Ask me anything',
+                placeholder: 'Type your question...',
+            },
+            color: '#13ecec',
+            x: 0, y: 0, scale: 1, rotation: 0, zIndex: z,
+        };
+        setElements(prev => [...prev, newQuestion]);
+        setActiveElementId(newQuestion.id);
+        setShowStickerTray(false);
+    }, [nextZ]);
+
+    // ─── NEW: Emoji Slider Sticker ──────────────────────────────────────────
+    const addSlider = useCallback(() => {
+        const z = nextZ();
+        const newSlider = {
+            id: `slider_${Date.now()}`,
+            type: 'slider',
+            content: {
+                question: 'How much?',
+                emoji: SLIDER_EMOJIS[0],
+            },
+            color: '#ffd700',
+            x: 0, y: 0, scale: 1, rotation: 0, zIndex: z,
+        };
+        setElements(prev => [...prev, newSlider]);
+        setActiveElementId(newSlider.id);
+        setShowStickerTray(false);
+    }, [nextZ]);
+
+    // ─── NEW: Countdown Sticker ─────────────────────────────────────────────
+    const addCountdown = useCallback(() => {
+        const z = nextZ();
+        // Default: 24 hours from now
+        const targetDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        const newCountdown = {
+            id: `countdown_${Date.now()}`,
+            type: 'countdown',
+            content: {
+                title: 'Event Starting',
+                targetDate,
+            },
+            color: '#f56e3d',
+            x: 0, y: 0, scale: 1, rotation: 0, zIndex: z,
+        };
+        setElements(prev => [...prev, newCountdown]);
+        setActiveElementId(newCountdown.id);
         setShowStickerTray(false);
     }, [nextZ]);
 
@@ -261,6 +339,7 @@ export default function useElementManager() {
         safeZoneWarning,
 
         // Setters
+        setElements,
         setActiveElementId,
         setShowStickerTray,
         setShowFilters,
@@ -274,6 +353,10 @@ export default function useElementManager() {
         addText,
         addSticker,
         addPoll,
+        addQuiz,
+        addQuestion,
+        addSlider,
+        addCountdown,
         addSmartSticker,
         addPhotoSticker,
         cyclePhotoShape,

@@ -1,6 +1,6 @@
 /* ===== STORY SHARED STYLES ===== */
 /* Styles shared between StoryViewer and StoryCreate */
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=JetBrains+Mono:wght@400;500;700&family=Pacifico&family=Space+Grotesk:wght@400;500;700&display=swap');
 
 /* ─── Poll Widget ────────────────────────────────────────────────────────── */
 .story-poll-widget {

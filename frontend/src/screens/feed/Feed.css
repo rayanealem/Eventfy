@@ -171,15 +171,17 @@
     margin-top: 4px;
 }
 
-/* ===== STORIES — INSTAGRAM-LEVEL ===== */
+/* ===== STORIES — INSTAGRAM-LEVEL ==== */
 .feed-stories {
     display: flex;
-    gap: 16px;
-    padding: 20px 16px;
+    gap: 14px;
+    padding: 16px 16px;
     overflow-x: auto;
     scrollbar-width: none;
     position: relative;
     z-index: 1;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
 }
 
 .feed-stories::-webkit-scrollbar {
@@ -195,22 +197,18 @@
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     transition: transform 0.15s ease;
+    position: relative;
+    scroll-snap-align: start;
 }
 
 .feed-story:active {
     transform: scale(0.92);
 }
 
-.feed-story.faded {
-    opacity: 0.5;
-}
-
 .feed-story-ring {
-    width: 72px;
-    height: 72px;
+    width: 68px;
+    height: 68px;
     border-radius: 9999px;
-    border-width: 3px;
-    border-style: solid;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -222,18 +220,10 @@
     transform: scale(1.05);
 }
 
-.feed-story-ring.dashed {
-    border-style: dashed;
+/* No ring — for "Your story" when no active stories */
+.feed-story-ring.no-ring {
+    border: 2px solid rgba(255, 255, 255, 0.12);
     padding: 3px;
-    border-width: 2px;
-    animation: dashSpin 12s linear infinite;
-}
-
-@keyframes dashSpin {
-    0% { border-color: #f472b6; }
-    33% { border-color: #a855f7; }
-    66% { border-color: #13ecec; }
-    100% { border-color: #f472b6; }
 }
 
 .feed-story-avatar-inner {
@@ -242,7 +232,7 @@
     border-radius: 9999px;
     overflow: hidden;
     background: #0a0a1a;
-    border: 2px solid #0a0a0f;
+    border: 2.5px solid #0a0a0f;
 }
 
 .feed-story-avatar-inner img {
@@ -254,16 +244,60 @@
 
 .feed-story-name {
     font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700;
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
+    font-weight: 500;
+    font-size: 11px;
     line-height: 14px;
     text-align: center;
     max-width: 72px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    color: #f1f5f9;
+}
+
+.feed-story-name--muted {
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.feed-story-name--seen {
+    color: rgba(255, 255, 255, 0.35);
+}
+
+/* Add badge (+ button on your story) */
+.feed-story-add-badge {
+    position: absolute;
+    bottom: 18px;
+    right: 0px;
+    background: linear-gradient(135deg, #0095f6 0%, #833ab4 60%, #fd1d1d 100%);
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2.5px solid #0a0a0f;
+    box-shadow: 0 2px 8px rgba(0, 149, 246, 0.3);
+    z-index: 2;
+}
+
+/* ===== STORY RINGS — PREMIUM INSTAGRAM-STYLE ===== */
+.feed-story-ring.gradient {
+    border: 2.5px solid transparent;
+    background: linear-gradient(#0a0a0f, #0a0a0f) padding-box,
+        conic-gradient(from 0deg, #feda75, #fa7e1e, #d62976, #962fbf, #4f5bd5, #feda75) border-box;
+    animation: ringPulse 3s ease-in-out infinite;
+}
+
+@keyframes ringPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(214, 41, 118, 0); }
+    50% { box-shadow: 0 0 12px 2px rgba(214, 41, 118, 0.15); }
+}
+
+.feed-story-ring.seen {
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    background: none;
+    animation: none;
+    box-shadow: none;
 }
 
 /* ===== TOGGLE BAR ===== */

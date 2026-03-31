@@ -4,10 +4,31 @@
  */
 
 // ─── Duration ───────────────────────────────────────────────────────────────
-export const STORY_DURATION = 5000; // 5s per frame
+export const STORY_DURATION = 5000; // 5s per frame default
 
-// ─── Color Palette (Creator) ────────────────────────────────────────────────
-export const COLORS = ['#ffffff', '#000000', '#fb5151', '#00ffc2', '#ffd700', '#b484ce'];
+// ─── Expanded Color Palette (20 colors) ─────────────────────────────────────
+export const COLORS = [
+    '#ffffff', '#000000',
+    '#fb5151', '#ff6b6b',   // Reds
+    '#f56e3d', '#ffa94d',   // Oranges
+    '#ffd700', '#ffe066',   // Yellows
+    '#00ffc2', '#51cf66',   // Greens
+    '#3b82f6', '#339af0',   // Blues
+    '#a855f7', '#b484ce',   // Purples
+    '#f472b6', '#ff6b9d',   // Pinks
+    '#13ecec', '#94a3b8',   // Cyan / Gray
+];
+
+// ─── Gradient Presets (for text backgrounds) ────────────────────────────────
+export const GRADIENT_PRESETS = [
+    { name: 'Sunset', css: 'linear-gradient(135deg, #f56e3d 0%, #ff2d78 100%)' },
+    { name: 'Ocean', css: 'linear-gradient(135deg, #13ecec 0%, #3b82f6 100%)' },
+    { name: 'Neon', css: 'linear-gradient(135deg, #a855f7 0%, #13ecec 100%)' },
+    { name: 'Fire', css: 'linear-gradient(135deg, #ffd700 0%, #fb5151 100%)' },
+    { name: 'Forest', css: 'linear-gradient(135deg, #00ffc2 0%, #51cf66 100%)' },
+    { name: 'Midnight', css: 'linear-gradient(135deg, #1e1e2e 0%, #a855f7 100%)' },
+    { name: 'Rose', css: 'linear-gradient(135deg, #f472b6 0%, #fb5151 100%)' },
+];
 
 // ─── Eventfy Brand Shapes ───────────────────────────────────────────────────
 export const EVENTFY_SHAPES = [
@@ -18,69 +39,66 @@ export const EVENTFY_SHAPES = [
 ];
 
 // ─── Emojis / Stickers ─────────────────────────────────────────────────────
-export const EMOJIS = ['🔥', '⚡', '✨', '🎯', '💡', '💯', '🚀', '❤️'];
+export const EMOJIS = ['🔥', '⚡', '✨', '🎯', '💡', '💯', '🚀', '❤️', '😂', '🤯', '🥳', '👏', '🎉', '🏆', '💪', '🙌'];
+
+// ─── Reaction Emojis (Viewer) ───────────────────────────────────────────────
+export const REACTION_EMOJIS = ['❤️', '🔥', '😂', '😮', '😢', '👏'];
+
+// ─── Slider Emojis (for Emoji Slider sticker) ───────────────────────────────
+export const SLIDER_EMOJIS = ['🔥', '❤️', '😍', '💯', '👏', '🤩', '🥵', '😈'];
 
 // ─── Filters ────────────────────────────────────────────────────────────────
 export const FILTERS = [
     { name: 'Normal', css: 'none' },
-    { name: 'B&W', css: 'grayscale(100%)' },
-    { name: 'Vintage', css: 'sepia(80%)' },
-    { name: 'Vivid', css: 'contrast(120%) saturate(150%)' },
-    { name: 'Blur', css: 'blur(4px)' },
+    { name: 'Clarendon', css: 'contrast(120%) saturate(125%)' },
+    { name: 'Gingham', css: 'brightness(105%) hue-rotate(-10deg)' },
+    { name: 'Moon', css: 'grayscale(100%) contrast(110%) brightness(110%)' },
+    { name: 'Lark', css: 'contrast(90%) saturate(120%) brightness(110%)' },
+    { name: 'Reyes', css: 'sepia(22%) brightness(110%) contrast(85%) saturate(75%)' },
+    { name: 'Juno', css: 'contrast(110%) saturate(140%) brightness(105%) hue-rotate(-5deg)' },
+    { name: 'Lo-Fi', css: 'contrast(150%) saturate(110%)' },
+    { name: 'Valencia', css: 'sepia(8%) contrast(108%) brightness(108%)' },
+    { name: 'Nashville', css: 'sepia(25%) contrast(150%) brightness(90%) saturate(120%)' },
 ];
 
 // ─── Photo Sticker Shape Cycle ──────────────────────────────────────────────
 export const PHOTO_SHAPES = ['square', 'rounded', 'circle', 'star'];
 
 // ─── Text Styles Cycle ──────────────────────────────────────────────────────
-export const TEXT_STYLES = ['plain', 'solid', 'translucent'];
+export const TEXT_STYLES = ['plain', 'solid', 'translucent', 'glow', 'gradient'];
 
 // ─── Text Alignments Cycle ──────────────────────────────────────────────────
 export const TEXT_ALIGNS = ['center', 'left', 'right'];
 
 // ─── Animation Types Cycle ──────────────────────────────────────────────────
-export const ANIMATION_TYPES = ['none', 'pulse', 'wobble'];
+export const ANIMATION_TYPES = ['none', 'pulse', 'wobble', 'typewriter', 'bounce'];
 
 // ─── Brush Types ────────────────────────────────────────────────────────────
-export const BRUSH_TYPES = ['normal', 'neon', 'eraser'];
+export const BRUSH_TYPES = ['normal', 'neon', 'marker', 'eraser'];
+
+// ─── Font Families (expanded) ───────────────────────────────────────────────
+export const FONT_FAMILIES = [
+    { name: 'Grotesk', family: 'Space Grotesk' },
+    { name: 'Bebas', family: 'Bebas Neue' },
+    { name: 'Mono', family: 'DM Mono' },
+    { name: 'Serif', family: 'Georgia, serif' },
+    { name: 'Script', family: 'Pacifico, cursive' },
+    { name: 'Impact', family: 'Impact, sans-serif' },
+    { name: 'Mono Alt', family: 'JetBrains Mono, monospace' },
+];
+
+// ─── Text Shadow Presets ────────────────────────────────────────────────────
+export const TEXT_SHADOWS = [
+    { name: 'None', css: 'none' },
+    { name: 'Drop', css: '0 2px 8px rgba(0,0,0,0.6)' },
+    { name: 'Neon', css: '0 0 10px currentColor, 0 0 20px currentColor' },
+    { name: 'Hard', css: '3px 3px 0 rgba(0,0,0,0.8)' },
+    { name: 'Outline', css: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' },
+];
 
 // ─── Utility: Contrast Color ────────────────────────────────────────────────
 export function getContrastColor(hexColor) {
     if (!hexColor) return '#ffffff';
-    const darkColors = ['#ffffff', '#00ffc2', '#ffd700'];
+    const darkColors = ['#ffffff', '#00ffc2', '#ffd700', '#ffe066', '#ffa94d'];
     return darkColors.includes(hexColor.toLowerCase()) ? '#000000' : '#ffffff';
 }
-
-// ─── Fallback Stories (when API is unavailable) ─────────────────────────────
-export const FALLBACK_STORIES = [
-    {
-        id: 1,
-        type: 'announcement',
-        badge: '🔴 LIVE EVENT',
-        title: 'HACKATHON\nREGISTRATION\nOPEN NOW',
-        body: '48 hours of pure code chaos.\nOnly 456 spots remaining.',
-        bg: 'linear-gradient(180deg, #0a0a1a 0%, #1a0a2e 50%, #0a0a1a 100%)',
-        accent: '#13ecec',
-        created_at: new Date(Date.now() - 2 * 3600000).toISOString(),
-    },
-    {
-        id: 2,
-        type: 'highlight',
-        badge: '🏆 RESULTS',
-        title: 'FINAL\nSCOREBOARD\nIS LIVE',
-        body: 'See who dominated the arena.\n1,240 participants ranked.',
-        bg: 'linear-gradient(180deg, #0a1a0a 0%, #0a2e1a 50%, #0a1a0a 100%)',
-        accent: '#2dd4bf',
-        created_at: new Date(Date.now() - 5 * 3600000).toISOString(),
-    },
-    {
-        id: 3,
-        type: 'promo',
-        badge: '🎟️ EARLY ACCESS',
-        title: 'SUMMER\nFESTIVAL\n2026',
-        body: 'Get your tickets before they sell out.\nFirst 100 get VIP upgrades.',
-        bg: 'linear-gradient(180deg, #1a0a0a 0%, #2e1a0a 50%, #1a0a0a 100%)',
-        accent: '#fbbf24',
-        created_at: new Date(Date.now() - 8 * 3600000).toISOString(),
-    },
-];
