@@ -4,10 +4,8 @@
 .np-root {
     position: relative;
     width: 100%;
-    min-height: 100vh;
+    min-height: 100dvh;
     background: #0a0a0f;
-    max-width: 430px;
-    margin: 0 auto;
     display: flex;
     flex-direction: column;
     border-left: 1px solid rgba(30, 41, 59, .5);
@@ -378,7 +376,7 @@
     left: 50%;
     transform: translateX(-50%);
     width: 100%;
-    max-width: 430px;
+    max-width: var(--app-max-width);
     backdrop-filter: blur(12px);
     background: rgba(10, 10, 15, .95);
     border-top: 1px solid #1e293b;

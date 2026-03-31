@@ -7,10 +7,8 @@
 .event-root {
     position: relative;
     width: 100%;
-    min-height: 100vh;
+    min-height: 100dvh;
     background: black;
-    max-width: 430px;
-    margin: 0 auto;
 }
 
 .event-noise {
@@ -613,7 +611,7 @@
     left: 50%;
     transform: translateX(-50%);
     width: 100%;
-    max-width: 430px;
+    max-width: var(--app-max-width);
     padding: 24px;
     background: linear-gradient(to top, black, rgba(0, 0, 0, 0.9) 50%, rgba(0, 0, 0, 0));
     z-index: 100;

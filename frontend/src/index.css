@@ -48,8 +48,8 @@
   --shadow-glow-teal: 0 0 20px rgba(0, 255, 194, 0.3);
   --shadow-glow-gold: 0 0 20px rgba(255, 215, 0, 0.3);
 
-  /* Bottom Nav Height */
-  --nav-height: 72px;
+  /* Bottom Nav Height — includes gesture-bar safe area */
+  --nav-height: calc(72px + env(safe-area-inset-bottom, 0px));
 
   /* App frame width: full on native/mobile, 430px on desktop */
   --app-max-width: 430px;
@@ -68,13 +68,15 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden; /* Prevent horizontal scroll globally */
 }
 
 body {
   font-family: var(--font-body);
   background: var(--color-bg);
   color: var(--color-text-primary);
-  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: 100vh; /* fallback for older browsers */
   /* Native safe-area insets for status bar, notch, gesture bar */
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
@@ -88,7 +90,8 @@ body.keyboard-open {
 }
 
 #root {
-  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: 100vh; /* fallback */
   display: flex;
   flex-direction: column;
 }
@@ -182,7 +185,8 @@ img {
 .app-shell {
   max-width: var(--app-max-width);
   margin: 0 auto;
-  height: 100vh;
+  height: 100dvh;
+  height: 100vh; /* fallback */
   position: relative;
   overflow-y: auto;
   overflow-x: hidden;
@@ -228,7 +232,17 @@ img {
 
 .page-content {
   padding-bottom: var(--nav-height);
-  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: 100vh; /* fallback */
+}
+
+/* Unified screen root — all page containers should use this */
+.screen-root {
+  position: relative;
+  width: 100%;
+  min-height: 100dvh;
+  min-height: 100vh; /* fallback */
+  /* NO max-width or margin — inherited from .app-shell */
 }
 
 /* --- Glass Card --- */
@@ -344,7 +358,7 @@ img {
   transform: translateX(-50%);
   width: 100%;
   max-width: var(--app-max-width);
-  height: 72px;
+  height: var(--nav-height);
   background: rgba(10, 10, 15, 0.95);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -352,8 +366,8 @@ img {
   display: flex;
   align-items: center;
   justify-content: space-around;
-  padding: 0 0 env(safe-area-inset-bottom) 0;
-  z-index: 1000;
+  padding: 0 0 env(safe-area-inset-bottom, 0px) 0;
+  z-index: 99999;
 }
 
 .nav-item {

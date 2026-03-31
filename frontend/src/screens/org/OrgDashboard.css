@@ -1,16 +1,16 @@
 .od-root {
-    min-height: 100vh;
+    min-height: 100dvh;
     background-color: var(--color-bg);
     color: var(--color-text);
     position: relative;
-    padding-bottom: 80px;
+    padding-bottom: var(--nav-height);
     /* space for bottom nav */
     display: flex;
     flex-direction: column;
 }
 
 .od-loader-screen {
-    min-height: 100vh;
+    min-height: 100dvh;
     background-color: var(--color-bg);
     display: flex;
     align-items: center;

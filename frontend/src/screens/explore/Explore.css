@@ -5,12 +5,9 @@
 .explore-root {
     position: relative;
     width: 100%;
-    min-height: 100vh;
+    min-height: 100dvh;
     background: black;
-    max-width: 430px;
-    margin: 0 auto;
     padding-bottom: 96px;
-    overflow: hidden;
 }
 
 .explore-noise {

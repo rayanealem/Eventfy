@@ -18,7 +18,7 @@ export default function AppShell() {
         <ToastProvider>
             <div
                 className={`app-shell ${isFullscreen ? 'app-shell--fullscreen' : ''}`}
-                style={hideBottomNav ? undefined : { paddingBottom: '80px' }}
+                style={hideBottomNav ? undefined : { paddingBottom: 'var(--nav-height)' }}
             >
                 <AnimatePresence mode="popLayout">
                     <motion.div

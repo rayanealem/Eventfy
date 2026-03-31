@@ -69,26 +69,7 @@ export default function BottomNav() {
 
     return (
         <>
-            <nav
-                className="bottom-nav custom-forced-nav"
-                style={{
-                    position: 'fixed',
-                    bottom: 0,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: '100%',
-                    height: '72px',
-                    background: 'rgba(10, 10, 15, 0.95)',
-                    backdropFilter: 'blur(10px)',
-                    WebkitBackdropFilter: 'blur(10px)',
-                    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-around',
-                    paddingBottom: 'env(safe-area-inset-bottom)',
-                    zIndex: 99999
-                }}
-            >
+            <nav className="bottom-nav">
                 {navItems.map(({ path, shape, activeColor, badge }) => {
                     const isActive = location.pathname === path ||
                         (path === '/profile/me' && location.pathname.startsWith('/profile/')) ||

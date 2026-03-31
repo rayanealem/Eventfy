@@ -6,7 +6,7 @@
 .splash-root {
     position: relative;
     width: 100%;
-    min-height: 100vh;
+    min-height: 100dvh;
     background: black;
 }
 
@@ -24,9 +24,7 @@
 /* Main container — max 430px like Figma */
 .splash-container {
     position: relative;
-    max-width: 430px;
-    min-height: 100vh;
-    margin: 0 auto;
+    min-height: 100dvh;
     border-left: 1px solid rgba(255, 255, 255, 0.05);
     border-right: 1px solid rgba(255, 255, 255, 0.05);
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);

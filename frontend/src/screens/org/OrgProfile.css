@@ -4,10 +4,8 @@
 .orgp-root {
     position: relative;
     width: 100%;
-    min-height: 100vh;
+    min-height: 100dvh;
     background: #000;
-    max-width: 448px;
-    margin: 0 auto;
     display: flex;
     flex-direction: column;
     padding-bottom: 96px;
