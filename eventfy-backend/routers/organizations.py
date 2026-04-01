@@ -306,6 +306,18 @@ async def get_org_posts(org_id: str, page: int = 0, page_size: int = 20):
     return posts.data or []
 
 
+@router.get("/{org_id}/members/count")
+async def get_org_member_count(org_id: str):
+    """Get count of org members."""
+    members = (
+        supabase.table("org_members")
+        .select("user_id", count="exact")
+        .eq("org_id", org_id)
+        .execute()
+    )
+    return {"count": members.count if members.count is not None else len(members.data or [])}
+
+
 # ── Members ────────────────────────────────────────────
 
 @router.post("/{org_id}/members")

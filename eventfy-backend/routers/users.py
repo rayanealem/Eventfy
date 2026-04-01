@@ -168,6 +168,13 @@ async def get_user_profile(username: str, user=Depends(get_optional_user)):
     except Exception:
         pass
 
+    # Story count
+    try:
+        stories = supabase.table("stories").select("id", count="exact").eq("user_id", uid).eq("owner_type", "user").execute()
+        result["story_count"] = stories.count if stories.count is not None else len(stories.data or [])
+    except Exception:
+        result["story_count"] = 0
+
     # Check if the current user follows this profile
     result["is_following"] = False
     if user and user["id"] != result["id"]:
@@ -240,13 +247,20 @@ async def get_user_passport(username: str):
         .execute()
     )
 
+    # Connections count
+    conn_sent = supabase.table("connections").select("requester_id", count="exact").eq("requester_id", uid).eq("status", "accepted").execute()
+    conn_recv = supabase.table("connections").select("addressee_id", count="exact").eq("addressee_id", uid).eq("status", "accepted").execute()
+    conn_count = (conn_sent.count or 0) + (conn_recv.count or 0)
+
     return {
         "profile": profile.data,
         "badges": badges.data or [],
         "events_attended": events.data or [],
         "certificates": certs.data or [],
+        "certificate_count": len(certs.data or []),
         "skills": skills.data or [],
         "xp_history": xp_history.data or [],
+        "connections_count": conn_count,
     }
 
 
@@ -475,6 +489,89 @@ async def get_xp_history(
         .execute()
     )
     return xp.data or []
+
+
+@router.get("/{username}/stories")
+async def get_user_stories(username: str, page: int = 0, page_size: int = 30):
+    """Get user's stories for their profile gallery grid."""
+    profile = (
+        supabase.table("profiles")
+        .select("id")
+        .eq("username", username)
+        .single()
+        .execute()
+    )
+    if not profile.data:
+        raise HTTPException(404, "User not found")
+
+    uid = profile.data["id"]
+    stories = (
+        supabase.table("stories")
+        .select("id, caption, created_at, view_count, reaction_counts, story_frames(id, media_url, media_type, thumbnail_url, sort_order)")
+        .eq("user_id", uid)
+        .eq("owner_type", "user")
+        .order("created_at", desc=True)
+        .range(page * page_size, (page + 1) * page_size - 1)
+        .execute()
+    )
+    return {"stories": stories.data or [], "has_more": len(stories.data or []) == page_size}
+
+
+@router.get("/{username}/highlights")
+async def get_user_highlights(username: str):
+    """Get user's highlighted stories for profile highlight circles."""
+    profile = (
+        supabase.table("profiles")
+        .select("id")
+        .eq("username", username)
+        .single()
+        .execute()
+    )
+    if not profile.data:
+        raise HTTPException(404, "User not found")
+
+    uid = profile.data["id"]
+    highlights = (
+        supabase.table("stories")
+        .select("id, caption, created_at, story_frames(id, media_url, thumbnail_url, sort_order)")
+        .eq("user_id", uid)
+        .eq("owner_type", "user")
+        .eq("is_highlight", True)
+        .order("created_at", desc=True)
+        .limit(10)
+        .execute()
+    )
+    return {"highlights": highlights.data or []}
+
+
+@router.get("/me/connection-status/{target_user_id}")
+async def get_connection_status(target_user_id: str, user=Depends(get_current_user)):
+    """Check connection status between current user and target."""
+    if target_user_id == user["id"]:
+        return {"status": "self"}
+
+    # Check if connection exists in either direction
+    sent = (
+        supabase.table("connections")
+        .select("status")
+        .eq("requester_id", user["id"])
+        .eq("addressee_id", target_user_id)
+        .execute()
+    )
+    if sent.data:
+        return {"status": sent.data[0]["status"]}
+
+    received = (
+        supabase.table("connections")
+        .select("status")
+        .eq("requester_id", target_user_id)
+        .eq("addressee_id", user["id"])
+        .execute()
+    )
+    if received.data:
+        return {"status": received.data[0]["status"]}
+
+    return {"status": "none"}
 
 
 @router.post("/me/avatar")
