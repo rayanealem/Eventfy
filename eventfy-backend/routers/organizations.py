@@ -109,20 +109,19 @@ async def get_org_profile(slug: str, user=Depends(get_optional_user)):
         supabase.table("organizations")
         .select("*")
         .eq("slug", slug)
-        .single()
         .execute()
     )
-    if not org.data:
+    if not org.data or len(org.data) == 0:
         raise HTTPException(404, "Organization not found")
 
-    result = org.data
+    result = org.data[0]
 
     # Check if the current user follows this org
     result["is_following"] = False
     if user:
         follow_check = (
             supabase.table("org_followers")
-            .select("id")
+            .select("user_id")
             .eq("org_id", result["id"])
             .eq("user_id", user["id"])
             .execute()

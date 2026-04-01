@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { Plus, Megaphone, QrCode, Users, Check, X, ArrowRight } from 'lucide-react';
 import { api } from '../../lib/api';
 import './OrgDashboard.css';
 
@@ -19,7 +20,10 @@ export default function OrgDashboard() {
         setError(false);
         try {
             const res = await api('GET', '/orgs/me/dashboard');
-            setData(res);
+            setData({
+                ...res,
+                pending_volunteers: res.pending_volunteers || []
+            });
         } catch (err) {
             console.error("Dashboard error:", err);
             setError(true);
@@ -30,29 +34,73 @@ export default function OrgDashboard() {
 
     if (loading) {
         return (
-            <div className="od-loader-screen">
-                <span className="od-loader-text">LOADING COMMAND DATA...</span>
+            <div className="od-root theme-ph">
+                <header className="od-header">
+                    <div className="od-header-left">
+                        <div className="od-org-avatar skeleton-box" style={{ borderRadius: '12px' }} />
+                        <div className="od-org-titles">
+                            <div className="skeleton-box" style={{ width: '120px', height: '14px', marginBottom: '8px' }} />
+                            <div className="skeleton-box" style={{ width: '180px', height: '32px' }} />
+                        </div>
+                    </div>
+                </header>
+                <main className="od-main">
+                    <div className="od-snapshot-container">
+                        <div className="od-snapshot-scroll">
+                            {[1, 2, 3, 4].map(i => (
+                                <div key={i} className="od-snap-card skeleton-card">
+                                    <div className="skeleton-box" style={{ width: '70%', height: '14px', marginBottom: '16px' }} />
+                                    <div className="skeleton-box" style={{ width: '50%', height: '36px' }} />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    <section className="od-section">
+                        <div className="skeleton-box" style={{ width: '140px', height: '24px', marginBottom: '16px', borderRadius: '4px' }} />
+                        <div className="od-actions-grid">
+                            {[1, 2, 3, 4].map(i => (
+                                <div key={i} className="od-action-btn skeleton-card" style={{ height: '130px', border: 'none' }} />
+                            ))}
+                        </div>
+                    </section>
+                    <section className="od-section" style={{ marginTop: '1rem' }}>
+                        <div className="skeleton-box" style={{ width: '180px', height: '24px', marginBottom: '16px', borderRadius: '4px' }} />
+                        <div className="od-events-list">
+                            {[1, 2].map(i => (
+                                <div key={i} className="od-event-row skeleton-card" style={{ height: '140px', border: 'none' }} />
+                            ))}
+                        </div>
+                    </section>
+                </main>
             </div>
         );
     }
 
     if (error || !data) {
         return (
-            <div className="od-loader-screen" style={{ flexDirection: 'column', gap: '1rem' }}>
-                <span className="od-loader-text" style={{ color: 'var(--color-coral)' }}>CONNECTION FAILED</span>
-                <button className="od-retry-btn" onClick={loadDashboard}>RETRY CONNECTION ⟳</button>
+            <div className="od-root theme-ph error-state">
+                <div className="od-error-content">
+                    <X size={48} className="od-error-icon" />
+                    <span className="od-error-text">CONNECTION FAILED</span>
+                    <button className="od-retry-btn" onClick={loadDashboard}>RETRY CONNECTION</button>
+                </div>
             </div>
         );
     }
 
-    const { org, stats, events } = data;
-    const liveEvents = events.filter(e => e.status === 'live' || e.is_live);
-    const scheduledEvents = events.filter(e => e.status === 'scheduled' || e.status === 'draft');
+    const { org, stats, events, pending_volunteers } = data;
+    const activeEvents = events.filter(e => e.status === 'live' || e.is_live || e.status === 'scheduled');
+
+    const getCapacityColor = (regCount, cap) => {
+        if (!cap) return 'var(--color-teal)'; // No limit
+        const ratio = regCount / cap;
+        if (ratio >= 1) return 'var(--color-orange)';
+        if (ratio >= 0.7) return 'var(--color-purple)';
+        return 'var(--color-teal)';
+    };
 
     return (
-        <div className="od-root">
-            <div className="od-noise" />
-
+        <div className="od-root theme-ph">
             {/* Header */}
             <header className="od-header">
                 <div className="od-header-left">
@@ -60,114 +108,149 @@ export default function OrgDashboard() {
                         {!org?.logo_url && <span>{org?.name?.substring(0, 2)?.toUpperCase()}</span>}
                     </div>
                     <div className="od-org-titles">
+                        <span className="od-supertitle">COMMAND CENTER</span>
                         <h1 className="od-org-name">{org?.name?.toUpperCase()}</h1>
-                        <span className="od-subtitle">◆ COMMAND CENTER</span>
                     </div>
                 </div>
-                <button className="od-settings-btn" onClick={() => navigate('/org/setup')}>⚙</button>
+                <div className="od-header-actions">
+                    <button className="od-settings-btn" onClick={() => navigate(`/org/${org.slug}`)}>PROFILE</button>
+                    <button className="od-settings-btn icon" onClick={() => navigate('/org/setup')}>⚙</button>
+                </div>
             </header>
 
             <main className="od-main">
-                {/* Stats Grid */}
-                <div className="od-stats-grid">
-                    <motion.div className="od-stat-card pink" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-                        <span className="od-stat-icon">○</span>
-                        <div className="od-stat-data">
-                            <span className="od-stat-val">{stats.follower_count.toLocaleString()}</span>
-                            <span className="od-stat-label">TOTAL FOLLOWERS</span>
-                        </div>
-                    </motion.div>
+                {/* Snapshot Cards */}
+                <div className="od-snapshot-container">
+                    <div className="od-snapshot-scroll">
+                        <motion.div className="od-snap-card" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+                            <span className="od-snap-label">TOTAL EVENTS</span>
+                            <span className="od-snap-val">{stats?.total_events?.toLocaleString() || 0}</span>
+                        </motion.div>
 
-                    <motion.div className="od-stat-card gold" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-                        <span className="od-stat-icon">△</span>
-                        <div className="od-stat-data">
-                            <span className="od-stat-val">{stats.total_events.toLocaleString()}</span>
-                            <span className="od-stat-label">TOTAL EVENTS</span>
-                        </div>
-                    </motion.div>
+                        <motion.div className="od-snap-card" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                            <span className="od-snap-label">REGISTRATIONS</span>
+                            <span className="od-snap-val">{stats?.total_registrations?.toLocaleString() || 0}</span>
+                        </motion.div>
 
-                    <motion.div className="od-stat-card teal" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-                        <span className="od-stat-icon">□</span>
-                        <div className="od-stat-data">
-                            <span className="od-stat-val">{stats.total_registrations.toLocaleString()}</span>
-                            <span className="od-stat-label">TOTAL REGISTRATIONS</span>
-                        </div>
-                    </motion.div>
+                        <motion.div className="od-snap-card" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+                            <span className="od-snap-label">FOLLOWERS</span>
+                            <span className="od-snap-val">{stats?.follower_count?.toLocaleString() || 0}</span>
+                        </motion.div>
 
-                    <motion.div className={`od-stat-card coral ${stats.pending_volunteers > 0 ? 'pulse' : ''}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                        <span className="od-stat-icon">◇</span>
-                        <div className="od-stat-data">
-                            <span className="od-stat-val">{stats.pending_volunteers.toLocaleString()}</span>
-                            <span className="od-stat-label">PENDING VOLUNTEERS</span>
-                        </div>
-                    </motion.div>
+                        <motion.div className={`od-snap-card ${stats?.pending_volunteers > 0 ? 'alert' : ''}`} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+                            <span className="od-snap-label">VOLUNTEERS</span>
+                            <span className="od-snap-val">{stats?.pending_volunteers?.toLocaleString() || 0}</span>
+                        </motion.div>
+                    </div>
                 </div>
 
-                {/* Create CTA */}
-                <button className="od-create-cta" onClick={() => navigate('/event/create')}>
-                    + CREATE NEW EVENT □
-                </button>
+                {/* Quick Actions Grid */}
+                <section className="od-section">
+                    <h2 className="od-section-title">OPERATIONS</h2>
+                    <div className="od-actions-grid">
+                        <button 
+                            className="od-action-btn purple"
+                            onClick={() => navigate('/event/create')}
+                        >
+                            <Plus size={28} className="oa-icon" strokeWidth={2} />
+                            <span>CREATE EVENT</span>
+                        </button>
+                        
+                        <button 
+                            className="od-action-btn teal"
+                            onClick={() => navigate('/announcements/create')}
+                        >
+                            <Megaphone size={28} className="oa-icon" strokeWidth={2} />
+                            <span>PUBLISH POST</span>
+                        </button>
 
-                {/* Pending Actions */}
-                {stats.pending_volunteers > 0 && (
-                    <div className="od-pending-band">
-                        <span className="od-pending-text">ATTENTION: {stats.pending_volunteers} PENDING VOLUNTEER {stats.pending_volunteers === 1 ? 'APPLICATION' : 'APPLICATIONS'}</span>
-                        <button className="od-view-btn">VIEW ◇</button>
+                        <button 
+                            className="od-action-btn teal"
+                            onClick={() => navigate('/qr-scanner')}
+                        >
+                            <QrCode size={28} className="oa-icon" strokeWidth={2} />
+                            <span>SCAN TICKETS</span>
+                        </button>
+
+                        <button 
+                            className="od-action-btn purple"
+                            onClick={() => navigate('/org/team')}
+                        >
+                            <Users size={28} className="oa-icon" strokeWidth={2} />
+                            <span>MANAGE TEAM</span>
+                        </button>
                     </div>
-                )}
+                </section>
 
-                {/* Live Events */}
-                {liveEvents.length > 0 && (
-                    <section className="od-section">
-                        <h2 className="od-section-title">ACTIVE TRANSMISSIONS</h2>
-                        <div className="od-events-list">
-                            {liveEvents.map((ev) => (
-                                <div key={ev.id} className="od-event-card live" onClick={() => navigate(`/manage/${ev.id}`)}>
-                                    <div className="od-ec-cover" style={{ backgroundImage: ev.cover_url ? `url(${ev.cover_url})` : 'var(--gradient-card)' }} />
-                                    <div className="od-ec-info">
-                                        <div className="od-ec-head">
-                                            <span className="od-ec-dot" />
-                                            <h3 className="od-ec-title">{ev.title.toUpperCase()}</h3>
-                                        </div>
-                                        <div className="od-ec-stats">
-                                            <span>REG: {ev.registration_count || 0}/{ev.capacity || '∞'}</span>
-                                        </div>
+                {/* Pending Volunteers Panel */}
+                {pending_volunteers && pending_volunteers.length > 0 && (
+                    <section className="od-section attention-panel">
+                        <h2 className="od-section-title alert-text">ATTENTION REQUIRED</h2>
+                        <div className="od-volunteers-list">
+                            {pending_volunteers.map((vol) => (
+                                <div key={vol.id} className="od-volunteer-card">
+                                    <div className="od-vol-info">
+                                        <h4>{vol.user?.name || 'Applicant'}</h4>
+                                        <p>Event: <strong>{vol.event?.title || 'Unknown Event'}</strong></p>
                                     </div>
-                                    <button className="od-scan-btn" onClick={(e) => { e.stopPropagation(); navigate(`/qr/${ev.id}`); }}>
-                                        ⬡ SCAN
-                                    </button>
+                                    <div className="od-vol-actions">
+                                        <button className="od-btn-approve"><Check size={20} strokeWidth={3} /></button>
+                                        <button className="od-btn-reject"><X size={20} strokeWidth={3} /></button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
                     </section>
                 )}
 
-                {/* Scheduled Events */}
+                {/* Active Events & Capacity Manager */}
                 <section className="od-section">
-                    <h2 className="od-section-title">SCHEDULED EVENTS</h2>
-                    {scheduledEvents.length === 0 ? (
+                    <h2 className="od-section-title">ACTIVE EVENTS</h2>
+                    {activeEvents.length === 0 ? (
                         <div className="od-empty-state">
-                            <span className="od-empty-text">NO EVENTS FOUND IN REGISTRY</span>
-                            <button className="od-empty-link" onClick={() => navigate('/event/create')}>
-                                CREATE YOUR FIRST EVENT ○
-                            </button>
+                            <span className="od-empty-icon">⌘</span>
+                            <p>NO ACTIVE TRANSMISSIONS</p>
                         </div>
                     ) : (
                         <div className="od-events-list">
-                            {scheduledEvents.map((ev) => (
-                                <div key={ev.id} className="od-event-card" onClick={() => navigate(`/manage/${ev.id}`)}>
-                                    <div className="od-ec-cover" style={{ backgroundImage: ev.cover_url ? `url(${ev.cover_url})` : 'var(--gradient-card)' }} />
-                                    <div className="od-ec-info">
-                                        <h3 className="od-ec-title">{ev.title.toUpperCase()}</h3>
-                                        <div className="od-ec-meta">
-                                            <span>{new Date(ev.starts_at).toLocaleDateString()}</span>
-                                            <span className="od-ec-divider">•</span>
-                                            <span>{ev.registration_count || 0} REG</span>
+                            {activeEvents.map((ev) => {
+                                const regCount = ev.registration_count || 0;
+                                const cap = ev.capacity || 0;
+                                const pct = cap > 0 ? Math.min((regCount / cap) * 100, 100) : (regCount > 0 ? 100 : 0);
+                                const capColor = getCapacityColor(regCount, cap);
+                                const isLive = ev.status === 'live' || ev.is_live;
+
+                                return (
+                                    <div key={ev.id} className="od-event-row" onClick={() => navigate(`/manage/${ev.id}`)}>
+                                        <div className="od-er-top">
+                                            <div className="od-er-info">
+                                                <h3 className="od-er-title">{ev.title}</h3>
+                                                <span className="od-er-date">
+                                                    <span className={`status-dot ${isLive ? 'live' : 'scheduled'}`} />
+                                                    {new Date(ev.starts_at).toLocaleDateString()} • {isLive ? 'LIVE' : 'SCHEDULED'}
+                                                </span>
+                                            </div>
+                                            <ArrowRight size={24} className="od-er-arrow" />
+                                        </div>
+                                        
+                                        <div className="od-er-bottom">
+                                            <div className="od-capacity-labels">
+                                                <span>CAPACITY</span>
+                                                <span style={{ color: capColor }}>{regCount} / {cap || '∞'}</span>
+                                            </div>
+                                            <div className="od-capacity-track">
+                                                <div 
+                                                    className="od-capacity-fill" 
+                                                    style={{ 
+                                                        width: cap ? `${pct}%` : '100%', 
+                                                        backgroundColor: capColor 
+                                                    }} 
+                                                />
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="od-ec-arrow">›</div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </section>
